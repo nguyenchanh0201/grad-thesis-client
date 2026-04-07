@@ -3,7 +3,7 @@
  */
 export const API_CONFIG = {
   BASE_URL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api/v1",
-  TIMEOUT: 15000, // 15 seconds
+  TIMEOUT: 15000, // 15s
   HEADERS: {
     CORRELATION_ID: "X-Correlation-Id",
     REQUEST_ID: "X-Request-Id",
@@ -18,6 +18,7 @@ export const API_CONFIG = {
 export const PAGINATION = {
   DEFAULT_PAGE: 1,
   DEFAULT_LIMIT: 10,
+  MIN_LIMIT: 1,
   LIMIT_OPTIONS: [10, 20, 50, 100],
 } as const;
 
@@ -44,15 +45,18 @@ export const HTTP_STATUS = {
   UNAUTHORIZED: 401,
   FORBIDDEN: 403,
   NOT_FOUND: 404,
-  UNPROCESSABLE_ENTITY: 422,
+  CONFLICT: 409,
+  GONE: 410,
+  TOO_MANY_REQUESTS: 429,
   INTERNAL_SERVER_ERROR: 500,
+  NETWORK_ERROR: 503,
 } as const;
 
 /**
  * UI & UX Constants
  */
 export const UI_CONFIG = {
-  TOAST_DURATION: 4000, // 4 seconds
+  TOAST_DURATION: 4000, // 4s
   DEBOUNCE_DELAY: 300, // ms for search inputs
   MODAL_TRANSITION: 200, // ms
 } as const;
