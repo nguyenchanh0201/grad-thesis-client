@@ -3,6 +3,7 @@ import { stripHtml } from "@/lib/html";
 import { buildEventJsonLd, buildBreadcrumbJsonLd } from "@/lib/seo";
 import { mockEventDetail } from "@/lib/mock/events";
 import type { EventDetail } from "@/schemas/event";
+import { EventDetailHeader } from "@/components/event/detail/event-detail-header";
 
 export const revalidate = 60;
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://ticketgo.vn";
@@ -71,7 +72,8 @@ export default async function EventDetailPage({ params }: Props) {
         dangerouslySetInnerHTML={{ __html: buildBreadcrumbJsonLd(event) }}
       />
       <main>
-        <p className="p-8 text-center text-muted-foreground">{event.title}</p>
+        <EventDetailHeader event={event} status="for-sale" />
+        {/* EventTabBar, sections assembled in Phase 4–8 */}
       </main>
     </>
   );

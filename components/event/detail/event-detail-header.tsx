@@ -1,0 +1,240 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
+import { Calendar, MapPin, Ticket, Facebook, Globe } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { formatPrice } from "@/lib/strings/money";
+import { fmtIsoDate, fmtIsoTime } from "@/lib/date";
+import { DEFAULT_CURRENCY } from "@/core/constants";
+import type { EventDetail } from "@/schemas/event";
+
+interface EventDetailHeaderProps {
+  event: EventDetail;
+  status?: "for-sale" | "sold-out" | "cancelled" | "postponed";
+  socialLinks?: { facebook?: string; website?: string };
+  ctaLabel?: string;
+  onCTAClick?: () => void;
+  isLoggedIn?: boolean;
+}
+
+const STATUS_BADGE: Record<
+  NonNullable<EventDetailHeaderProps["status"]>,
+  {
+    label: string;
+    variant: "success" | "destructive" | "secondary" | "warning";
+  }
+> = {
+  "for-sale": { label: "For Sale", variant: "success" },
+  "sold-out": { label: "Sold Out", variant: "destructive" },
+  cancelled: { label: "Cancelled", variant: "secondary" },
+  postponed: { label: "Postponed", variant: "warning" },
+};
+
+export function EventDetailHeader({
+  event,
+  status,
+  socialLinks,
+  ctaLabel,
+  onCTAClick,
+  isLoggedIn = false,
+}: EventDetailHeaderProps) {
+  const mobileCTARef = useRef<HTMLButtonElement>(null);
+  const [mobileCTAHeight, setMobileCTAHeight] = useState(0);
+
+  useEffect(() => {
+    const el = mobileCTARef.current;
+    if (!el) return;
+    const update = () => setMobileCTAHeight(el.offsetHeight);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const badge = status ? STATUS_BADGE[status] : null;
+  const firstDate = event.dates[0];
+  const extraDates = event.dates.length - 1;
+  const buttonLabel = isLoggedIn
+    ? "Buy Tickets"
+    : (ctaLabel ?? "Login required to purchase tickets");
+  const hasSocialLinks = socialLinks?.facebook || socialLinks?.website;
+
+  return (
+    <section
+      aria-label="Event overview"
+      className="relative w-full overflow-hidden"
+      style={{ background: "#0a0a0f" }}
+    >
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 z-0"
+        style={{
+          background:
+            "radial-gradient(ellipse at 20% 50%, rgba(180,120,0,0.25) 0%, transparent 60%)",
+        }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 z-0"
+        style={{
+          background:
+            "radial-gradient(ellipse at 80% 50%, rgba(100,60,180,0.2) 0%, transparent 60%)",
+        }}
+      />
+
+      <div className="page-container relative z-10 py-8 md:py-12">
+        <div className="flex flex-col gap-6 md:grid md:grid-cols-[2fr_3fr] md:gap-10">
+          <div className="flex flex-col gap-4">
+            <div className="relative aspect-video overflow-hidden rounded-md md:aspect-auto md:flex-1">
+              <Image
+                src={event.images[0]}
+                alt={`${event.title} - event poster`}
+                fill
+                sizes="(max-width: 768px) 100vw, 40vw"
+                className="object-cover"
+                priority
+              />
+            </div>
+            <Button
+              onClick={onCTAClick}
+              className="hidden h-auto w-full py-3.5 text-base font-semibold md:flex"
+            >
+              {buttonLabel}
+            </Button>
+          </div>
+
+          <div className="flex flex-col gap-5 pt-1">
+            {badge && (
+              <Badge
+                variant={badge.variant}
+                role="status"
+                aria-label={`Ticket status: ${status}`}
+                className="w-fit px-3.5 py-1 text-xs"
+              >
+                {badge.label}
+              </Badge>
+            )}
+
+            <h1
+              className="m-0 font-bold leading-tight text-white"
+              style={{ fontSize: "clamp(20px, 3vw, 32px)" }}
+            >
+              {event.title}
+            </h1>
+
+            <div className="flex items-start gap-3">
+              <Calendar
+                size={20}
+                className="mt-0.5 shrink-0 text-white"
+                aria-hidden
+              />
+              <div>
+                <time
+                  dateTime={firstDate.startTime}
+                  className="block text-base font-medium text-white"
+                >
+                  {fmtIsoDate(firstDate.startTime)}
+                </time>
+                <p className="mt-0.5 text-sm text-white/60">
+                  From {fmtIsoTime(firstDate.startTime)}
+                  {firstDate.endTime
+                    ? ` - ${fmtIsoTime(firstDate.endTime)}`
+                    : ""}
+                </p>
+                {extraDates > 0 && (
+                  <Button
+                    variant="link"
+                    type="button"
+                    className="p-0 text-sm text-primary underline-offset-2"
+                  >
+                    + {extraDates} more date{extraDates > 1 ? "s" : ""}
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <MapPin
+                size={20}
+                className="mt-0.5 shrink-0 text-white"
+                aria-hidden
+              />
+              <address className="not-italic line-clamp-2">
+                <p className="font-semibold text-white">{event.venue.name}</p>
+                <p className="mt-0.5 text-sm text-white/60">
+                  {event.venue.address}, {event.venue.city},
+                </p>
+              </address>
+            </div>
+
+            {event.lowestPrice !== undefined && (
+              <div className="flex items-start gap-3">
+                <Ticket
+                  size={20}
+                  className="mt-0.5 shrink-0 text-white"
+                  aria-hidden
+                />
+                <div>
+                  <p className="font-semibold text-white">Ticket Price</p>
+                  <p
+                    aria-label="Ticket price"
+                    className="mt-0.5 text-sm text-white/60"
+                  >
+                    {formatPrice(
+                      event.lowestPrice,
+                      undefined,
+                      DEFAULT_CURRENCY,
+                    )}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {hasSocialLinks && (
+              <div className="flex items-center gap-3">
+                {socialLinks?.facebook && (
+                  <a
+                    href={socialLinks.facebook}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Facebook page"
+                    className="flex size-10 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20"
+                  >
+                    <Facebook size={20} aria-hidden />
+                  </a>
+                )}
+                {socialLinks?.website && (
+                  <a
+                    href={socialLinks.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Official website"
+                    className="flex size-10 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20"
+                  >
+                    <Globe size={20} aria-hidden />
+                  </a>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div
+          className="block md:hidden"
+          style={{ height: mobileCTAHeight }}
+          aria-hidden
+        />
+      </div>
+
+      <Button
+        ref={mobileCTARef}
+        onClick={onCTAClick}
+        className="fixed bottom-0 left-0 right-0 z-50 w-full bg-primary text-center text-base font-semibold text-primary-foreground md:hidden py-8"
+      >
+        {buttonLabel}
+      </Button>
+    </section>
+  );
+}
