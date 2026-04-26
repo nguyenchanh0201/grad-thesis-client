@@ -44,20 +44,19 @@ function QueuePageContent() {
     };
   }, [polledStatus]);
 
-  // Auto-navigate when countdown reaches 0
   useEffect(() => {
     if (polledStatus !== "ready" || countdown !== 0 || !purchaseUrl) return;
     if (intervalRef.current) clearInterval(intervalRef.current);
-    router.push(purchaseUrl);
+    router.replace(purchaseUrl);
   }, [polledStatus, countdown, purchaseUrl, router]);
 
   const handleRedirect = () => {
     if (intervalRef.current) clearInterval(intervalRef.current);
-    if (purchaseUrl) router.push(purchaseUrl);
+    if (purchaseUrl) router.replace(purchaseUrl);
   };
 
   const handleRejoin = () => {
-    router.push(
+    router.replace(
       eventData?.eventSlug ? `/events/${eventData.eventSlug}` : "/events",
     );
   };

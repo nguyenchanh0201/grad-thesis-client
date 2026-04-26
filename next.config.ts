@@ -17,6 +17,14 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async rewrites() {
+    return [
+      {
+        source: "/events",
+        destination: "/",
+      },
+    ];
+  },
 };
 
 export default nextConfig;

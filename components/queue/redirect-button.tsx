@@ -21,7 +21,7 @@ export function RedirectButton({ status, onRedirect, onRejoin }: Props) {
 
   return (
     <Button
-      className="mt-4 h-[50px] w-full text-[15px] font-medium"
+      className="mt-4 h-12.5 w-full text-[15px] font-medium"
       disabled={isWaiting}
       variant={isExpired ? "outline" : "default"}
       onClick={handleClick}
