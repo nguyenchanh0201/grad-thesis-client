@@ -132,7 +132,6 @@ export default async function RootLayout({
                 { label: "Terms of Use", href: "/terms" },
                 { label: "Accessibility", href: "/accessibility" },
               ]}
-              feedbackUrl="/feedback"
             />
           </LanguageProvider>
         </QueryProvider>

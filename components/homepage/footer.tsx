@@ -1,10 +1,8 @@
 import Link from "next/link";
 import React from "react";
 
-import { buttonVariants } from "@/components/ui/button.variants";
 import { Separator } from "@/components/ui/separator";
-import { cn } from "@/lib/utils";
-import { ChevronDown, MessagesSquare } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
 export interface SocialLink {
   platform: "facebook" | "x" | "youtube" | "instagram" | "blog" | string;
@@ -27,7 +25,6 @@ export interface FooterProps {
   legalText?: React.ReactNode;
   copyrightText?: string;
   bottomLinks?: { label: string; href: string }[];
-  feedbackUrl?: string;
 }
 
 const APPLE_BADGE =
@@ -62,7 +59,6 @@ export function Footer({
   legalText,
   copyrightText,
   bottomLinks = [],
-  feedbackUrl,
 }: FooterProps) {
   const hasAppBadges = appStoreUrl || googlePlayUrl;
 
@@ -191,19 +187,6 @@ export function Footer({
           </div>
         </div>
       </footer>
-
-      {feedbackUrl && (
-        <Link
-          href={feedbackUrl}
-          className={cn(
-            buttonVariants({ variant: "default", size: "xs" }),
-            "fixed bottom-4 right-0 z-50 h-auto rounded-l-sm rounded-r-none px-4 py-1.5 gap-1.5",
-          )}
-        >
-          <MessagesSquare />
-          Feedback
-        </Link>
-      )}
     </>
   );
 }
