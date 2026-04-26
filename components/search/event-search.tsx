@@ -1,14 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import {
-  Calendar,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  MapPin,
-  Search,
-} from "lucide-react";
+import { Calendar, ChevronDown, MapPin, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -62,7 +55,7 @@ export function EventSearch() {
 
   const dateLabel = startDate
     ? endDate
-      ? `${fmtShort(startDate)} – ${fmtShort(endDate)}`
+      ? `${fmtShort(startDate)} - ${fmtShort(endDate)}`
       : fmtShort(startDate)
     : null;
 
@@ -121,7 +114,7 @@ export function EventSearch() {
   return (
     <div className="mx-auto w-full max-w-4xl px-4">
       {/* Desktop */}
-      <div className="hidden items-stretch rounded-sm border border-border bg-background shadow-md sm:flex">
+      <div className="hidden items-stretch rounded-sm border border-border bg-background md:flex">
         {/* Location */}
         <Select value={location} onValueChange={(v) => setLocation(v ?? "")}>
           <SelectTrigger className={cn(FIELD_BASE, "flex-1 px-5 py-3.5")}>

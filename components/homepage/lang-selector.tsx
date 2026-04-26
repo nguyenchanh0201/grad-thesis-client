@@ -24,13 +24,13 @@ export function LangSelector() {
       >
         <SelectTrigger
           className={cn(
-            "border-0 bg-transparent px-5 shadow-none gap-1.5",
+            "border-0 bg-transparent px-2 shadow-none gap-2",
             "focus-visible:ring-0 focus-visible:border-0",
             "[&[aria-expanded=true]_svg:last-child]:rotate-180 [&_svg:last-child]:transition-transform",
           )}
         >
           <FlagIcon code={language.code} className="shrink-0" />
-          <span className="text-sm font-medium text-foreground">
+          <span className="hidden lg:inline text-sm font-medium text-foreground">
             {language.label}
           </span>
         </SelectTrigger>
