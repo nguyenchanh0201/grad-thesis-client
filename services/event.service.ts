@@ -1,6 +1,6 @@
 import { PAGINATION } from "@/core/constants";
-import { apiClient } from "@/lib/api-client";
-import { parseOrThrow } from "@/lib/api-utils";
+import { apiClient } from "@/lib/api/api-client";
+import { parseOrThrow } from "@/lib/api/api-utils";
 import {
   CreateEventDTO,
   EventDetailResult,
