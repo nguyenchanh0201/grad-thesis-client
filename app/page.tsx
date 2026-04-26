@@ -3,11 +3,22 @@
 import { HeroBanner } from "@/components/homepage/hero-banner";
 import EventListing from "@/components/event/event-listing";
 import { mockEvents } from "@/lib/mock/events";
-import CategoryTabBar from "@/components/homepage/category-tab";
+import TabBar, { TabItem } from "@/components/shared/tab-bar";
 import { MessagesSquare } from "lucide-react";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button.variants";
 import { cn } from "@/lib/utils";
+
+const EVENT_CATEGORY_TABS: TabItem[] = [
+  { id: "all", label: "All" },
+  { id: "live-music", label: "Live Music" },
+  { id: "fan-meeting", label: "Fan Meeting" },
+  { id: "merchandise", label: "Merchandise" },
+  { id: "stage-art", label: "Stage & Art" },
+  { id: "sports", label: "Sports" },
+  { id: "conferences", label: "Conferences & Community" },
+  { id: "courses", label: "Courses" },
+];
 
 export default function Home() {
   return (
@@ -15,7 +26,7 @@ export default function Home() {
       <HeroBanner />
 
       <div className="page-container space-y-16 py-12">
-        <CategoryTabBar />
+        <TabBar tabs={EVENT_CATEGORY_TABS} />
 
         {/* Horizontal — trending row */}
         <EventListing

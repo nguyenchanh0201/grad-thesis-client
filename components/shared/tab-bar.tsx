@@ -3,41 +3,30 @@
 import React, { useRef, useState, useEffect } from "react";
 import { Button } from "../ui/button";
 
-export interface CategoryItem {
+export interface TabItem {
   id: string;
   label: string;
   icon?: string;
 }
 
-export interface CategoryTabBarProps {
-  categories?: CategoryItem[];
+export interface TabBarProps {
+  tabs?: TabItem[];
   selected?: string;
   onChange?: (id: string) => void;
   className?: string;
 }
 
-const defaultCategories: CategoryItem[] = [
-  { id: "all", label: "All" },
-  { id: "live-music", label: "Live Music" },
-  { id: "fan-meeting", label: "Fan Meeting" },
-  { id: "merchandise", label: "Merchandise" },
-  { id: "stage-art", label: "Stage & Art" },
-  { id: "sports", label: "Sports" },
-  { id: "conferences", label: "Conferences & Community" },
-  { id: "courses", label: "Courses" },
-];
-
-export default function CategoryTabBar({
-  categories = defaultCategories,
+export default function TabBar({
+  tabs = [],
   selected,
   onChange,
   className = "",
-}: CategoryTabBarProps) {
+}: TabBarProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const activeTabRef = useRef<HTMLButtonElement>(null);
 
   const [internalSelected, setInternalSelected] = useState<string | undefined>(
-    categories?.[0]?.id,
+    tabs?.[0]?.id,
   );
   const activeId = selected !== undefined ? selected : internalSelected;
 
@@ -56,7 +45,7 @@ export default function CategoryTabBar({
     updateScrollState();
     window.addEventListener("resize", updateScrollState);
     return () => window.removeEventListener("resize", updateScrollState);
-  }, [categories]);
+  }, [tabs]);
 
   useEffect(() => {
     if (activeId && activeTabRef.current) {
@@ -104,22 +93,22 @@ export default function CategoryTabBar({
         onScroll={handleScroll}
         className="flex overflow-x-auto scroll-smooth h-full [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
       >
-        {categories.map((cat) => {
-          const isActive = activeId === cat.id;
+        {tabs.map((tab) => {
+          const isActive = activeId === tab.id;
           return (
             <Button
               variant="ghost"
-              key={cat.id}
+              key={tab.id}
               ref={isActive ? activeTabRef : null}
               onClick={() => {
                 if (selected === undefined) {
-                  setInternalSelected(cat.id);
+                  setInternalSelected(tab.id);
                 }
-                onChange?.(cat.id);
+                onChange?.(tab.id);
               }}
               className={`
                 inline-flex items-center whitespace-nowrap h-full relative cursor-pointer
-                px-4 sm:px-6 
+                px-4 sm:px-6
                 text-sm sm:text-base
                 transition-colors duration-150
                 ${
@@ -129,8 +118,8 @@ export default function CategoryTabBar({
                 }
               `}
             >
-              {cat.icon && <span className="mr-2">{cat.icon}</span>}
-              {cat.label}
+              {tab.icon && <span className="mr-2">{tab.icon}</span>}
+              {tab.label}
 
               {isActive && (
                 <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-foreground" />
