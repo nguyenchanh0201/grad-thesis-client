@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import { stripHtml } from "@/lib/html";
 import { buildEventJsonLd, buildBreadcrumbJsonLd } from "@/lib/seo";
-import { mockEventDetail } from "@/lib/mock/events";
+import { mockEventDetail, mockEvents } from "@/lib/mock/events";
 import type { EventDetail } from "@/schemas/event";
 import { EventDetailHeader } from "@/components/event/detail/event-detail-header";
+import { EventDetailSections } from "@/components/event/detail/event-detail-sections";
+import { EventListing } from "@/components/event/event-listing";
 
 export const revalidate = 60;
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://ticketgo.vn";
@@ -71,9 +73,17 @@ export default async function EventDetailPage({ params }: Props) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: buildBreadcrumbJsonLd(event) }}
       />
-      <main>
+
+      <main className="page-container pt-5 pb-20 space-y-5">
         <EventDetailHeader event={event} />
-        {/* EventTabBar, sections assembled in Phase 4–8 */}
+        <EventDetailSections event={event} />
+        <EventListing
+          variant="grid"
+          label="You Might Like"
+          labelBorder="bottom"
+          items={mockEvents}
+          maxItems={8}
+        />
       </main>
     </>
   );

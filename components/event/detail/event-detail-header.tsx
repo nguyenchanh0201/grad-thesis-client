@@ -87,7 +87,7 @@ export function EventDetailHeader({
       <div className="page-container relative z-10 py-8 md:py-12">
         <div className="flex flex-col gap-6 md:grid md:grid-cols-[2fr_3fr] md:gap-10">
           <div className="flex flex-col gap-4">
-            <div className="relative aspect-video overflow-hidden rounded-md md:aspect-auto md:flex-1">
+            <div className="relative aspect-video overflow-hidden rounded-md md:aspect-auto md:flex-1 md:min-h-0">
               <Image
                 src={event.images[0]}
                 alt={`${event.title} - event poster`}

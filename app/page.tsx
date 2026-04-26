@@ -1,13 +1,13 @@
 "use client";
 
 import { HeroBanner } from "@/components/homepage/hero-banner";
-import EventListing from "@/components/event/event-listing";
 import { mockEvents } from "@/lib/mock/events";
 import TabBar, { TabItem } from "@/components/shared/tab-bar";
 import { MessagesSquare } from "lucide-react";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button.variants";
 import { cn } from "@/lib/utils";
+import { EventListing } from "@/components/event/event-listing";
 
 const EVENT_CATEGORY_TABS: TabItem[] = [
   { id: "all", label: "All" },
@@ -26,7 +26,7 @@ export default function Home() {
       <HeroBanner />
 
       <div className="page-container space-y-16 py-12">
-        <TabBar tabs={EVENT_CATEGORY_TABS} />
+        <TabBar tabs={EVENT_CATEGORY_TABS} className="mb-12" />
 
         {/* Horizontal — trending row */}
         <EventListing
