@@ -184,7 +184,7 @@ export function EventSearch() {
       </div>
 
       {/* Mobile */}
-      <div className="flex flex-col gap-2 sm:hidden">
+      <div className="flex flex-col gap-2 md:hidden">
         <div className="flex gap-2">
           {/* Location */}
           <Select value={location} onValueChange={(v) => setLocation(v ?? "")}>
