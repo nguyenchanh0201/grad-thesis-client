@@ -1,4 +1,5 @@
 import type { EventItem } from "@/components/event/event-card";
+import type { EventDetail } from "@/schemas/event";
 
 export const mockEvents: EventItem[] = [
   {
@@ -107,3 +108,64 @@ export const mockEvents: EventItem[] = [
     tag: "HOT",
   },
 ];
+
+export const mockEventDetail: EventDetail = {
+  id: "1",
+  slug: "ravolution-music-festival-2026",
+  title: "Ravolution Music Festival 2026",
+  subtitle: "Đêm nhạc đỉnh cao với những nghệ sĩ hàng đầu Việt Nam",
+  images: [
+    "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=1200&q=80",
+    "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=1200&q=80",
+    "https://images.unsplash.com/photo-1524368535928-5b5e00ddc76b?w=1200&q=80",
+  ],
+  dates: [
+    {
+      date: "2026-06-13",
+      label: "Saturday 13/06/2026",
+      startTime: "2026-06-13T19:00:00+07:00",
+      endTime: "2026-06-13T23:00:00+07:00",
+    },
+    {
+      date: "2026-06-14",
+      label: "Sunday 14/06/2026",
+      startTime: "2026-06-14T19:00:00+07:00",
+      endTime: "2026-06-14T23:00:00+07:00",
+    },
+  ],
+  venue: {
+    name: "Sân Vận Động Quốc Gia Mỹ Đình",
+    address: "Đường Lê Đức Thọ, Mỹ Đình, Nam Từ Liêm",
+    city: "Hà Nội",
+    mapUrl: "https://maps.google.com/?q=My+Dinh+National+Stadium+Hanoi",
+  },
+  organizer: {
+    id: "1",
+    name: "Ravolution Entertainment",
+    logo: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=200&q=80",
+    followerCount: 125000,
+    description:
+      "Ravolution Entertainment là đơn vị tổ chức sự kiện âm nhạc hàng đầu Việt Nam, với hơn 10 năm kinh nghiệm.",
+  },
+  description: `<h2>GIỚI THIỆU VỀ CHƯƠNG TRÌNH</h2>
+<p>Ravolution Music Festival 2026 là sự kiện âm nhạc lớn nhất trong năm, quy tụ hơn 50 nghệ sĩ hàng đầu Việt Nam và quốc tế trên một sân khấu hoành tráng.</p>
+<p>Với hệ thống âm thanh ánh sáng đỉnh cao và không gian sáng tạo độc đáo, đây hứa hẹn là một đêm nhạc không thể quên dành cho tất cả người yêu âm nhạc.</p>`,
+  timeVenueNotes: [
+    "Ngày: Thứ Bảy & Chủ Nhật, 13–14/06/2026",
+    "Giờ: 19:00 – 23:00 (mở cửa từ 17:00)",
+    "Địa điểm: Sân Vận Động Quốc Gia Mỹ Đình, Hà Nội",
+    "Phân loại: 16+ (dưới 16 tuổi cần có người lớn đi kèm)",
+  ],
+  seatMapImage:
+    "https://images.unsplash.com/photo-1578849278619-e73505e9610f?w=1200&q=80",
+  termsAndConditions: `<p>1. Vé đã mua không được hoàn trả hoặc đổi dưới mọi hình thức.</p>
+<p>2. Khán giả cần xuất trình vé (bản cứng hoặc bản mềm) khi vào cổng.</p>
+<p>3. Ban tổ chức có quyền từ chối phục vụ khán giả có hành vi gây rối trật tự.</p>
+<p>4. Cấm mang đồ ăn, thức uống, máy quay chuyên nghiệp vào khu vực sân khấu.</p>
+<p>5. Ban tổ chức không chịu trách nhiệm về tài sản thất lạc trong sự kiện.</p>`,
+  tags: ["music", "festival", "live-music", "ha-noi", "ravolution"],
+  followerCount: 45200,
+  lowestPrice: 500000,
+  performerName: "Various Artists",
+  relatedEvents: mockEvents.slice(0, 4),
+};

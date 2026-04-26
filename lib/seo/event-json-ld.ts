@@ -1,7 +1,7 @@
 import type { EventDetail } from "@/schemas/event";
 import { stripHtml } from "@/lib/html";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://cticket.vn";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://ticketgo.vn";
 
 export function buildEventJsonLd(event: EventDetail): string {
   const firstDate = event.dates[0];
