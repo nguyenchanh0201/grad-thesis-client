@@ -1,4 +1,5 @@
-import { useLanguage, SUPPORTED_LANGUAGES } from "@/lib/lang";
+import { useLanguage } from "@/hooks/use-language";
+import { SUPPORTED_LANGUAGES } from "@/lib/lang";
 import { cn } from "@/lib/utils";
 import {
   Select,
