@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { QueryProvider } from "@/components/providers/query-provider";
+import { LanguageProvider } from "@/components/providers/language-provider";
 import { Header } from "@/components/homepage/header";
 import { Footer } from "@/components/homepage/footer";
+import { getLanguageCookie } from "@/lib/cookies/language";
 import Link from "next/link";
 
 const fontSans = Plus_Jakarta_Sans({
@@ -100,35 +102,39 @@ const linkGroups = [
   },
 ];
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const initialLanguage = await getLanguageCookie();
+
   return (
-    <html lang="en">
+    <html lang={initialLanguage.code}>
       <body className={`${fontSans.variable} ${fontMono.variable} antialiased`}>
         <QueryProvider>
-          <Header />
-          {children}
-          <Footer
-            socialLinks={socialLinks}
-            linkGroups={linkGroups}
-            legalText={
-              <>
-                By continuing past this page, you agree to our{" "}
-                <Link href="/terms">Terms of Use</Link>.
-              </>
-            }
-            copyrightText="© 1999–2026 TicketGo. All rights reserved."
-            bottomLinks={[
-              { label: "Privacy Policy", href: "/privacy" },
-              { label: "Cookie Policy", href: "/cookies" },
-              { label: "Terms of Use", href: "/terms" },
-              { label: "Accessibility", href: "/accessibility" },
-            ]}
-            feedbackUrl="/feedback"
-          />
+          <LanguageProvider initialLanguage={initialLanguage}>
+            <Header />
+            {children}
+            <Footer
+              socialLinks={socialLinks}
+              linkGroups={linkGroups}
+              legalText={
+                <>
+                  By continuing past this page, you agree to our{" "}
+                  <Link href="/terms">Terms of Use</Link>.
+                </>
+              }
+              copyrightText="© 1999–2026 TicketGo. All rights reserved."
+              bottomLinks={[
+                { label: "Privacy Policy", href: "/privacy" },
+                { label: "Cookie Policy", href: "/cookies" },
+                { label: "Terms of Use", href: "/terms" },
+                { label: "Accessibility", href: "/accessibility" },
+              ]}
+              feedbackUrl="/feedback"
+            />
+          </LanguageProvider>
         </QueryProvider>
       </body>
     </html>

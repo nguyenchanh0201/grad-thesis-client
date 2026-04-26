@@ -1,5 +1,3 @@
-"use client";
-
 import { useLanguage, SUPPORTED_LANGUAGES } from "@/lib/lang";
 import { cn } from "@/lib/utils";
 import {

@@ -82,5 +82,5 @@ export const REGEX = {
 } as const;
 
 export const DEFAULT_LANGUAGE = SUPPORTED_LANGUAGES[0];
-export const STORAGE_KEY = "preferred-lang";
+export const LANGUAGE_COOKIE = "preferred-lang";
 export const DEFAULT_CURRENCY = "VND";
