@@ -1,11 +1,10 @@
-import Image from "next/image";
 import Link from "next/link";
 import React from "react";
 
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button.variants";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { ArrowLeft, ChevronDown, MessagesSquare } from "lucide-react";
+import { ChevronDown, MessagesSquare } from "lucide-react";
 
 export interface SocialLink {
   platform: "facebook" | "x" | "youtube" | "instagram" | "blog" | string;
@@ -53,7 +52,7 @@ function LinkList({ links }: { links: FooterLinkGroup["links"] }) {
   );
 }
 
-export default function Footer({
+export function Footer({
   brandName = "TicketGo",
   brandTagline = "Let's connect",
   socialLinks = [],
