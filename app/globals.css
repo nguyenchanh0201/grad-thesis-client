@@ -35,6 +35,11 @@
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) * 1.6);
+
+  --color-footer-bg: oklch(0.1 0.02 264);
+  --color-footer-fg: oklch(0.95 0.01 264);
+  --color-footer-muted: oklch(0.62 0.02 264);
+  --color-footer-border: oklch(1 0 0 / 12%);
 }
 
 :root {
