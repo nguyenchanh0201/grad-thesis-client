@@ -7,7 +7,11 @@ import { NavAuthBar } from "./nav-auth-bar";
 import { EventSearch } from "../search/event-search";
 import { useHeaderSize } from "@/hooks/use-header-size";
 
-export function Header() {
+type HeaderProps = {
+  hideSearchBar?: boolean;
+};
+
+export function Header({ hideSearchBar = false }: HeaderProps) {
   const headerRef = useHeaderSize();
 
   return (
@@ -27,9 +31,11 @@ export function Header() {
         </div>
 
         {/* Search */}
-        <div className="order-3 w-full pb-3 lg:order-2 lg:flex-1 lg:pb-0">
-          <EventSearch />
-        </div>
+        {!hideSearchBar && (
+          <div className="order-3 w-full pb-3 lg:order-2 lg:flex-1 lg:pb-0">
+            <EventSearch />
+          </div>
+        )}
       </div>
     </header>
   );
