@@ -16,7 +16,7 @@ const fontMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CTicket",
+  title: "TicketGo",
   description: "Browse and book tickets for events near you",
 };
 

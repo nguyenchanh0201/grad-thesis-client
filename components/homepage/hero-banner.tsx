@@ -183,7 +183,7 @@ function Slide({ event }: { event: FeaturedEvent }) {
               className: "font-semibold",
             })}
           >
-            Get Tickets
+            Learn More
           </Link>
         </div>
       </div>
