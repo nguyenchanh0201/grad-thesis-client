@@ -28,7 +28,7 @@ export const mockQueueAdmitted = (): QueueStatusData => ({
   status: "ADMITTED",
   position: null,
   estimatedWaitSeconds: null,
-  purchaseUrl: "/buy/mock-event-001/tickets",
+  purchaseUrl: "/buy/ravolution-music-festival-2026/tickets",
   event: MOCK_EVENT,
 });
 

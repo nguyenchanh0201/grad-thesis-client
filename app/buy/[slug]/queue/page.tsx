@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 
 import { CountdownBar } from "@/components/queue/countdown-bar";
 import { EventBanner } from "@/components/queue/event-banner";
@@ -12,13 +12,21 @@ import { QueueStatusMessage } from "@/components/queue/queue-status-message";
 import { RedirectButton } from "@/components/queue/redirect-button";
 import { useQueuePolling } from "@/hooks/use-queue-polling";
 import type { FrontendQueueStatus } from "@/schemas/queue";
+import { setBuySession } from "@/lib/buy-session";
 
 const REDIRECT_COUNTDOWN_SECONDS = 8;
 
 function QueuePageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { slug } = useParams<{ slug: string }>();
   const entryCode = searchParams.get("entryCode");
+
+  useEffect(() => {
+    if (!entryCode) {
+      router.replace(slug ? `/events/${slug}` : "/events");
+    }
+  }, [entryCode, slug, router]);
 
   const {
     status: polledStatus,
@@ -29,11 +37,9 @@ function QueuePageContent() {
   const [countdown, setCountdown] = useState(REDIRECT_COUNTDOWN_SECONDS);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // "ready" is terminal — polling stops there and never reverts
   const displayStatus: FrontendQueueStatus =
     polledStatus === "ready" ? "redirecting" : polledStatus;
 
-  // Tick countdown once admitted
   useEffect(() => {
     if (polledStatus !== "ready") return;
     intervalRef.current = setInterval(() => {
@@ -47,12 +53,16 @@ function QueuePageContent() {
   useEffect(() => {
     if (polledStatus !== "ready" || countdown !== 0 || !purchaseUrl) return;
     if (intervalRef.current) clearInterval(intervalRef.current);
+    setBuySession(slug);
     router.replace(purchaseUrl);
-  }, [polledStatus, countdown, purchaseUrl, router]);
+  }, [polledStatus, countdown, purchaseUrl, router, slug]);
 
   const handleRedirect = () => {
     if (intervalRef.current) clearInterval(intervalRef.current);
-    if (purchaseUrl) router.replace(purchaseUrl);
+    if (purchaseUrl) {
+      setBuySession(slug);
+      router.replace(purchaseUrl);
+    }
   };
 
   const handleRejoin = () => {
@@ -62,6 +72,8 @@ function QueuePageContent() {
   };
 
   const title = eventData?.title ?? "Loading event...";
+
+  if (!entryCode) return null;
 
   return (
     <QueueCard backgroundImageUrl={eventData?.bannerImageUrl}>
