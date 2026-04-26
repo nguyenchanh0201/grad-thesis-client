@@ -72,7 +72,7 @@ export default async function EventDetailPage({ params }: Props) {
         dangerouslySetInnerHTML={{ __html: buildBreadcrumbJsonLd(event) }}
       />
       <main>
-        <EventDetailHeader event={event} status="for-sale" />
+        <EventDetailHeader event={event} />
         {/* EventTabBar, sections assembled in Phase 4–8 */}
       </main>
     </>

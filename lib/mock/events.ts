@@ -1,4 +1,5 @@
 import type { EventItem } from "@/components/event/event-card";
+import { EventStatus } from "@/schemas/event";
 import type { EventDetail } from "@/schemas/event";
 
 export const mockEvents: EventItem[] = [
@@ -167,5 +168,10 @@ export const mockEventDetail: EventDetail = {
   followerCount: 45200,
   lowestPrice: 500000,
   performerName: "Various Artists",
+  status: EventStatus.ON_SALE,
+  socialLinks: {
+    facebook: "https://facebook.com/ravolution",
+    website: "https://ravolution.vn",
+  },
   relatedEvents: mockEvents.slice(0, 4),
 };

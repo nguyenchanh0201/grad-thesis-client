@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { BigIntIdSchema } from "../api";
+import { EventStatus } from "./event.schema";
 
 export const EventDateSchema = z.object({
   date: z.string(),
@@ -40,6 +41,7 @@ export const EventDetailSchema = z.object({
   title: z.string().max(255),
   subtitle: z.string().optional(),
   images: z.array(z.string()).min(1),
+  status: z.nativeEnum(EventStatus),
   dates: z.array(EventDateSchema).min(1),
   venue: EventVenueDetailSchema,
   organizer: EventOrganizerSchema,
@@ -51,6 +53,12 @@ export const EventDetailSchema = z.object({
   followerCount: z.number().int().nonnegative().optional(),
   lowestPrice: z.number().nonnegative().optional(),
   performerName: z.string().optional(),
+  socialLinks: z
+    .object({
+      facebook: z.string().url().optional(),
+      website: z.string().url().optional(),
+    })
+    .optional(),
   relatedEvents: z.array(EventItemSchema),
 });
 

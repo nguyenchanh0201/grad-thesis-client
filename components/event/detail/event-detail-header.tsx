@@ -8,34 +8,33 @@ import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/strings/money";
 import { fmtIsoDate, fmtIsoTime } from "@/lib/date";
 import { DEFAULT_CURRENCY } from "@/core/constants";
+import { EventStatus } from "@/schemas/event";
 import type { EventDetail } from "@/schemas/event";
 
 interface EventDetailHeaderProps {
   event: EventDetail;
-  status?: "for-sale" | "sold-out" | "cancelled" | "postponed";
-  socialLinks?: { facebook?: string; website?: string };
   ctaLabel?: string;
   onCTAClick?: () => void;
   isLoggedIn?: boolean;
 }
 
-const STATUS_BADGE: Record<
-  NonNullable<EventDetailHeaderProps["status"]>,
-  {
-    label: string;
-    variant: "success" | "destructive" | "secondary" | "warning";
-  }
+const STATUS_BADGE: Partial<
+  Record<
+    EventStatus,
+    {
+      label: string;
+      variant: "success" | "destructive" | "secondary" | "warning";
+    }
+  >
 > = {
-  "for-sale": { label: "For Sale", variant: "success" },
-  "sold-out": { label: "Sold Out", variant: "destructive" },
-  cancelled: { label: "Cancelled", variant: "secondary" },
-  postponed: { label: "Postponed", variant: "warning" },
+  [EventStatus.ON_SALE]: { label: "For Sale", variant: "success" },
+  [EventStatus.SOLD_OUT]: { label: "Sold Out", variant: "destructive" },
+  [EventStatus.CANCELLED]: { label: "Cancelled", variant: "secondary" },
+  [EventStatus.UPCOMING]: { label: "Upcoming", variant: "warning" },
 };
 
 export function EventDetailHeader({
   event,
-  status,
-  socialLinks,
   ctaLabel,
   onCTAClick,
   isLoggedIn = false,
@@ -53,13 +52,14 @@ export function EventDetailHeader({
     return () => ro.disconnect();
   }, []);
 
-  const badge = status ? STATUS_BADGE[status] : null;
+  const badge = event.status ? STATUS_BADGE[event.status] : null;
   const firstDate = event.dates[0];
   const extraDates = event.dates.length - 1;
   const buttonLabel = isLoggedIn
     ? "Buy Tickets"
     : (ctaLabel ?? "Login required to purchase tickets");
-  const hasSocialLinks = socialLinks?.facebook || socialLinks?.website;
+  const hasSocialLinks =
+    event.socialLinks?.facebook || event.socialLinks?.website;
 
   return (
     <section
@@ -110,7 +110,7 @@ export function EventDetailHeader({
               <Badge
                 variant={badge.variant}
                 role="status"
-                aria-label={`Ticket status: ${status}`}
+                aria-label={`Ticket status: ${event.status}`}
                 className="w-fit px-3.5 py-1 text-xs"
               >
                 {badge.label}
@@ -194,9 +194,9 @@ export function EventDetailHeader({
 
             {hasSocialLinks && (
               <div className="flex items-center gap-3">
-                {socialLinks?.facebook && (
+                {event.socialLinks?.facebook && (
                   <a
-                    href={socialLinks.facebook}
+                    href={event.socialLinks.facebook}
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label="Facebook page"
@@ -205,9 +205,9 @@ export function EventDetailHeader({
                     <Facebook size={20} aria-hidden />
                   </a>
                 )}
-                {socialLinks?.website && (
+                {event.socialLinks?.website && (
                   <a
-                    href={socialLinks.website}
+                    href={event.socialLinks.website}
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label="Official website"
