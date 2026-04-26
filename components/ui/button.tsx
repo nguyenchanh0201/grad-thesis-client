@@ -25,4 +25,14 @@ function Button({
   );
 }
 
+export type ButtonVariantType =
+  | "default"
+  | "outline"
+  | "secondary"
+  | "ghost"
+  | "destructive"
+  | "link"
+  | null
+  | undefined;
+
 export { Button };
