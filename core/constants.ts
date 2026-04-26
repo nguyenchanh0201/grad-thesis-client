@@ -1,3 +1,5 @@
+import { SUPPORTED_LANGUAGES } from "@/lib/lang";
+
 /**
  * API & Network Constants
  */
@@ -78,3 +80,6 @@ export const REGEX = {
   PASSWORD_STRENGTH:
     /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*])(?=.{8,})/,
 } as const;
+
+export const DEFAULT_LANGUAGE = SUPPORTED_LANGUAGES[0];
+export const STORAGE_KEY = "preferred-lang";
