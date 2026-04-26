@@ -5,25 +5,16 @@ import { useEffect, useRef } from "react";
 import { Logo } from "../shared/logo";
 import { NavAuthBar } from "./nav-auth-bar";
 import { EventSearch } from "../search/event-search";
+import { useHeaderSize } from "@/hooks/use-header-size";
 
 export function Header() {
-  const ref = useRef<HTMLElement>(null);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const observer = new ResizeObserver(() => {
-      document.documentElement.style.setProperty(
-        "--header-height",
-        `${el.offsetHeight}px`,
-      );
-    });
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
+  const headerRef = useHeaderSize();
 
   return (
-    <header ref={ref} className="w-full border-b border-border bg-background">
+    <header
+      ref={headerRef}
+      className="w-full border-b border-border bg-background"
+    >
       <div className="flex flex-wrap items-center py-3">
         {/* Logo */}
         <div className="flex h-14 shrink-0 items-center px-4 lg:h-16 lg:px-6">
