@@ -1,10 +1,11 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, ArrowUpRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EventCard } from "./event-card";
 import type { EventItem } from "./event-card";
+import { Button } from "../ui/button";
 
 interface EventListingProps {
   variant: "grid" | "horizontal" | "vertical";
@@ -95,7 +96,8 @@ function ArrowBtn({
   disabled: boolean;
 }) {
   return (
-    <button
+    <Button
+      variant="outline"
       onClick={onClick}
       disabled={disabled}
       aria-label={direction === "prev" ? "Previous" : "Next"}
@@ -106,7 +108,7 @@ function ArrowBtn({
       ) : (
         <ChevronRight className="h-4 w-4" />
       )}
-    </button>
+    </Button>
   );
 }
 
@@ -120,7 +122,8 @@ function ViewMoreBtn({
   onClick: () => void;
 }) {
   return (
-    <button
+    <Button
+      variant="link"
       onClick={onClick}
       disabled={loading}
       className="flex items-center gap-2 rounded-xl border border-border px-7 py-2.5 text-sm text-foreground transition-colors hover:border-foreground/50 disabled:pointer-events-none disabled:opacity-60"
@@ -130,10 +133,10 @@ function ViewMoreBtn({
       ) : (
         <>
           {label}
-          <ArrowUpRight className="h-4 w-4" />
+          <ArrowRight className="h-4 w-4" />
         </>
       )}
-    </button>
+    </Button>
   );
 }
 
@@ -218,30 +221,41 @@ export default function EventListing({
 
   if (variant === "horizontal") {
     itemList = (
-      <div className="relative overflow-hidden">
-        <div
-          className="flex gap-5"
-          style={{
-            transform: `translateX(${-(currentIndex * step) + dragDelta}px)`,
-            transition:
-              dragDelta !== 0
-                ? "none"
-                : "transform 0.4s cubic-bezier(0.25,0.46,0.45,0.94)",
-          }}
-          onTouchStart={onTouchStart}
-          onTouchMove={onTouchMove}
-          onTouchEnd={onTouchEnd}
-        >
-          {displayedItems.map((item) => (
-            <EventCard
-              key={item.id}
-              item={item}
-              variant="horizontal"
-              className={cardClassName}
-            />
-          ))}
+      <>
+        <div className="relative overflow-hidden">
+          <div
+            className="flex gap-5"
+            style={{
+              transform: `translateX(${-(currentIndex * step) + dragDelta}px)`,
+              transition:
+                dragDelta !== 0
+                  ? "none"
+                  : "transform 0.4s cubic-bezier(0.25,0.46,0.45,0.94)",
+            }}
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+          >
+            {displayedItems.map((item) => (
+              <EventCard
+                key={item.id}
+                item={item}
+                variant="horizontal"
+                className={cardClassName}
+              />
+            ))}
+          </div>
         </div>
-      </div>
+        {onViewMore && (
+          <div className="mt-6 flex justify-center">
+            <ViewMoreBtn
+              label={viewMoreLabel}
+              loading={loadingMore}
+              onClick={onViewMore}
+            />
+          </div>
+        )}
+      </>
     );
   } else if (variant === "grid") {
     itemList = (
@@ -307,7 +321,7 @@ export default function EventListing({
           className,
         )}
       >
-        <div className="flex-shrink-0 self-start pt-2">
+        <div className="shrink-0 self-start pt-2">
           <LabelBlock
             label={label}
             labelBorder={labelBorder}

@@ -20,6 +20,7 @@ export default function Home() {
           labelBorder="top"
           items={mockEvents}
           maxItems={10}
+          onViewMore={() => {}}
         />
 
         {/* Grid — all events */}

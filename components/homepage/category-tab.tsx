@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useState, useEffect } from "react";
+import { Button } from "../ui/button";
 
 export interface CategoryItem {
   id: string;
@@ -84,13 +85,14 @@ export default function CategoryTabBar({
       {canScrollLeft && (
         <div className="absolute left-0 top-0 bottom-0 hidden lg:flex pointer-events-none z-10 w-24">
           <div className="w-10 bg-background flex items-center justify-center pointer-events-auto">
-            <button
+            <Button
+              variant="outline"
               className="w-full h-full flex items-center justify-center text-muted-foreground hover:text-foreground text-lg cursor-pointer transition-colors duration-150"
               onClick={() => scrollBy(-200)}
               aria-label="Scroll left"
             >
               &#8249;
-            </button>
+            </Button>
           </div>
           <div className="w-14 bg-linear-to-r from-background to-transparent" />
         </div>
@@ -105,7 +107,8 @@ export default function CategoryTabBar({
         {categories.map((cat) => {
           const isActive = activeId === cat.id;
           return (
-            <button
+            <Button
+              variant="ghost"
               key={cat.id}
               ref={isActive ? activeTabRef : null}
               onClick={() => {
@@ -132,7 +135,7 @@ export default function CategoryTabBar({
               {isActive && (
                 <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-foreground" />
               )}
-            </button>
+            </Button>
           );
         })}
       </div>
@@ -141,13 +144,14 @@ export default function CategoryTabBar({
         <div className="absolute right-0 top-0 bottom-0 hidden lg:flex pointer-events-none z-10 w-24 justify-end">
           <div className="w-14 bg-linear-to-r from-transparent to-background" />
           <div className="w-10 bg-background flex items-center justify-center pointer-events-auto">
-            <button
+            <Button
+              variant="outline"
               className="w-full h-full flex items-center justify-center text-muted-foreground hover:text-foreground text-lg cursor-pointer transition-colors duration-150"
               onClick={() => scrollBy(200)}
               aria-label="Scroll right"
             >
               &#8250;
-            </button>
+            </Button>
           </div>
         </div>
       )}
