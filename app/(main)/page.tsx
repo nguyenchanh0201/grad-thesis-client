@@ -26,9 +26,13 @@ export default function Home() {
       <HeroBanner />
 
       <div className="page-container space-y-16 py-12">
-        <TabBar tabs={EVENT_CATEGORY_TABS} className="mb-12" />
+        <TabBar
+          autoScroll={false}
+          tabs={EVENT_CATEGORY_TABS}
+          className="mb-12"
+        />
 
-        {/* Horizontal — trending row */}
+        {/* Horizontal */}
         <EventListing
           variant="horizontal"
           label="TRENDING NOW"
@@ -38,7 +42,7 @@ export default function Home() {
           onViewMore={() => {}}
         />
 
-        {/* Grid — all events */}
+        {/* Grid */}
         <EventListing
           variant="grid"
           label="UPCOMING EVENTS"
@@ -48,7 +52,7 @@ export default function Home() {
           onViewMore={() => {}}
         />
 
-        {/* Vertical — featured sidebar style */}
+        {/* Vertical */}
         <EventListing
           variant="vertical"
           label="FEATURED"

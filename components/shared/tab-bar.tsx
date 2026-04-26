@@ -15,12 +15,14 @@ export interface TabBarProps {
   selected?: string;
   onChange?: (id: string) => void;
   className?: string;
+  autoScroll?: boolean;
 }
 
 export default function TabBar({
   tabs = [],
   selected,
   onChange,
+  autoScroll = true,
   className = "",
 }: TabBarProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -48,7 +50,7 @@ export default function TabBar({
   }, [tabs]);
 
   useEffect(() => {
-    if (activeId && activeTabRef.current) {
+    if (autoScroll && activeId && activeTabRef.current) {
       activeTabRef.current.scrollIntoView({
         behavior: "smooth",
         inline: "nearest",
