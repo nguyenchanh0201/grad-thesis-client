@@ -1,0 +1,107 @@
+import type { MyTicket } from "@/schemas/ticket";
+
+export const mockTickets: MyTicket[] = [
+  {
+    id: "t1",
+    invoiceId: "INV-A1B2C3D4",
+    event: {
+      title: "Taylor Swift | The Eras Tour",
+      image:
+        "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=600&q=80",
+      genre: "POP",
+      date: "May 15, 2026",
+      time: "19:00",
+      venue: "SoFi Stadium",
+      city: "Los Angeles",
+      slug: "taylor-swift-eras-tour",
+      eventDate: "2026-05-15",
+    },
+    lineItems: [{ label: "Zone A", quantity: 2, unitPrice: 2450000 }],
+    totalAmount: 4900000,
+    status: "confirmed",
+    purchasedAt: "April 10, 2026",
+  },
+  {
+    id: "t2",
+    invoiceId: "INV-E5F6G7H8",
+    event: {
+      title: "Coldplay Music of the Spheres World Tour",
+      image:
+        "https://images.unsplash.com/photo-1493676304819-0d7a8d026dcf?w=600&q=80",
+      genre: "ROCK",
+      date: "Jun 8, 2026",
+      time: "20:00",
+      venue: "Wembley Stadium",
+      city: "London",
+      slug: "coldplay-music-of-the-spheres",
+      eventDate: "2026-06-08",
+    },
+    lineItems: [
+      { label: "Standing Pit", quantity: 1, unitPrice: 3200000 },
+      { label: "Zone B", quantity: 2, unitPrice: 1800000 },
+    ],
+    totalAmount: 6800000,
+    status: "confirmed",
+    purchasedAt: "April 20, 2026",
+  },
+  {
+    id: "t3",
+    invoiceId: "INV-I9J0K1L2",
+    event: {
+      title: "Beyoncé Renaissance World Tour",
+      image:
+        "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=600&q=80",
+      genre: "R&B",
+      date: "Mar 2, 2026",
+      time: "19:30",
+      venue: "MetLife Stadium",
+      city: "New Jersey",
+      slug: "beyonce-renaissance-world-tour",
+      eventDate: "2026-03-02",
+    },
+    lineItems: [{ label: "Zone VIP", quantity: 2, unitPrice: 4900000 }],
+    totalAmount: 9800000,
+    status: "used",
+    purchasedAt: "January 15, 2026",
+  },
+  {
+    id: "t4",
+    invoiceId: "INV-M3N4O5P6",
+    event: {
+      title: "BLACKPINK BORN PINK World Tour",
+      image:
+        "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=600&q=80",
+      genre: "K-POP",
+      date: "Jan 20, 2026",
+      time: "18:00",
+      venue: "Madison Square Garden",
+      city: "New York",
+      slug: "blackpink-born-pink",
+      eventDate: "2026-01-20",
+    },
+    lineItems: [{ label: "Floor A", quantity: 3, unitPrice: 2100000 }],
+    totalAmount: 6300000,
+    status: "used",
+    purchasedAt: "December 5, 2025",
+  },
+  {
+    id: "t5",
+    invoiceId: "INV-Q7R8S9T0",
+    event: {
+      title: "BTS WORLD TOUR: LOVE YOURSELF",
+      image:
+        "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=600&q=80",
+      genre: "K-POP",
+      date: "Feb 10, 2026",
+      time: "19:00",
+      venue: "Barclays Center",
+      city: "Brooklyn",
+      slug: "bts-love-yourself-tour",
+      eventDate: "2026-02-10",
+    },
+    lineItems: [{ label: "Zone A", quantity: 1, unitPrice: 3500000 }],
+    totalAmount: 3500000,
+    status: "cancelled",
+    purchasedAt: "November 20, 2025",
+  },
+];
