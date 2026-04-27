@@ -1,6 +1,6 @@
 "use client";
 
-import { useCurrentUserOrGuest } from "@/hooks/useCurrentUser";
+import { useCurrentUserOrGuest } from "@/hooks/use-current-user";
 
 export function UserProfile() {
   const { data: user, isLoading, error } = useCurrentUserOrGuest();
