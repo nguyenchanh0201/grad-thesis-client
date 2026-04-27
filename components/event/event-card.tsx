@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
+import { FilledImage } from "../shared/filled-image";
 
 export interface EventItem {
   id: string;
@@ -118,26 +119,6 @@ export function EventCard({ item, variant, className }: EventCardProps) {
           <p className="text-sm font-semibold text-foreground">{item.price}</p>
         )}
       </div>
-    </div>
-  );
-}
-
-function FilledImage({
-  event,
-  onError,
-}: {
-  event: EventItem;
-  onError: () => void;
-}) {
-  return (
-    <div className="relative aspect-square overflow-hidden rounded-sm bg-muted">
-      <Image
-        fill
-        src={event.image}
-        alt={event.title}
-        aria-label={event.title}
-        className="h-full w-full object-cover"
-      />
     </div>
   );
 }
