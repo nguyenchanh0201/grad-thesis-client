@@ -18,11 +18,6 @@ function GuardSkeleton() {
   );
 }
 
-/**
- * Wraps content that requires authentication.
- * Shows a spinner while the session restore attempt is in flight,
- * then redirects to login (preserving the intended path) if unauthenticated.
- */
 export function AuthGuard({
   children,
   redirectTo = "/auth/login",
@@ -31,13 +26,17 @@ export function AuthGuard({
   const router = useRouter();
 
   useEffect(() => {
-    if (!isInitialized || user) return;
+    if (user || !isInitialized) return;
     const intended = window.location.pathname + window.location.search;
     router.replace(`${redirectTo}?redirect=${encodeURIComponent(intended)}`);
-  }, [isInitialized, user, router, redirectTo]);
+  }, [user, isInitialized, router, redirectTo]);
 
+  // User present (from persist or fresh login) — render immediately, no flicker.
+  if (user) return <>{children}</>;
+
+  // No user yet, but initialization is still in progress (refresh call in flight).
   if (!isInitialized) return <GuardSkeleton />;
-  if (!user) return null;
 
-  return <>{children}</>;
+  // No user, initialization done — redirect is firing from the effect.
+  return null;
 }
