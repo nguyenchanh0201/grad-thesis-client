@@ -10,6 +10,8 @@ export type AuthUser = {
   id: string;
   email: string;
   role: "USER" | "ORGANIZER" | "ADMIN" | "SUPER_ADMIN";
+  name?: string;
+  phone?: string;
 };
 
 export type AuthResult = {
@@ -59,6 +61,19 @@ export async function register(
     user: { id: "mock-user-2", email: data.email, role: "USER" },
     accessToken: "mock-access-token",
   };
+}
+
+export type ProfileInput = {
+  name: string;
+  phone: string;
+};
+
+// Mock: replace with apiClient calls when backend is ready
+export async function updateProfile(
+  data: ProfileInput,
+): Promise<Partial<AuthUser>> {
+  await delay(600);
+  return { name: data.name, phone: data.phone };
 }
 
 export function getAuthErrorMessage(error: unknown): string {

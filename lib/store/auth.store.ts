@@ -32,6 +32,7 @@ interface AuthState {
   setAuth: (accessToken: string, user: AuthUser) => void;
   clearAuth: () => void;
   setInitialized: () => void;
+  updateUser: (partial: Partial<AuthUser>) => void;
 }
 
 export const useAuthStore = create<AuthState>()((set) => ({
@@ -47,4 +48,10 @@ export const useAuthStore = create<AuthState>()((set) => ({
     set({ accessToken: null, user: null });
   },
   setInitialized: () => set({ isInitialized: true }),
+  updateUser: (partial) =>
+    set((state) => {
+      const updated = state.user ? { ...state.user, ...partial } : state.user;
+      persistUser(updated);
+      return { user: updated };
+    }),
 }));
