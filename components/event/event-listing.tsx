@@ -46,6 +46,7 @@ export function EventListing({
 }: EventListingProps) {
   const resolvedMax = maxItems ?? DEFAULT_MAX[variant];
 
+  // Horizontal
   if (variant === "horizontal") {
     return (
       <EventCarousel
@@ -67,6 +68,7 @@ export function EventListing({
   const displayedItems = items.slice(0, resolvedMax);
   const isLR = labelPosition === "left" || labelPosition === "right";
 
+  // Grid & Vertical
   const itemList = (
     <>
       <div

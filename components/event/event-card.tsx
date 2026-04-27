@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { ReactNode, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
@@ -32,13 +32,7 @@ export function EventCard({ item, variant, className }: EventCardProps) {
           {imgError ? (
             <div className="h-full w-full bg-muted" />
           ) : (
-            <Image
-              src={item.image}
-              alt={item.title}
-              fill
-              className="h-full w-full object-cover"
-              onError={() => setImgError(true)}
-            />
+            <FilledImage event={item} onError={() => setImgError(true)} />
           )}
         </div>
         {item.genre && (
@@ -60,13 +54,7 @@ export function EventCard({ item, variant, className }: EventCardProps) {
           {imgError ? (
             <div className="h-full w-full bg-muted" />
           ) : (
-            <Image
-              src={item.image}
-              alt={item.title}
-              fill
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-              onError={() => setImgError(true)}
-            />
+            <FilledImage event={item} onError={() => setImgError(true)} />
           )}
           {item.tag && (
             <Badge className="absolute left-2 top-2 text-xs">{item.tag}</Badge>
@@ -109,13 +97,7 @@ export function EventCard({ item, variant, className }: EventCardProps) {
         {imgError ? (
           <div className="h-full w-full bg-muted" />
         ) : (
-          <Image
-            src={item.image}
-            alt={item.title}
-            className="h-full w-full object-cover"
-            fill
-            onError={() => setImgError(true)}
-          />
+          <FilledImage event={item} onError={() => setImgError(true)} />
         )}
       </div>
       <div className="flex min-w-0 flex-col gap-0.5">
@@ -136,6 +118,26 @@ export function EventCard({ item, variant, className }: EventCardProps) {
           <p className="text-sm font-semibold text-foreground">{item.price}</p>
         )}
       </div>
+    </div>
+  );
+}
+
+function FilledImage({
+  event,
+  onError,
+}: {
+  event: EventItem;
+  onError: () => void;
+}) {
+  return (
+    <div className="relative aspect-square overflow-hidden rounded-sm bg-muted">
+      <Image
+        fill
+        src={event.image}
+        alt={event.title}
+        aria-label={event.title}
+        className="h-full w-full object-cover"
+      />
     </div>
   );
 }
