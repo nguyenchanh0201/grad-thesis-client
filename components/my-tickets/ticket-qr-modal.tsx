@@ -28,7 +28,6 @@ export function TicketQRModal({ open, onClose, ticket }: Props) {
     const canvas = qrRef.current;
     if (!canvas) return;
 
-    // Create a new canvas to add some padding/white background for the download image
     const downloadCanvas = document.createElement("canvas");
     const ctx = downloadCanvas.getContext("2d");
     const padding = 40;
@@ -38,11 +37,9 @@ export function TicketQRModal({ open, onClose, ticket }: Props) {
     downloadCanvas.height = size;
 
     if (ctx) {
-      // White background
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, size, size);
 
-      // Draw the QR code
       ctx.drawImage(canvas, padding, padding);
 
       const url = downloadCanvas.toDataURL("image/png");
