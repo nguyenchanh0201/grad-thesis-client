@@ -18,6 +18,17 @@ export function clearBuySession(slug: string) {
   sessionStorage.removeItem(name);
 }
 
+export function getBuySessionDeadline(slug: string): Date | null {
+  try {
+    const name = cookieName(slug);
+    const raw = sessionStorage.getItem(name);
+    if (!raw) return null;
+    return new Date(parseInt(raw, 10) + COOKIE_MAX_AGE * 1000);
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Synchronous check — safe to call during render (useState lazy initializer).
  * Returns false and cleans up if the session is older than COOKIE_MAX_AGE.
