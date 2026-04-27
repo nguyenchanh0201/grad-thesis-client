@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -31,7 +31,13 @@ export const metadata: Metadata = {
     apple: [{ url: "/apple-icon-180x180.png", sizes: "180x180" }],
   },
   manifest: "/manifest.json",
-  themeColor: "#ffffff",
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#000000" },
+  ],
 };
 
 export default async function RootLayout({
