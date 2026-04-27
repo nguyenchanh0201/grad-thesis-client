@@ -1,10 +1,17 @@
 import type { ProfileUser } from "@/schemas/user";
+import { ROLES } from "@/schemas/user/role";
 
 // TODO: Delete later
 const delay = (ms: number) => new Promise<void>((res) => setTimeout(res, ms));
 
 // In-memory mock state — replace with apiClient calls when backend is ready
-let _mock: ProfileUser = { name: "", phone: undefined, profilePic: undefined };
+let _mock: ProfileUser = {
+  name: "",
+  email: "",
+  phone: undefined,
+  profilePic: undefined,
+  role: ROLES["USER"],
+};
 
 export async function fetchUserProfile(): Promise<ProfileUser> {
   await delay(400);

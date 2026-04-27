@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import Image from "next/image";
 import { FilledImage } from "../shared/filled-image";
 
 export interface EventItem {
