@@ -7,7 +7,7 @@ import Link from "next/link";
 import { apiClient } from "@/lib/api/api-client";
 import { validateGoogleState } from "@/lib/auth/google-oauth";
 import { useAuthStore } from "@/lib/store/auth.store";
-import type { AuthUser } from "@/services/auth.service";
+import { AuthUser } from "@/schemas/user";
 
 interface GoogleAuthResponseData {
   data: { accessToken: string; user: AuthUser };

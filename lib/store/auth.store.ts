@@ -1,5 +1,5 @@
+import { AuthUser } from "@/schemas/user";
 import { create } from "zustand";
-import type { AuthUser } from "@/services/auth.service";
 
 const USER_KEY = "APP_NAME_V1_auth_user";
 
@@ -30,7 +30,6 @@ interface AuthState {
   setAuth: (accessToken: string, user: AuthUser) => void;
   clearAuth: () => void;
   setInitialized: () => void;
-  updateUser: (partial: Partial<AuthUser>) => void;
 }
 
 export const useAuthStore = create<AuthState>()((set) => ({
@@ -46,10 +45,4 @@ export const useAuthStore = create<AuthState>()((set) => ({
     set({ accessToken: null, user: null });
   },
   setInitialized: () => set({ isInitialized: true }),
-  updateUser: (partial) =>
-    set((state) => {
-      const updated = state.user ? { ...state.user, ...partial } : state.user;
-      persistUser(updated);
-      return { user: updated };
-    }),
 }));

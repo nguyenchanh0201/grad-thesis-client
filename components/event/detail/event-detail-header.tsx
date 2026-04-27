@@ -10,12 +10,12 @@ import { fmtIsoDate, fmtIsoTime } from "@/lib/date";
 import { DEFAULT_CURRENCY } from "@/core/constants";
 import { EventStatus } from "@/schemas/event";
 import type { EventDetail } from "@/schemas/event";
+import { useUserProfile } from "@/hooks/user-profile";
 
 interface EventDetailHeaderProps {
   event: EventDetail;
   ctaLabel?: string;
   onCTAClick?: () => void;
-  isLoggedIn?: boolean;
 }
 
 const STATUS_BADGE: Partial<
@@ -37,10 +37,11 @@ export function EventDetailHeader({
   event,
   ctaLabel,
   onCTAClick,
-  isLoggedIn = false,
 }: EventDetailHeaderProps) {
   const mobileCTARef = useRef<HTMLButtonElement>(null);
   const [mobileCTAHeight, setMobileCTAHeight] = useState(0);
+  const { data: user } = useUserProfile();
+  const isLoggedIn = user !== null;
 
   useEffect(() => {
     const el = mobileCTARef.current;

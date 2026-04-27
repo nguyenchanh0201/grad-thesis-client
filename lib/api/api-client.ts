@@ -6,8 +6,8 @@ import {
   UnauthorizedError,
 } from "@/core/error";
 import { useAuthStore } from "@/lib/store/auth.store";
-import type { AuthUser } from "@/services/auth.service";
 import { ApiErrorSchema } from "@/schemas/api";
+import { AuthUser } from "@/schemas/user";
 import axios, {
   type AxiosRequestConfig,
   AxiosError,

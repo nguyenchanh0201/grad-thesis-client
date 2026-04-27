@@ -4,7 +4,7 @@ import { useEffect } from "react";
 
 import { refreshClient } from "@/lib/api/api-client";
 import { readPersistedUser, useAuthStore } from "@/lib/store/auth.store";
-import type { AuthUser } from "@/services/auth.service";
+import { AuthUser } from "@/schemas/user";
 
 interface RefreshResponseData {
   data: { accessToken: string; user: AuthUser };

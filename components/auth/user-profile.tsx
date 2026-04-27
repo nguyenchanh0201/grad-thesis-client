@@ -12,8 +12,8 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
-import type { AuthUser } from "@/services/auth.service";
 import { Button } from "../ui/button";
+import { AuthUser } from "@/schemas/user";
 
 const ROLES: Record<AuthUser["role"], string> = {
   USER: "Member",
