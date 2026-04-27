@@ -4,6 +4,7 @@ import type { SelectedTicket } from "@/schemas/seat/types";
 import type { SelectedSeat } from "@/components/ticket-selection/seat-map";
 import { MapType, Zone } from "@/schemas/seat";
 import { DeliveryMethod, RecipientInfo } from "@/schemas/booking";
+import type { DiscountCode, PaymentMethodId } from "@/schemas/payment";
 
 type InitStep1Payload = {
   slug: string;
@@ -22,6 +23,11 @@ type BookingState = {
   recipient: RecipientInfo;
   deliveryMethod: DeliveryMethod;
 
+  // ── Step 3 ──
+  paymentMethodId: PaymentMethodId | null;
+  discountCode: DiscountCode | null;
+  billingRequested: boolean;
+
   initStep1: (payload: InitStep1Payload) => void;
   reset: () => void;
 
@@ -37,6 +43,10 @@ type BookingState = {
 
   updateRecipient: (fields: Partial<RecipientInfo>) => void;
   setDeliveryMethod: (method: DeliveryMethod) => void;
+
+  setPaymentMethodId: (id: PaymentMethodId) => void;
+  setDiscountCode: (code: DiscountCode | null) => void;
+  setBillingRequested: (value: boolean) => void;
 };
 
 const DEFAULT_RECIPIENT: RecipientInfo = {
@@ -56,6 +66,9 @@ const INITIAL_STATE = {
   selectedSeats: [] as SelectedSeat[],
   recipient: DEFAULT_RECIPIENT,
   deliveryMethod: "email_and_physical" as DeliveryMethod,
+  paymentMethodId: null,
+  discountCode: null,
+  billingRequested: false,
 };
 
 export const useBookingStore = create<BookingState>()(
@@ -144,6 +157,11 @@ export const useBookingStore = create<BookingState>()(
         set((s) => ({ recipient: { ...s.recipient, ...fields } })),
 
       setDeliveryMethod: (method) => set({ deliveryMethod: method }),
+
+      // Step 3
+      setPaymentMethodId: (id) => set({ paymentMethodId: id }),
+      setDiscountCode: (code) => set({ discountCode: code }),
+      setBillingRequested: (value) => set({ billingRequested: value }),
     }),
     {
       name: "booking",
@@ -166,6 +184,9 @@ export const useBookingStore = create<BookingState>()(
         selectedSeats,
         recipient,
         deliveryMethod,
+        paymentMethodId,
+        discountCode,
+        billingRequested,
       }) => ({
         slug,
         zones,
@@ -175,6 +196,9 @@ export const useBookingStore = create<BookingState>()(
         selectedSeats,
         recipient,
         deliveryMethod,
+        paymentMethodId,
+        discountCode,
+        billingRequested,
       }),
     },
   ),
