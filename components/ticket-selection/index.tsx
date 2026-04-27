@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { clearBuySession, hasBuySession } from "@/lib/buy-session";
+import { clearBuySession, hasBuySession } from "@/lib/booking/buy-session";
+import { useBookingStore } from "@/lib/store/booking";
 import {
   mockEventDetail,
   mockEventDetailTheater,
@@ -13,10 +14,10 @@ import { ProgressSteps } from "./progress-steps";
 import { TicketPanel } from "./ticket-panel";
 import { TimeoutModal } from "./timeout-modal";
 import { VenueMap } from "./venue-map";
-import { useTicketTimer } from "./use-ticket-timer";
+import { useTicketTimer } from "../../hooks/use-ticket-timer";
 import { generateTheaterConfig, generateStadiumConfig } from "./seat-map";
 import type { SelectedSeat } from "./seat-map";
-import type { SelectedTicket, Zone } from "./types";
+import { Zone } from "@/schemas/seat";
 
 // Zone Mock
 const ZONE_MAP_ZONES: Zone[] = [
@@ -53,7 +54,7 @@ const ZONE_MAP_ZONES: Zone[] = [
   { id: "stage", label: "Stage", price: 0, colorKey: "stage", available: 0 },
 ];
 
-// Threater Mock
+// Theater Mock
 const THEATER_ZONES: Zone[] = [
   {
     id: "vip",
@@ -110,7 +111,6 @@ const STADIUM_ZONES: Zone[] = [
   },
 ];
 
-// Lookup mock event detail by slug — replace with API call when backend is ready
 const MOCK_EVENT_DETAILS = [
   mockEventDetail,
   mockEventDetailTheater,
@@ -127,33 +127,58 @@ type Props = { slug: string };
 
 export function TicketSelection({ slug }: Props) {
   const router = useRouter();
-  const { formatted, timeRemaining, timedOut, reset } = useTicketTimer();
+  const {
+    formatted,
+    timeRemaining,
+    timedOut,
+    reset: timerReset,
+  } = useTicketTimer();
   const panelRef = useRef<HTMLDivElement>(null);
 
-  // TODO: Elimiate later
+  const {
+    tickets,
+    selectedSeats,
+    selectedZoneId,
+    initStep1,
+    setSelectedZoneId,
+    incrementTicket,
+    decrementTicket,
+    deleteTicket,
+    clearTickets,
+    toggleSeat,
+    removeSeat,
+    clearSeats,
+    reset: storeReset,
+  } = useBookingStore();
+
+  // TODO: Eliminate later
   const skipGuard = process.env.NEXT_PUBLIC_SKIP_BUY_SESSION === "true";
   const [authorized] = useState(() => skipGuard || hasBuySession(slug));
 
   useEffect(() => {
-    if (!authorized) router.replace(`/events/${slug}`);
-  }, [authorized, slug, router]);
+    if (!authorized) {
+      storeReset(); // clear persisted state so re-queuing always starts fresh
+      router.replace(`/events/${slug}`);
+    }
+  }, [authorized, slug, router, storeReset]);
 
   const isWarning = timeRemaining <= 60;
 
   const event = useMemo(() => getMockEvent(slug), [slug]);
   const mapType = event.seatMapType ?? "zone";
 
-  const activeZones: Zone[] =
-    mapType === "theater"
-      ? THEATER_ZONES
-      : mapType === "stadium"
-        ? STADIUM_ZONES
-        : ZONE_MAP_ZONES;
+  const activeZones = useMemo<Zone[]>(
+    () =>
+      mapType === "theater"
+        ? THEATER_ZONES
+        : mapType === "stadium"
+          ? STADIUM_ZONES
+          : ZONE_MAP_ZONES,
+    [mapType],
+  );
 
-  // Lazily generate seat configs once
   const theaterConfig = useMemo(() => generateTheaterConfig(), []);
   const stadiumConfig = useMemo(() => generateStadiumConfig(), []);
-
   const seatMapConfig =
     mapType === "theater"
       ? theaterConfig
@@ -161,61 +186,35 @@ export function TicketSelection({ slug }: Props) {
         ? stadiumConfig
         : undefined;
 
-  // Zone state
-  const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
-  const [tickets, setTickets] = useState<SelectedTicket[]>([]);
+  // Seed store with slug + zones on mount; resets selection if slug changed
+  useEffect(() => {
+    initStep1({ slug, zones: activeZones, mapType });
+  }, [slug, activeZones, mapType, initStep1]);
 
-  // Seat state
-  const [selectedSeats, setSelectedSeats] = useState<SelectedSeat[]>([]);
+  const handleZoneClick = useCallback(
+    (zoneId: string) => {
+      setSelectedZoneId(zoneId);
+      document
+        .getElementById(`zone-row-${zoneId}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    },
+    [setSelectedZoneId],
+  );
 
-  // Zone handler
-  const handleZoneClick = useCallback((zoneId: string) => {
-    setSelectedZoneId(zoneId);
-    document
-      .getElementById(`zone-row-${zoneId}`)
-      ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  }, []);
+  const handleIncrement = useCallback(
+    (zoneId: string) => incrementTicket(zoneId, MAX_PER_ZONE),
+    [incrementTicket],
+  );
 
-  const handleIncrement = useCallback((zoneId: string) => {
-    setTickets((prev) => {
-      const existing = prev.find((t) => t.zoneId === zoneId);
-      const zone = ZONE_MAP_ZONES.find((z) => z.id === zoneId);
-      if (!zone) return prev;
-      if (existing) {
-        if (
-          existing.quantity >= MAX_PER_ZONE ||
-          existing.quantity >= zone.available
-        )
-          return prev;
-        return prev.map((t) =>
-          t.zoneId === zoneId ? { ...t, quantity: t.quantity + 1 } : t,
-        );
-      }
-      return [...prev, { zoneId, quantity: 1 }];
-    });
-  }, []);
+  const handleDecrement = useCallback(
+    (zoneId: string) => decrementTicket(zoneId),
+    [decrementTicket],
+  );
 
-  const handleDecrement = useCallback((zoneId: string) => {
-    setTickets((prev) => {
-      const existing = prev.find((t) => t.zoneId === zoneId);
-      if (!existing || existing.quantity <= 0) return prev;
-      if (existing.quantity === 1)
-        return prev.filter((t) => t.zoneId !== zoneId);
-      return prev.map((t) =>
-        t.zoneId === zoneId ? { ...t, quantity: t.quantity - 1 } : t,
-      );
-    });
-  }, []);
-
-  // Seat handler
-  const handleSeatToggle = useCallback((seat: SelectedSeat) => {
-    setSelectedSeats((prev) => {
-      const exists = prev.find((s) => s.id === seat.id);
-      if (exists) return prev.filter((s) => s.id !== seat.id);
-      if (prev.length >= MAX_SEATS) return prev;
-      return [...prev, seat];
-    });
-  }, []);
+  const handleSeatToggle = useCallback(
+    (seat: SelectedSeat) => toggleSeat(seat, MAX_SEATS),
+    [toggleSeat],
+  );
 
   const handleContinue = () => {
     router.replace(`/buy/${slug}/info`);
@@ -223,11 +222,8 @@ export function TicketSelection({ slug }: Props) {
 
   const handleTimeoutOk = () => {
     clearBuySession(slug);
-    reset();
-    setTickets([]);
-    setSelectedSeats([]);
-    setSelectedZoneId(null);
-
+    timerReset();
+    storeReset();
     router.replace(`/events/${slug}`);
   };
 
@@ -253,7 +249,6 @@ export function TicketSelection({ slug }: Props) {
         }
         eventLocation={`${event.venue.name}, ${event.venue.city}`}
       />
-
       {/* Two-panel layout */}
       <div className="flex flex-1 flex-col md:flex-row">
         {/* Left: venue map */}
@@ -282,22 +277,16 @@ export function TicketSelection({ slug }: Props) {
             onContinue={handleContinue}
             onChangeDate={() => {}}
             mode={isSeatMode ? "seat" : "zone"}
-            // zone mode
             tickets={tickets}
             selectedZoneId={selectedZoneId}
             onIncrement={handleIncrement}
             onDecrement={handleDecrement}
-            onDeleteTicket={(zoneId) =>
-              setTickets((p) => p.filter((t) => t.zoneId !== zoneId))
-            }
-            onDeleteAll={() => setTickets([])}
+            onDeleteTicket={deleteTicket}
+            onDeleteAll={clearTickets}
             onResetZone={() => setSelectedZoneId(null)}
-            // seat mode
             selectedSeats={selectedSeats}
-            onSeatRemove={(id) =>
-              setSelectedSeats((p) => p.filter((s) => s.id !== id))
-            }
-            onSeatClearAll={() => setSelectedSeats([])}
+            onSeatRemove={removeSeat}
+            onSeatClearAll={clearSeats}
           />
         </div>
       </div>

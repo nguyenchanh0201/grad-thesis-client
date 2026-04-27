@@ -1,8 +1,7 @@
 "use client";
 
-import { ArrowLeft } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { BackButton } from "../shared/back-button";
 
 const STEPS = [
   { label: "Select Tickets", num: 1 },
@@ -23,18 +22,9 @@ export function ProgressSteps({
   isWarning,
   backHref,
 }: Props) {
-  const router = useRouter();
-
   return (
     <div className="flex items-center justify-between border-b border-border bg-background px-4 py-3 sm:px-6">
-      <button
-        onClick={() => (backHref ? router.push(backHref) : router.back())}
-        aria-label="Go back"
-        className="flex items-center gap-1.5 text-sm text-muted-foreground transition hover:text-foreground"
-      >
-        <ArrowLeft className="size-4" />
-        <span className="hidden sm:inline">Back</span>
-      </button>
+      <BackButton backHref={backHref} title="Go back" />
 
       <ol className="flex items-center gap-2 sm:gap-4" role="list">
         {STEPS.map(({ label, num }, idx) => {

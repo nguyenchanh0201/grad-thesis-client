@@ -5,6 +5,7 @@ import { useState } from "react";
 import { SeatCell, getZoneColor } from "./seat-cell";
 import type { StadiumMapConfig, StadiumSection, SelectedSeat } from "./types";
 import { Button } from "@/components/ui/button";
+import { BackButton } from "@/components/shared/back-button";
 
 const ZONE_COLOR_KEYS: Record<string, string> = {
   "s-vip-front": "a",
@@ -217,15 +218,7 @@ function SectionDetail({
     <div className="flex flex-col gap-3">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Button
-          variant="link"
-          onClick={onBack}
-          className="flex items-center gap-1 text-sm text-muted-foreground transition hover:text-foreground"
-          aria-label="Back to overview"
-        >
-          <ArrowLeft className="size-4" />
-          Overview
-        </Button>
+        <BackButton title="Back to overview" onBack={onBack} />
         <div className="flex items-center gap-2">
           <span
             className="size-3 rounded-sm"

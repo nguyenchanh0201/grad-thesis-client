@@ -26,8 +26,7 @@ export function useTicketTimer() {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    if (timedOut) return; // already timed out, don't start interval
-
+    if (timedOut) return;
     intervalRef.current = setInterval(() => {
       setTimeRemaining((prev) => {
         if (prev <= 1) {

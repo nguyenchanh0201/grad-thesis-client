@@ -4,9 +4,10 @@ import { ChevronDown, ChevronUp, Minus, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { Zone, SelectedTicket } from "./types";
+import type { SelectedTicket } from "../../schemas/seat/types";
 import type { SelectedSeat } from "./seat-map";
 import { fmt } from "@/lib/strings/money";
+import { Zone, ZoneMode } from "@/schemas/seat";
 
 type Props = {
   zones: Zone[];
@@ -14,7 +15,7 @@ type Props = {
   onContinue: () => void;
   onChangeDate: () => void;
   // Zone mode
-  mode?: "zone" | "seat";
+  mode?: ZoneMode;
   tickets?: SelectedTicket[];
   selectedZoneId?: string | null;
   onIncrement?: (zoneId: string) => void;
@@ -74,7 +75,6 @@ export function TicketPanel({
         </Button>
       </div>
 
-      {/* ── Zone mode ── */}
       {mode === "zone" && (
         <>
           {selectedZoneId && (
@@ -164,7 +164,6 @@ export function TicketPanel({
         </>
       )}
 
-      {/* ── Seat mode ── */}
       {mode === "seat" && (
         <div className="flex-1 overflow-y-auto">
           {selectedSeats.length === 0 ? (
@@ -192,13 +191,14 @@ export function TicketPanel({
                         VND
                       </p>
                     </div>
-                    <button
+                    <Button
+                      variant="ghost"
                       onClick={() => onSeatRemove?.(seat.id)}
                       aria-label={`Remove seat ${seat.label}`}
                       className="text-muted-foreground transition hover:text-destructive"
                     >
                       <Trash2 className="size-4" />
-                    </button>
+                    </Button>
                   </div>
                 );
               })}
@@ -207,10 +207,19 @@ export function TicketPanel({
         </div>
       )}
 
-      {/* Summary (shared) */}
+      {/* Summary */}
       {totalQty > 0 && (
         <div className="border-t border-border bg-muted/30">
-          <button
+          <Button
+            variant="link"
+            onClick={mode === "seat" ? onSeatClearAll : onDeleteAll}
+            className="w-full flex justify-end pr-5 text-sm text-muted-foreground underline-offset-2 hover:text-destructive hover:underline"
+          >
+            Clear all
+          </Button>
+
+          <Button
+            variant="outline"
             onClick={() => setSummaryOpen((v) => !v)}
             className="flex w-full items-center justify-between px-5 py-3 text-sm font-semibold"
             aria-expanded={summaryOpen}
@@ -225,7 +234,7 @@ export function TicketPanel({
             ) : (
               <ChevronUp className="size-4 text-muted-foreground" />
             )}
-          </button>
+          </Button>
 
           {summaryOpen && (
             <div className="space-y-1 px-5 pb-3">
@@ -239,19 +248,20 @@ export function TicketPanel({
                       className="flex items-center justify-between text-sm"
                     >
                       <span className="truncate text-foreground">
-                        {zone.label} × {t.quantity}
+                        {zone.label} x {t.quantity}
                       </span>
                       <div className="flex shrink-0 items-center gap-3 pl-4">
                         <span className="text-muted-foreground">
                           {fmt(zone.price * t.quantity)} VND
                         </span>
-                        <button
+                        <Button
+                          variant="ghost"
                           onClick={() => onDeleteTicket?.(t.zoneId)}
                           aria-label={`Remove ${zone.label}`}
                           className="text-muted-foreground transition hover:text-destructive"
                         >
                           <Trash2 className="size-3.5" />
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   );
@@ -261,13 +271,6 @@ export function TicketPanel({
                 <span>Subtotal</span>
                 <span>{fmt(totalPrice)} VND</span>
               </div>
-
-              <button
-                onClick={mode === "seat" ? onSeatClearAll : onDeleteAll}
-                className="text-xs text-muted-foreground underline-offset-2 hover:text-destructive hover:underline"
-              >
-                Clear all
-              </button>
             </div>
           )}
         </div>

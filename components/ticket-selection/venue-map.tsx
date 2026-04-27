@@ -4,7 +4,7 @@ import { ChevronDown, ChevronUp, MapPin } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
 import { SeatMap } from "./seat-map";
-import type { Zone } from "./types";
+import type { Zone } from "../../schemas/seat/types";
 import type {
   TheaterMapConfig,
   StadiumMapConfig,
