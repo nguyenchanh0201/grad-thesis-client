@@ -2,12 +2,7 @@
 
 import { TheaterMap } from "./theater-map";
 import { StadiumMap } from "./stadium-map";
-import type {
-  SeatMapConfig,
-  TheaterMapConfig,
-  StadiumMapConfig,
-  SelectedSeat,
-} from "./types";
+import type { TheaterMapConfig, StadiumMapConfig, SelectedSeat } from "./types";
 
 type Props = {
   config: TheaterMapConfig | StadiumMapConfig;

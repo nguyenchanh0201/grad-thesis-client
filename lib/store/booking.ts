@@ -1,22 +1,9 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import type { Zone, SelectedTicket } from "@/schemas/seat/types";
+import type { SelectedTicket } from "@/schemas/seat/types";
 import type { SelectedSeat } from "@/components/ticket-selection/seat-map";
-import { MapType } from "@/schemas/seat";
-
-// ── Shared types ─────────────────────────────────────────────────────────────
-
-export type RecipientInfo = {
-  fullName: string;
-  email: string;
-  phoneCountryCode: string;
-  phoneNumber: string;
-  idPassport: string;
-};
-
-export type DeliveryMethod = "email_and_physical";
-
-// ── Store shape ───────────────────────────────────────────────────────────────
+import { MapType, Zone } from "@/schemas/seat";
+import { DeliveryMethod, RecipientInfo } from "@/schemas/booking";
 
 type InitStep1Payload = {
   slug: string;
@@ -25,7 +12,6 @@ type InitStep1Payload = {
 };
 
 type BookingState = {
-  // ── Step 1 ──
   slug: string | null;
   zones: Zone[];
   mapType: MapType;
@@ -33,33 +19,25 @@ type BookingState = {
   tickets: SelectedTicket[];
   selectedSeats: SelectedSeat[];
 
-  // ── Step 2 ──
   recipient: RecipientInfo;
   deliveryMethod: DeliveryMethod;
 
-  // ── Actions: session ──
-  /** Call on TicketSelection mount. Resets selection only when slug changes. */
   initStep1: (payload: InitStep1Payload) => void;
   reset: () => void;
 
-  // ── Actions: zone mode ──
   setSelectedZoneId: (id: string | null) => void;
   incrementTicket: (zoneId: string, maxPerZone: number) => void;
   decrementTicket: (zoneId: string) => void;
   deleteTicket: (zoneId: string) => void;
   clearTickets: () => void;
 
-  // ── Actions: seat mode ──
   toggleSeat: (seat: SelectedSeat, maxSeats: number) => void;
   removeSeat: (seatId: string) => void;
   clearSeats: () => void;
 
-  // ── Actions: step 2 ──
   updateRecipient: (fields: Partial<RecipientInfo>) => void;
   setDeliveryMethod: (method: DeliveryMethod) => void;
 };
-
-// ── Defaults ──────────────────────────────────────────────────────────────────
 
 const DEFAULT_RECIPIENT: RecipientInfo = {
   fullName: "",
@@ -80,8 +58,6 @@ const INITIAL_STATE = {
   deliveryMethod: "email_and_physical" as DeliveryMethod,
 };
 
-// ── Store ─────────────────────────────────────────────────────────────────────
-
 export const useBookingStore = create<BookingState>()(
   persist(
     (set) => ({
@@ -95,7 +71,6 @@ export const useBookingStore = create<BookingState>()(
             slug,
             zones,
             mapType,
-            // Preserve ongoing selection if returning to the same event
             selectedZoneId: slugChanged ? null : s.selectedZoneId,
             tickets: slugChanged ? [] : s.tickets,
             selectedSeats: slugChanged ? [] : s.selectedSeats,

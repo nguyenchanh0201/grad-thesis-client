@@ -1,9 +1,16 @@
-import type { Zone, SelectedTicket } from "@/schemas/seat/types";
+import type { SelectedTicket } from "@/schemas/seat/types";
 import type { SelectedSeat } from "@/components/ticket-selection/seat-map";
-import { MapType } from "../seat";
+import { MapType, Zone } from "../seat";
 
-// RecipientInfo and DeliveryMethod are defined in and exported from the store
-export type { RecipientInfo, DeliveryMethod } from "@/lib/store/booking";
+export type RecipientInfo = {
+  fullName: string;
+  email: string;
+  phoneCountryCode: string;
+  phoneNumber: string;
+  idPassport: string;
+};
+
+export type DeliveryMethod = "email_and_physical";
 
 export type Step1Snapshot = {
   tickets: SelectedTicket[];

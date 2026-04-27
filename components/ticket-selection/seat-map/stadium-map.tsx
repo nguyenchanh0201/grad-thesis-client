@@ -1,10 +1,8 @@
 "use client";
 
-import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { SeatCell, getZoneColor } from "./seat-cell";
 import type { StadiumMapConfig, StadiumSection, SelectedSeat } from "./types";
-import { Button } from "@/components/ui/button";
 import { BackButton } from "@/components/shared/back-button";
 
 const ZONE_COLOR_KEYS: Record<string, string> = {
@@ -210,8 +208,6 @@ function SectionDetail({
   onSeatToggle,
   onBack,
 }: DetailProps) {
-  const colorKey = ZONE_COLOR_KEYS[section.zoneId] ?? "d";
-  const { bg } = getZoneColor(section.zoneId);
   const seatCount = section.rows[0]?.seats.length ?? 0;
 
   return (
@@ -220,11 +216,7 @@ function SectionDetail({
       <div className="flex items-center gap-3">
         <BackButton title="Back to overview" onBack={onBack} />
         <div className="flex items-center gap-2">
-          <span
-            className="size-3 rounded-sm"
-            style={{ background: bg }}
-            aria-hidden
-          />
+          <span className="bg-background size-3 rounded-sm" aria-hidden />
           <span className="text-sm font-semibold">Section {section.label}</span>
         </div>
       </div>
