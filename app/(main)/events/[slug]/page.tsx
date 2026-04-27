@@ -11,7 +11,8 @@ export const revalidate = 60;
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://ticketgo.vn";
 type Props = { params: Promise<{ slug: string }> };
 
-async function fetchEventDetail(/*slug: string*/): Promise<EventDetail> {
+async function fetchEventDetail(slug: string): Promise<EventDetail> {
+  console.log(slug);
   return mockEventDetail;
 }
 

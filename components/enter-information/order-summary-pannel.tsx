@@ -17,6 +17,7 @@ type Props = {
   selectedSeats: SelectedSeat[];
   mapType: MapType;
   recipient: RecipientInfo;
+  discount?: { code: string; amount: number } | null;
 };
 
 type SeatRow = { label: string; quantity: number; unitPrice: number };
@@ -62,9 +63,13 @@ export function OrderSummaryPanel({
   selectedSeats,
   mapType,
   recipient,
+  discount,
 }: Props) {
   const seatRows = buildSeatRows(tickets, selectedSeats, zones, mapType);
-  const total = computeTotal(seatRows);
+  const subtotal = computeTotal(seatRows);
+  const total = discount?.amount
+    ? Math.max(0, subtotal - discount.amount)
+    : subtotal;
 
   return (
     <div className="flex flex-col">
@@ -118,6 +123,20 @@ export function OrderSummaryPanel({
                 </span>
               )}
             </p>
+            {recipient.phoneNumber && (
+              <p>
+                <span className="text-muted-foreground">Phone: </span>
+                <span className="text-foreground">
+                  {recipient.phoneCountryCode} {recipient.phoneNumber}
+                </span>
+              </p>
+            )}
+            {recipient.idPassport && (
+              <p>
+                <span className="text-muted-foreground">ID / Passport: </span>
+                <span className="text-foreground">{recipient.idPassport}</span>
+              </p>
+            )}
           </div>
           <div className="space-y-1">
             <p className="font-medium text-foreground">
@@ -168,9 +187,15 @@ export function OrderSummaryPanel({
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">Subtotal</span>
             <span className="font-medium text-foreground">
-              {fmt(total)} VND
+              {fmt(subtotal)} VND
             </span>
           </div>
+          {discount?.amount ? (
+            <div className="flex items-center justify-between text-green-600">
+              <span>Discount ({discount.code})</span>
+              <span className="font-medium">−{fmt(discount.amount)} VND</span>
+            </div>
+          ) : null}
           <div className="flex items-center justify-between border-t border-border pt-2 font-semibold">
             <span>Total</span>
             <span className="text-primary">{fmt(total)} VND</span>
