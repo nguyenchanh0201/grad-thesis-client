@@ -1,9 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 import { AuthCard } from "@/components/auth/auth-card";
@@ -11,23 +9,21 @@ import { InputField } from "@/components/auth/input-field";
 import { GoogleButton } from "@/components/auth/google-button";
 import { AuthFooterLink } from "@/components/auth/auth-footer-link";
 import { RegisterSchema, type RegisterInput } from "@/schemas/auth";
-import {
-  register as registerUser,
-  getAuthErrorMessage,
-} from "@/services/auth.service";
+import { getAuthErrorMessage } from "@/services/auth.service";
+import { useRegister } from "@/hooks/use-auth";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 
 export default function RegisterPage() {
-  const router = useRouter();
-  const [authError, setAuthError] = useState<string | null>(null);
+  const { mutate: registerUser, isPending, error } = useRegister();
+  const authError = error ? getAuthErrorMessage(error) : null;
 
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<RegisterInput>({
     resolver: zodResolver(RegisterSchema),
     defaultValues: {
@@ -38,14 +34,8 @@ export default function RegisterPage() {
     },
   });
 
-  const onSubmit = async (data: RegisterInput) => {
-    setAuthError(null);
-    try {
-      await registerUser({ email: data.email, password: data.password });
-      router.push("/");
-    } catch (error) {
-      setAuthError(getAuthErrorMessage(error));
-    }
+  const onSubmit = (data: RegisterInput) => {
+    registerUser({ email: data.email, password: data.password });
   };
 
   return (
@@ -130,8 +120,8 @@ export default function RegisterPage() {
 
           <Button
             variant="default"
-            disabled={isSubmitting}
-            className="w-full py-6 rounded-xl"
+            disabled={isPending}
+            className="w-full py-6"
           >
             Continue
           </Button>
@@ -141,7 +131,7 @@ export default function RegisterPage() {
         <p className="text-shadow-muted-foreground text-center">
           Or register with
         </p>
-        <GoogleButton disabled={isSubmitting} />
+        <GoogleButton disabled={isPending} />
 
         <AuthFooterLink
           text="Already have an account?"

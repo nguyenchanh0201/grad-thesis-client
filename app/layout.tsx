@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
+import { AuthProvider } from "@/components/providers/auth-provider";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { LanguageProvider } from "@/components/providers/language-provider";
 import { getLanguageCookie } from "@/lib/cookies/language";
@@ -47,9 +48,11 @@ export default async function RootLayout({
     >
       <body className={`${geist.variable} ${fontMono.variable} antialiased`}>
         <QueryProvider>
-          <LanguageProvider initialLanguage={initialLanguage}>
-            {children}
-          </LanguageProvider>
+          <AuthProvider>
+            <LanguageProvider initialLanguage={initialLanguage}>
+              {children}
+            </LanguageProvider>
+          </AuthProvider>
         </QueryProvider>
       </body>
     </html>

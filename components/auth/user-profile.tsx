@@ -1,72 +1,117 @@
 "use client";
 
-import { useCurrentUserOrGuest } from "@/hooks/use-current-user";
+import { useState } from "react";
+import { ChevronDown, LogOut, Settings, Ticket } from "lucide-react";
+import Link from "next/link";
+
+import { useLogout } from "@/hooks/use-auth";
+import { useAuthStore } from "@/lib/store/auth.store";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Separator } from "@/components/ui/separator";
+import type { AuthUser } from "@/services/auth.service";
+import { Button } from "../ui/button";
+
+const ROLE_LABELS: Record<AuthUser["role"], string> = {
+  USER: "Member",
+  ORGANIZER: "Organizer",
+  ADMIN: "Admin",
+  SUPER_ADMIN: "Super Admin",
+};
+
+function getInitials(email: string): string {
+  return email.slice(0, 2).toUpperCase();
+}
 
 export function UserProfile() {
-  const { data: user, isLoading, error } = useCurrentUserOrGuest();
+  const user = useAuthStore((s) => s.user);
+  const [open, setOpen] = useState(false);
+  const logout = useLogout();
 
-  if (isLoading) {
-    return (
-      <div
-        data-agent-type="state-display"
-        data-entity-type="user-profile"
-        data-state-keys="loading"
-        className="flex items-center gap-3 rounded-xl border border-border/60 bg-background/80 px-3 py-2"
-      >
-        <span className="h-8 w-8 animate-pulse rounded-full bg-muted" />
-        <div className="space-y-1">
-          <div className="h-3 w-24 animate-pulse rounded bg-muted" />
-          <div className="h-2 w-16 animate-pulse rounded bg-muted" />
-        </div>
-      </div>
-    );
-  }
+  if (!user) return null;
 
-  if (error || !user) {
-    return (
-      <div
-        data-agent-type="state-display"
-        data-entity-type="user-profile"
-        data-state-keys="error"
-        className="rounded-xl border border-border/60 bg-background/80 px-3 py-2 text-sm text-muted-foreground"
-      >
-        Guest mode
-      </div>
-    );
-  }
+  const initials = getInitials(user.email);
+
+  const handleLogout = () => {
+    setOpen(false);
+    logout.mutate();
+  };
 
   return (
-    <div
-      data-agent-type="state-display"
-      data-entity-type="user-profile"
-      data-entity-id={user.id}
-      data-state-keys="id,role"
-      className="flex items-center gap-3 rounded-xl border border-border/60 bg-background/80 px-3 py-2"
-    >
-      <div
-        data-agent-type="image"
-        data-entity-type="user-avatar"
-        className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/15 text-xs font-semibold text-primary"
-        aria-hidden="true"
-      >
-        {user.id.slice(0, 2).toUpperCase()}
-      </div>
-      <div className="leading-tight">
-        <div
-          data-agent-type="text"
-          data-entity-type="user-name"
-          className="text-sm font-medium text-foreground"
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="ghost"
+          className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label="Open account menu"
+          aria-expanded={open}
         >
-          {user.id}
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/15 text-xs font-semibold text-primary select-none">
+            {initials}
+          </span>
+          <ChevronDown
+            className="h-3.5 w-3.5 text-muted-foreground transition-transform duration-200"
+            style={{ transform: open ? "rotate(180deg)" : undefined }}
+          />
+        </Button>
+      </PopoverTrigger>
+
+      <PopoverContent align="end" sideOffset={8} className="w-60 p-0 shadow-lg">
+        {/* Account header */}
+        <div className="px-4 py-3">
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-sm font-semibold text-primary">
+              {initials}
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-foreground">
+                {user.email}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {ROLE_LABELS[user.role]}
+              </p>
+            </div>
+          </div>
         </div>
-        <div
-          data-agent-type="label"
-          data-entity-type="user-role"
-          className="text-xs text-muted-foreground"
-        >
-          {user.role}
+
+        <Separator />
+
+        <nav className="py-1" aria-label="Account menu">
+          <Link
+            href="/my-tickets"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-3 px-4 py-2.5 text-sm text-foreground transition-colors hover:bg-muted/60"
+          >
+            <Ticket className="h-4 w-4 shrink-0 text-muted-foreground" />
+            My Tickets
+          </Link>
+          <Link
+            href="/account/settings"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-3 px-4 py-2.5 text-sm text-foreground transition-colors hover:bg-muted/60"
+          >
+            <Settings className="h-4 w-4 shrink-0 text-muted-foreground" />
+            Account Settings
+          </Link>
+        </nav>
+
+        <Separator />
+
+        <div className="py-1">
+          <Button
+            variant="outline"
+            onClick={handleLogout}
+            disabled={logout.isPending}
+            className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-destructive transition-colors hover:bg-destructive/8 disabled:opacity-50"
+          >
+            <LogOut className="h-4 w-4 shrink-0" />
+            {logout.isPending ? "Signing out…" : "Sign out"}
+          </Button>
         </div>
-      </div>
-    </div>
+      </PopoverContent>
+    </Popover>
   );
 }

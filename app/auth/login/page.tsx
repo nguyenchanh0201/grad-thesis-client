@@ -1,9 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 import { AuthCard } from "@/components/auth/auth-card";
@@ -11,33 +9,28 @@ import { InputField } from "@/components/auth/input-field";
 import { GoogleButton } from "@/components/auth/google-button";
 import { AuthFooterLink } from "@/components/auth/auth-footer-link";
 import { LoginSchema, type LoginInput } from "@/schemas/auth";
-import { login, getAuthErrorMessage } from "@/services/auth.service";
+import { getAuthErrorMessage } from "@/services/auth.service";
+import { useLogin } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 
 export default function LoginPage() {
-  const router = useRouter();
-  const [authError, setAuthError] = useState<string | null>(null);
+  const { mutate: login, isPending, error } = useLogin();
+  const authError = error ? getAuthErrorMessage(error) : null;
 
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<LoginInput>({
     resolver: zodResolver(LoginSchema),
     defaultValues: { email: "", password: "", rememberMe: false },
   });
 
-  const onSubmit = async (data: LoginInput) => {
-    setAuthError(null);
-    try {
-      await login(data);
-      router.push("/");
-    } catch (error) {
-      setAuthError(getAuthErrorMessage(error));
-    }
+  const onSubmit = (data: LoginInput) => {
+    login(data);
   };
 
   return (
@@ -113,8 +106,8 @@ export default function LoginPage() {
 
           <Button
             variant="default"
-            disabled={isSubmitting}
-            className="w-full py-6 rounded-xl"
+            disabled={isPending}
+            className="w-full py-6"
           >
             Login
           </Button>
@@ -124,7 +117,7 @@ export default function LoginPage() {
         <p className="text-shadow-muted-foreground text-center">
           Or login with
         </p>
-        <GoogleButton disabled={isSubmitting} />
+        <GoogleButton disabled={isPending} />
 
         <AuthFooterLink
           text="Don't have an account?"
