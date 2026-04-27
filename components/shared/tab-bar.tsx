@@ -57,7 +57,7 @@ export default function TabBar({
         block: "nearest",
       });
     }
-  }, [activeId]);
+  }, [activeId, autoScroll]);
 
   const handleTabClick = (id: string) => {
     if (selected === undefined) setInternalSelected(id);

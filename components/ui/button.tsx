@@ -19,6 +19,7 @@ function Button({
       data-agent-type="action"
       data-entity-type="ui-button"
       data-slot="button"
+      disabled={props.disabled}
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
     />
