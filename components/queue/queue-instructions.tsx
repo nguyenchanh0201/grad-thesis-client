@@ -25,7 +25,7 @@ export function QueueInstructions({
       You have <strong>{bookingMinutes} minutes</strong> to book your ticket and
       another <strong>{paymentMinutes} minutes</strong> to complete your
       payment. Please note not to exit or refresh the page, as doing so will
-      result in losing your place in the ticket queue. CTicket appreciates your
+      result in losing your place in the ticket queue. TicketGo appreciates your
       patience!
     </p>
   );
