@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 
-const TOTAL_SECONDS = 600;
+// TODO: Change later
+const TOTAL_SECONDS = 30;
 
 export function useTicketTimer() {
   const [timeRemaining, setTimeRemaining] = useState(TOTAL_SECONDS);

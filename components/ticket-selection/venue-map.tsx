@@ -3,7 +3,13 @@
 import { ChevronDown, ChevronUp, MapPin } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
+import { SeatMap } from "./seat-map";
 import type { Zone } from "./types";
+import type {
+  TheaterMapConfig,
+  StadiumMapConfig,
+  SelectedSeat,
+} from "./seat-map";
 
 const COLOR_VARS: Record<string, { bg: string; fg: string }> = {
   a: { bg: "var(--zone-a)", fg: "var(--zone-a-fg)" },
@@ -15,31 +21,37 @@ const COLOR_VARS: Record<string, { bg: string; fg: string }> = {
 
 type Props = {
   zones: Zone[];
-  selectedZoneId: string | null;
-  onZoneClick: (zoneId: string) => void;
-  /** Floor-plan or seat-map image supplied by the backend. */
   venueImageUrl?: string;
-  /** Event thumbnail/banner — shown when no venueImageUrl. */
   fallbackImageUrl?: string;
+  // Zone mode
+  selectedZoneId?: string | null;
+  onZoneClick?: (zoneId: string) => void;
+  // Seat mode
+  seatMapConfig?: TheaterMapConfig | StadiumMapConfig;
+  selectedSeats?: string[];
+  onSeatToggle?: (seat: SelectedSeat) => void;
 };
 
 export function VenueMap({
   zones,
-  selectedZoneId,
-  onZoneClick,
   venueImageUrl,
   fallbackImageUrl,
+  selectedZoneId = null,
+  onZoneClick,
+  seatMapConfig,
+  selectedSeats = [],
+  onSeatToggle,
 }: Props) {
   const [mapOpen, setMapOpen] = useState(true);
-
   const imageUrl = venueImageUrl ?? fallbackImageUrl;
   const ticketZones = zones.filter(
     (z) => z.colorKey !== "stage" && z.price > 0,
   );
+  const isSeatMode = !!seatMapConfig;
 
   return (
     <div className="flex h-full flex-col">
-      {/* Mobile toggle header */}
+      {/* Mobile collapse toggle */}
       <button
         className="flex items-center justify-between border-b border-border px-4 py-3 md:hidden"
         onClick={() => setMapOpen((v) => !v)}
@@ -61,122 +73,129 @@ export function VenueMap({
         id="venue-map-body"
         className={
           mapOpen
-            ? "flex flex-1 flex-col gap-4 p-4"
-            : "hidden md:flex md:flex-1 md:flex-col md:gap-4 md:p-4"
+            ? "flex flex-1 flex-col gap-4 overflow-y-auto p-4"
+            : "hidden md:flex md:flex-1 md:flex-col md:gap-4 md:overflow-y-auto md:p-4"
         }
       >
-        {/* Map display */}
-        {imageUrl ? (
-          <ImageMap
-            imageUrl={imageUrl}
-            isVenueMap={!!venueImageUrl}
-            zones={ticketZones}
-            selectedZoneId={selectedZoneId}
-            onZoneClick={onZoneClick}
+        {isSeatMode ? (
+          /* ── Seat-based map ── */
+          <SeatMap
+            config={seatMapConfig}
+            selectedSeats={selectedSeats}
+            onSeatToggle={onSeatToggle ?? (() => {})}
           />
-        ) : (
-          <SVGMap
-            zones={zones}
-            selectedZoneId={selectedZoneId}
-            onZoneClick={onZoneClick}
-          />
-        )}
-
-        {/* Zone legend */}
-        {ticketZones.length > 0 && (
-          <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Zones
-            </p>
-            <div className="flex flex-wrap gap-x-4 gap-y-2">
-              {ticketZones.map((zone) => {
-                const colors = COLOR_VARS[zone.colorKey];
-                const isSelected = zone.id === selectedZoneId;
-                const isSoldOut = zone.available === 0;
-                return (
-                  <button
-                    key={zone.id}
-                    onClick={() => !isSoldOut && onZoneClick(zone.id)}
-                    disabled={isSoldOut}
-                    className="flex items-center gap-1.5 disabled:opacity-40"
-                  >
-                    <span
-                      className="size-3 shrink-0 rounded-sm ring-1 ring-transparent transition"
-                      style={{
-                        background: colors.bg,
-                        ...(isSelected && {
-                          outline: "2px solid var(--foreground)",
-                          outlineOffset: "1px",
-                        }),
-                      }}
-                      aria-hidden
-                    />
-                    <span
-                      className={`text-xs ${isSelected ? "font-semibold text-foreground" : "text-muted-foreground"}`}
-                    >
-                      {zone.label}
-                      {isSoldOut && " (Sold out)"}
-                    </span>
-                  </button>
-                );
-              })}
+        ) : imageUrl ? (
+          /* ── Image-based zone map ── */
+          <>
+            <div className="relative w-full overflow-hidden rounded-md border border-border bg-muted/30">
+              <div className="relative aspect-4/3 w-full">
+                <Image
+                  src={imageUrl}
+                  alt={venueImageUrl ? "Venue seat map" : "Event venue"}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 55vw"
+                  className="object-cover object-center"
+                />
+                {!venueImageUrl && (
+                  <div className="absolute inset-0 flex items-end bg-linear-to-t from-black/60 to-transparent">
+                    <p className="p-3 text-xs text-white/80">
+                      Venue map not available — select a zone from the list
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+            <ZoneLegend
+              zones={ticketZones}
+              selectedZoneId={selectedZoneId}
+              onZoneClick={onZoneClick}
+            />
+          </>
+        ) : (
+          /* ── SVG zone map fallback ── */
+          <>
+            <SVGZoneMap
+              zones={zones}
+              selectedZoneId={selectedZoneId}
+              onZoneClick={onZoneClick ?? (() => {})}
+            />
+            <ZoneLegend
+              zones={ticketZones}
+              selectedZoneId={selectedZoneId}
+              onZoneClick={onZoneClick}
+            />
+          </>
         )}
       </div>
     </div>
   );
 }
 
-// ─── Image-based map ─────────────────────────────────────────────────────────
+// ─── Zone legend ──────────────────────────────────────────────────────────────
 
-type ImageMapProps = {
-  imageUrl: string;
-  isVenueMap: boolean;
-  zones: Zone[];
-  selectedZoneId: string | null;
-  onZoneClick: (id: string) => void;
-};
-
-function ImageMap({
-  imageUrl,
-  isVenueMap,
+function ZoneLegend({
   zones,
   selectedZoneId,
   onZoneClick,
-}: ImageMapProps) {
+}: {
+  zones: Zone[];
+  selectedZoneId: string | null;
+  onZoneClick?: (id: string) => void;
+}) {
+  if (zones.length === 0) return null;
   return (
-    <div className="relative w-full overflow-hidden rounded-md border border-border bg-muted/30">
-      <div className="relative aspect-[4/3] w-full">
-        <Image
-          src={imageUrl}
-          alt={isVenueMap ? "Venue seat map" : "Event venue"}
-          fill
-          sizes="(max-width: 768px) 100vw, 55vw"
-          className="object-cover object-center"
-        />
-        {/* Overlay label when it's a fallback image */}
-        {!isVenueMap && (
-          <div className="absolute inset-0 flex items-end bg-gradient-to-t from-black/60 to-transparent">
-            <p className="p-3 text-xs text-white/80">
-              Venue map not available — select a zone from the list
-            </p>
-          </div>
-        )}
+    <div>
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        Zones
+      </p>
+      <div className="flex flex-wrap gap-x-4 gap-y-2">
+        {zones.map((zone) => {
+          const colors = COLOR_VARS[zone.colorKey];
+          const isSelected = zone.id === selectedZoneId;
+          const isSoldOut = zone.available === 0;
+          return (
+            <button
+              key={zone.id}
+              onClick={() => !isSoldOut && onZoneClick?.(zone.id)}
+              disabled={isSoldOut}
+              className="flex items-center gap-1.5 disabled:opacity-40"
+            >
+              <span
+                className="size-3 shrink-0 rounded-sm transition"
+                style={{
+                  background: colors.bg,
+                  ...(isSelected && {
+                    outline: "2px solid var(--foreground)",
+                    outlineOffset: "1px",
+                  }),
+                }}
+                aria-hidden
+              />
+              <span
+                className={`text-xs ${isSelected ? "font-semibold text-foreground" : "text-muted-foreground"}`}
+              >
+                {zone.label}
+                {isSoldOut && " (Sold out)"}
+              </span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
 }
 
-// ─── SVG fallback (dev / no image) ───────────────────────────────────────────
+// ─── SVG zone map ─────────────────────────────────────────────────────────────
 
-type SVGMapProps = {
+function SVGZoneMap({
+  zones,
+  selectedZoneId,
+  onZoneClick,
+}: {
   zones: Zone[];
   selectedZoneId: string | null;
   onZoneClick: (id: string) => void;
-};
-
-function SVGMap({ zones, selectedZoneId, onZoneClick }: SVGMapProps) {
+}) {
   return (
     <div className="relative w-full overflow-hidden rounded-md border border-border bg-muted/30">
       <svg
@@ -185,7 +204,6 @@ function SVGMap({ zones, selectedZoneId, onZoneClick }: SVGMapProps) {
         role="img"
         aria-label="Venue zone map"
       >
-        {/* Stage */}
         <rect
           x="90"
           y="10"
@@ -204,15 +222,14 @@ function SVGMap({ zones, selectedZoneId, onZoneClick }: SVGMapProps) {
         >
           STAGE
         </text>
-
         <SVGZone
           zone={zones.find((z) => z.id === "svip")!}
           x={90}
           y={56}
           w={140}
           h={36}
-          selectedZoneId={selectedZoneId}
-          onZoneClick={onZoneClick}
+          sel={selectedZoneId}
+          onClick={onZoneClick}
         />
         <SVGZone
           zone={zones.find((z) => z.id === "vip-l")!}
@@ -220,8 +237,8 @@ function SVGMap({ zones, selectedZoneId, onZoneClick }: SVGMapProps) {
           y={56}
           w={72}
           h={80}
-          selectedZoneId={selectedZoneId}
-          onZoneClick={onZoneClick}
+          sel={selectedZoneId}
+          onClick={onZoneClick}
         />
         <SVGZone
           zone={zones.find((z) => z.id === "vip-r")!}
@@ -229,8 +246,8 @@ function SVGMap({ zones, selectedZoneId, onZoneClick }: SVGMapProps) {
           y={56}
           w={72}
           h={80}
-          selectedZoneId={selectedZoneId}
-          onZoneClick={onZoneClick}
+          sel={selectedZoneId}
+          onClick={onZoneClick}
         />
         <SVGZone
           zone={zones.find((z) => z.id === "ga1")!}
@@ -238,8 +255,8 @@ function SVGMap({ zones, selectedZoneId, onZoneClick }: SVGMapProps) {
           y={100}
           w={140}
           h={46}
-          selectedZoneId={selectedZoneId}
-          onZoneClick={onZoneClick}
+          sel={selectedZoneId}
+          onClick={onZoneClick}
         />
         <SVGZone
           zone={zones.find((z) => z.id === "ga2")!}
@@ -247,8 +264,8 @@ function SVGMap({ zones, selectedZoneId, onZoneClick }: SVGMapProps) {
           y={148}
           w={300}
           h={46}
-          selectedZoneId={selectedZoneId}
-          onZoneClick={onZoneClick}
+          sel={selectedZoneId}
+          onClick={onZoneClick}
         />
         <SVGZone
           zone={zones.find((z) => z.id === "gen")!}
@@ -256,23 +273,13 @@ function SVGMap({ zones, selectedZoneId, onZoneClick }: SVGMapProps) {
           y={204}
           w={300}
           h={46}
-          selectedZoneId={selectedZoneId}
-          onZoneClick={onZoneClick}
+          sel={selectedZoneId}
+          onClick={onZoneClick}
         />
       </svg>
     </div>
   );
 }
-
-type SVGZoneProps = {
-  zone: Zone | undefined;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  selectedZoneId: string | null;
-  onZoneClick: (id: string) => void;
-};
 
 function SVGZone({
   zone,
@@ -280,28 +287,35 @@ function SVGZone({
   y,
   w,
   h,
-  selectedZoneId,
-  onZoneClick,
-}: SVGZoneProps) {
+  sel,
+  onClick,
+}: {
+  zone: Zone | undefined;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  sel: string | null;
+  onClick: (id: string) => void;
+}) {
   if (!zone) return null;
   const colors = COLOR_VARS[zone.colorKey];
-  const isSelected = zone.id === selectedZoneId;
+  const isSelected = zone.id === sel;
   const isUnavailable = zone.available === 0;
   const shortLabel =
     zone.label.length > 12 ? zone.label.slice(0, 11) + "…" : zone.label;
-
   return (
     <g
       role="button"
-      aria-label={`${zone.label}, ${zone.price.toLocaleString("vi-VN")} VND`}
+      aria-label={`${zone.label}`}
       aria-pressed={isSelected}
       aria-disabled={isUnavailable}
       tabIndex={isUnavailable ? -1 : 0}
       style={{ cursor: isUnavailable ? "not-allowed" : "pointer" }}
-      onClick={() => !isUnavailable && onZoneClick(zone.id)}
+      onClick={() => !isUnavailable && onClick(zone.id)}
       onKeyDown={(e) => {
         if ((e.key === "Enter" || e.key === " ") && !isUnavailable)
-          onZoneClick(zone.id);
+          onClick(zone.id);
       }}
     >
       <rect

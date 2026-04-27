@@ -19,3 +19,5 @@ export type TicketSelectionState = {
   timeRemaining: number;
   timedOut: boolean;
 };
+
+export type DemoMapType = "zone" | "theater" | "stadium";

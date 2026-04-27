@@ -48,6 +48,7 @@ export const EventDetailSchema = z.object({
   description: z.string(),
   timeVenueNotes: z.array(z.string()),
   seatMapImage: z.string().optional(),
+  seatMapType: z.enum(["zone", "theater", "stadium"]).optional(),
   termsAndConditions: z.string(),
   tags: z.array(z.string()).optional(),
   followerCount: z.number().int().nonnegative().optional(),
