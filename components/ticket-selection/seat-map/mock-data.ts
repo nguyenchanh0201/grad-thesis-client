@@ -43,8 +43,6 @@ function makeRow(
   };
 }
 
-// ─── Theater ─────────────────────────────────────────────────────────────────
-
 const THEATER_SOLD = new Set([
   "A-2",
   "A-3",
@@ -107,8 +105,6 @@ export function generateTheaterConfig(): TheaterMapConfig {
   };
 }
 
-// ─── Stadium ──────────────────────────────────────────────────────────────────
-
 function makeStadiumRows(
   prefix: string,
   rowCount: number,
@@ -116,7 +112,6 @@ function makeStadiumRows(
   zoneId: string,
 ): SeatRow[] {
   const rowLabels = "ABCDE".split("").slice(0, rowCount);
-  // ~15% sold, ~8% reserved, deterministic by position
   const sold = new Set(
     rowLabels.flatMap((r) =>
       Array.from(

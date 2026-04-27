@@ -2,7 +2,7 @@ export type SeatStatus = "available" | "reserved" | "sold";
 
 export type Seat = {
   id: string;
-  label: string; // "A1" — shown in ARIA label
+  label: string; // "A1"
   rowLabel: string; // "A"
   number: number;
   status: SeatStatus;
@@ -25,7 +25,6 @@ export type StadiumSection = {
   label: string;
   zoneId: string;
   rows: SeatRow[];
-  // position in the 320×270 overview SVG
   svgX: number;
   svgY: number;
   svgW: number;

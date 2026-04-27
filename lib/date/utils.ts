@@ -1,7 +1,5 @@
 const LOCALE = "en-US";
 
-// ─── Calendar / Date helpers ──────────────────────────────────────────────────
-
 export function sameDay(a: Date, b: Date): boolean {
   return a.toDateString() === b.toDateString();
 }
@@ -22,8 +20,6 @@ export function calDays(year: number, month: number): (Date | null)[] {
   while (days.length % 7) days.push(null);
   return days;
 }
-
-// ─── ISO string helpers ───────────────────────────────────────────────────────
 
 /** Parse ISO datetime string to a Date object. */
 export function parseIso(iso: string): Date {
@@ -49,8 +45,6 @@ export function fmtIsoTime(iso: string): string {
   return iso.slice(11, 16);
 }
 
-// ─── Date object formatters ───────────────────────────────────────────────────
-
 /** Date → "MM/DD/YYYY" (form inputs) */
 export function fmtDate(d: Date): string {
   return `${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")}/${d.getFullYear()}`;
@@ -72,8 +66,6 @@ export function fmtMonthYear(d: Date): string {
   return d.toLocaleDateString(LOCALE, { month: "long", year: "numeric" });
 }
 
-// ─── Input parsing / formatting ───────────────────────────────────────────────
-
 export function parseDate(s: string): Date | null {
   const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if (!m) return null;
@@ -91,7 +83,5 @@ export function autoFormatDateInput(raw: string): string {
   if (d.length <= 4) return `${d.slice(0, 2)}/${d.slice(2)}`;
   return `${d.slice(0, 2)}/${d.slice(2, 4)}/${d.slice(4)}`;
 }
-
-// ─── Constants ────────────────────────────────────────────────────────────────
 
 export const WDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];

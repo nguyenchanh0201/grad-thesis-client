@@ -26,7 +26,7 @@ export const apiClient = axios.create({
 });
 
 // Separate Axios instance for the refresh call.
-// No interceptors → avoids triggering another refresh on a 401 from /auth/refresh.
+// No interceptors
 export const refreshClient = axios.create({
   baseURL: API_CONFIG.BASE_URL,
   withCredentials: true,

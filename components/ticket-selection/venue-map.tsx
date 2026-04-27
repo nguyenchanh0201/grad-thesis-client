@@ -4,12 +4,12 @@ import { ChevronDown, ChevronUp, MapPin } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
 import { SeatMap } from "./seat-map";
-import type { Zone } from "../../schemas/seat/types";
 import type {
   TheaterMapConfig,
   StadiumMapConfig,
   SelectedSeat,
 } from "./seat-map";
+import { Zone } from "@/schemas/seat";
 
 const COLOR_VARS: Record<string, { bg: string; fg: string }> = {
   a: { bg: "var(--zone-a)", fg: "var(--zone-a-fg)" },
@@ -131,8 +131,6 @@ export function VenueMap({
   );
 }
 
-// ─── Zone legend ──────────────────────────────────────────────────────────────
-
 function ZoneLegend({
   zones,
   selectedZoneId,
@@ -184,8 +182,6 @@ function ZoneLegend({
     </div>
   );
 }
-
-// ─── SVG zone map ─────────────────────────────────────────────────────────────
 
 function SVGZoneMap({
   zones,
