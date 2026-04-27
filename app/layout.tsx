@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import NextTopLoader from "nextjs-toploader";
 import "./globals.css";
 
 import { AuthProvider } from "@/components/providers/auth-provider";
@@ -53,6 +54,7 @@ export default async function RootLayout({
       className={cn("font-sans", geist.variable)}
     >
       <body className={`${geist.variable} ${fontMono.variable} antialiased`}>
+        <NextTopLoader color="#f97316" showSpinner={false} height={3} />
         <QueryProvider>
           <AuthProvider>
             <LanguageProvider initialLanguage={initialLanguage}>
