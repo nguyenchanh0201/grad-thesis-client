@@ -15,8 +15,6 @@ const Toaster = ({ ...props }: ToasterProps) => {
 
   return (
     <Sonner
-      data-agent-type="state-display"
-      data-entity-type="ui-toast"
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
       icons={{
@@ -31,8 +29,6 @@ const Toaster = ({ ...props }: ToasterProps) => {
           "--normal-bg": "var(--popover)",
           "--normal-text": "var(--popover-foreground)",
           "--normal-border": "var(--border)",
-          "--normal-shadow":
-            "0 10px 30px color-mix(in oklch, var(--foreground) 8%, transparent)",
           "--border-radius": "var(--radius)",
         } as React.CSSProperties
       }
