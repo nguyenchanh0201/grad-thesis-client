@@ -189,6 +189,17 @@
   h6 {
     @apply text-base font-medium;
   }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  p {
+    @apply line-clamp-2;
+  }
+
   ::selection {
     background: color-mix(in oklch, var(--primary) 22%, transparent);
   }

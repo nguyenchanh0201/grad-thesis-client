@@ -12,7 +12,7 @@ import { QueueStatusMessage } from "@/components/queue/queue-status-message";
 import { RedirectButton } from "@/components/queue/redirect-button";
 import { useQueuePolling } from "@/hooks/use-queue-polling";
 import type { FrontendQueueStatus } from "@/schemas/queue";
-import { setBuySession } from "@/lib/buy-session";
+import { setBuySession } from "@/lib/booking/buy-session";
 
 const REDIRECT_COUNTDOWN_SECONDS = 8;
 

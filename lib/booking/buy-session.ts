@@ -18,10 +18,21 @@ export function clearBuySession(slug: string) {
   sessionStorage.removeItem(name);
 }
 
-/** Synchronous check — safe to call during render (useState lazy initializer). */
+/**
+ * Synchronous check — safe to call during render (useState lazy initializer).
+ * Returns false and cleans up if the session is older than COOKIE_MAX_AGE.
+ */
 export function hasBuySession(slug: string): boolean {
   try {
-    return !!sessionStorage.getItem(cookieName(slug));
+    const name = cookieName(slug);
+    const raw = sessionStorage.getItem(name);
+    if (!raw) return false;
+    const elapsedSeconds = (Date.now() - parseInt(raw, 10)) / 1000;
+    if (elapsedSeconds > COOKIE_MAX_AGE) {
+      sessionStorage.removeItem(name); // expired — purge preemptively
+      return false;
+    }
+    return true;
   } catch {
     return false;
   }
