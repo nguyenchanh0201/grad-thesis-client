@@ -3,8 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 
-import { login, register, updateProfile } from "@/services/auth.service";
-import type { ProfileInput } from "@/services/auth.service";
+import { login, register } from "@/services/auth.service";
 import { buildGoogleAuthUrl } from "@/lib/auth/google-oauth";
 import { apiClient } from "@/lib/api/api-client";
 import { useAuthStore } from "@/lib/store/auth.store";
@@ -52,17 +51,6 @@ export function useLogout() {
       clearAuth();
       queryClient.removeQueries({ queryKey: ["current-user"] });
       router.push("/");
-    },
-  });
-}
-
-export function useUpdateProfile() {
-  const { updateUser } = useAuthStore();
-
-  return useMutation({
-    mutationFn: (data: ProfileInput) => updateProfile(data),
-    onSuccess: (partial) => {
-      updateUser(partial);
     },
   });
 }

@@ -5,14 +5,7 @@ import {
   UnauthorizedError,
 } from "@/core/error";
 import type { LoginInput, RegisterInput } from "@/schemas/auth";
-
-export type AuthUser = {
-  id: string;
-  email: string;
-  role: "USER" | "ORGANIZER" | "ADMIN" | "SUPER_ADMIN";
-  name?: string;
-  phone?: string;
-};
+import { AuthUser } from "@/schemas/user";
 
 export type AuthResult = {
   user: AuthUser;
@@ -21,7 +14,6 @@ export type AuthResult = {
 
 const delay = (ms: number) => new Promise<void>((res) => setTimeout(res, ms));
 
-// Mock: replace with apiClient calls when backend is ready
 export async function login(
   data: Pick<LoginInput, "email" | "password">,
 ): Promise<AuthResult> {
@@ -40,7 +32,6 @@ export async function login(
   };
 }
 
-// Mock: replace with apiClient calls when backend is ready
 export async function register(
   data: Pick<RegisterInput, "email" | "password">,
 ): Promise<AuthResult> {
@@ -67,14 +58,6 @@ export type ProfileInput = {
   name: string;
   phone: string;
 };
-
-// Mock: replace with apiClient calls when backend is ready
-export async function updateProfile(
-  data: ProfileInput,
-): Promise<Partial<AuthUser>> {
-  await delay(600);
-  return { name: data.name, phone: data.phone };
-}
 
 export function getAuthErrorMessage(error: unknown): string {
   if (error instanceof UnauthorizedError) {

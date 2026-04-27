@@ -15,7 +15,7 @@ import { Separator } from "@/components/ui/separator";
 import type { AuthUser } from "@/services/auth.service";
 import { Button } from "../ui/button";
 
-const ROLE_LABELS: Record<AuthUser["role"], string> = {
+const ROLES: Record<AuthUser["role"], string> = {
   USER: "Member",
   ORGANIZER: "Organizer",
   ADMIN: "Admin",
@@ -71,7 +71,7 @@ export function UserProfile() {
                 {user.email}
               </p>
               <p className="text-xs text-muted-foreground">
-                {ROLE_LABELS[user.role]}
+                {ROLES[user.role]}
               </p>
             </div>
           </div>

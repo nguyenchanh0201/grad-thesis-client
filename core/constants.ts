@@ -84,3 +84,6 @@ export const REGEX = {
 export const DEFAULT_LANGUAGE = SUPPORTED_LANGUAGES[0];
 export const LANGUAGE_COOKIE = "preferred-lang";
 export const DEFAULT_CURRENCY = "VND";
+
+// RegExp
+export const PHONE_RE = /^\+?[\d\s\-()\[\]]{7,20}$/;

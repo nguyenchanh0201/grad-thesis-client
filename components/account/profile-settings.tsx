@@ -3,46 +3,21 @@
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 
-import { useUpdateProfile } from "@/hooks/use-auth";
-import { useAuthStore } from "@/lib/store/auth.store";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-
-const ROLE_LABELS: Record<string, string> = {
-  USER: "Member",
-  ORGANIZER: "Organizer",
-  ADMIN: "Admin",
-  SUPER_ADMIN: "Super Admin",
-};
-
-const PHONE_RE = /^\+?[\d\s\-()\[\]]{7,20}$/;
-
-const profileSchema = z.object({
-  name: z
-    .string()
-    .min(1, "Name is required")
-    .max(60, "Name must be 60 characters or less"),
-  phone: z
-    .string()
-    .refine((val) => !val || PHONE_RE.test(val), "Invalid phone number")
-    .optional(),
-});
-
-type ProfileFormValues = z.infer<typeof profileSchema>;
-
-function getInitials(email: string): string {
-  return email.slice(0, 2).toUpperCase();
-}
+import { ProfileFormValues, profileSchema } from "@/schemas/user";
+import { ROLES } from "@/schemas/user/role";
+import { UserProfilePicture } from "./profile-picture";
+import { useUpdateUserProfile, useUserProfile } from "@/hooks/user-profile";
 
 export function ProfileSettings() {
-  const user = useAuthStore((s) => s.user);
-  const updateProfile = useUpdateProfile();
+  const { data: user } = useUserProfile();
+  const updateProfile = useUpdateUserProfile();
 
   const {
     register,
@@ -74,9 +49,7 @@ export function ProfileSettings() {
     <div className="mx-auto w-full max-w-2xl px-4 py-10">
       {/* Avatar + identity */}
       <div className="flex items-center gap-4 mb-8">
-        <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-primary/15 text-xl font-semibold text-primary select-none">
-          {getInitials(user.email)}
-        </span>
+        <UserProfilePicture email={user.email} imageUrl={user.profilePic} />
         <div>
           <p className="text-lg font-semibold leading-tight">
             {user.name || "No name set"}
@@ -96,7 +69,7 @@ export function ProfileSettings() {
           <div className="flex items-center justify-between px-4 py-3">
             <span className="text-sm text-muted-foreground">Account type</span>
             <Badge variant="secondary" className="text-xs">
-              {ROLE_LABELS[user.role] ?? user.role}
+              {ROLES[user.role] ?? user.role}
             </Badge>
           </div>
         </div>
