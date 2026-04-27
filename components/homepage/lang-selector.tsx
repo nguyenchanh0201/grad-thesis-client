@@ -34,7 +34,7 @@ export function LangSelector() {
           </span>
         </SelectTrigger>
 
-        <SelectContent align="end" alignItemWithTrigger={false} sideOffset={6}>
+        <SelectContent align="end" position="popper" sideOffset={6}>
           {SUPPORTED_LANGUAGES.map((lang) => (
             <SelectItem key={lang.code} value={lang.code} className="py-3 pl-3">
               <FlagIcon code={lang.code} className="shrink-0" />

@@ -60,7 +60,7 @@ export function EventSearch() {
     : null;
 
   const locationContent = (
-    <SelectContent align="start" alignItemWithTrigger={false}>
+    <SelectContent align="start" position="popper">
       {locationGroups.map((group) => (
         <SelectGroup key={group.label}>
           <SelectLabel className="text-[10px] font-semibold uppercase tracking-wider">
