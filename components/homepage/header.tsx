@@ -1,7 +1,5 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-
 import { Logo } from "../shared/logo";
 import { NavAuthBar } from "./nav-auth-bar";
 import { EventSearch } from "../search/event-search";

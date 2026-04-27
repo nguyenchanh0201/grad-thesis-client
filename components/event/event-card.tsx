@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 
 export interface EventItem {
   id: string;
@@ -31,9 +32,10 @@ export function EventCard({ item, variant, className }: EventCardProps) {
           {imgError ? (
             <div className="h-full w-full bg-muted" />
           ) : (
-            <img
+            <Image
               src={item.image}
               alt={item.title}
+              fill
               className="h-full w-full object-cover"
               onError={() => setImgError(true)}
             />
@@ -58,9 +60,10 @@ export function EventCard({ item, variant, className }: EventCardProps) {
           {imgError ? (
             <div className="h-full w-full bg-muted" />
           ) : (
-            <img
+            <Image
               src={item.image}
               alt={item.title}
+              fill
               className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
               onError={() => setImgError(true)}
             />
@@ -106,10 +109,11 @@ export function EventCard({ item, variant, className }: EventCardProps) {
         {imgError ? (
           <div className="h-full w-full bg-muted" />
         ) : (
-          <img
+          <Image
             src={item.image}
             alt={item.title}
             className="h-full w-full object-cover"
+            fill
             onError={() => setImgError(true)}
           />
         )}

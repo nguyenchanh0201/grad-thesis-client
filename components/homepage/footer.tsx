@@ -27,10 +27,10 @@ export interface FooterProps {
   bottomLinks?: { label: string; href: string }[];
 }
 
-const APPLE_BADGE =
-  "https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg";
-const GOOGLE_BADGE =
-  "https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png";
+// const APPLE_BADGE =
+//   "https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg";
+// const GOOGLE_BADGE =
+//   "https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png";
 
 function LinkList({ links }: { links: FooterLinkGroup["links"] }) {
   return (
@@ -54,13 +54,11 @@ export function Footer({
   brandTagline = "Let's connect",
   socialLinks = [],
   linkGroups = [],
-  appStoreUrl,
-  googlePlayUrl,
   legalText,
   copyrightText,
   bottomLinks = [],
 }: FooterProps) {
-  const hasAppBadges = appStoreUrl || googlePlayUrl;
+  // const hasAppBadges = appStoreUrl || googlePlayUrl;
 
   return (
     <>
