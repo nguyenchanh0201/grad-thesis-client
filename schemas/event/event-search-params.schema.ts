@@ -9,10 +9,12 @@ export const GetEventsParamsSchema = z.object({
     .min(PAGINATION.MIN_LIMIT)
     .optional()
     .default(PAGINATION.DEFAULT_LIMIT),
-  search: z.string().optional(),
-  status: z.enum(EventStatus).optional(),
-  dateFrom: z.iso.datetime().optional(),
-  dateTo: z.iso.datetime().optional(),
+  organizerId: z.string().optional(),
+  status: z.nativeEnum(EventStatus).optional(),
+  category: z.string().optional(),
+  venue: z.string().optional(),
+  eventDateFrom: z.iso.datetime().optional(),
+  eventDateTo: z.iso.datetime().optional(),
 });
 
 export type GetEventsParams = z.infer<typeof GetEventsParamsSchema>;

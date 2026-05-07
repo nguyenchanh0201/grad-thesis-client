@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { BigIntIdSchema } from "../api";
 import { EventSchema } from "./event.schema";
 
 const UpdateEventBaseSchema = EventSchema.omit({
@@ -8,7 +9,13 @@ const UpdateEventBaseSchema = EventSchema.omit({
   deletedAt: true,
   status: true,
   slug: true,
-}).partial();
+  venue: true,
+  ticketTypes: true,
+})
+  .partial()
+  .extend({
+    venueId: BigIntIdSchema.optional(),
+  });
 
 export const UpdateEventSchema = UpdateEventBaseSchema.superRefine(
   (data, ctx) => {

@@ -167,7 +167,7 @@ export const mockEventDetail: EventDetail = {
 <p>5. Ban tổ chức không chịu trách nhiệm về tài sản thất lạc trong sự kiện.</p>`,
   tags: ["music", "festival", "live-music", "ha-noi", "ravolution"],
   followerCount: 45200,
-  lowestPrice: 500000,
+  lowestPrice: 50_000_000,
   performerName: "Various Artists",
   status: EventStatus.ON_SALE,
   socialLinks: {
@@ -184,7 +184,7 @@ export const mockEventDetailTheater: EventDetail = {
   title: "The Phantom of the Opera",
   subtitle: "Vở nhạc kịch kinh điển trở lại Hà Nội",
   seatMapType: "theater",
-  lowestPrice: 400000,
+  lowestPrice: 40_000_000,
   relatedEvents: mockEvents.slice(0, 4),
 };
 
@@ -195,6 +195,6 @@ export const mockEventDetailZone: EventDetail = {
   title: "Underground Rave Night 2026",
   subtitle: "General admission — no assigned seats",
   seatMapType: "zone",
-  lowestPrice: 799000,
+  lowestPrice: 79_900_000,
   relatedEvents: mockEvents.slice(0, 4),
 };

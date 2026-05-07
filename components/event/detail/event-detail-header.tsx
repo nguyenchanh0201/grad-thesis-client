@@ -30,7 +30,7 @@ const STATUS_BADGE: Partial<
   [EventStatus.ON_SALE]: { label: "For Sale", variant: "success" },
   [EventStatus.SOLD_OUT]: { label: "Sold Out", variant: "destructive" },
   [EventStatus.CANCELLED]: { label: "Cancelled", variant: "secondary" },
-  [EventStatus.UPCOMING]: { label: "Upcoming", variant: "warning" },
+  [EventStatus.DRAFT]: { label: "Draft", variant: "warning" },
 };
 
 export function EventDetailHeader({
@@ -183,11 +183,7 @@ export function EventDetailHeader({
                     aria-label="Ticket price"
                     className="mt-0.5 text-sm text-white/60"
                   >
-                    {formatPrice(
-                      event.lowestPrice,
-                      undefined,
-                      DEFAULT_CURRENCY,
-                    )}
+                    {formatPrice(event.lowestPrice, DEFAULT_CURRENCY)}
                   </p>
                 </div>
               </div>
