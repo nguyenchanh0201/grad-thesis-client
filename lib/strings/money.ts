@@ -1,11 +1,15 @@
 export const fmt = (n: number) => n.toLocaleString("vi-VN");
 
 export function formatPrice(
-  from: number,
-  to: number | undefined,
+  cents: number | bigint,
   currency: string,
-) {
-  return to && to !== from
-    ? `From ${fmt(from)} to ${fmt(to)} ${currency}`
-    : `From ${fmt(from)} ${currency}`;
+  toCents?: number | bigint,
+): string {
+  const format = (c: number | bigint) =>
+    new Intl.NumberFormat(undefined, { style: "currency", currency }).format(
+      Number(c) / 100,
+    );
+  return toCents !== undefined && toCents !== cents
+    ? `${format(cents)} – ${format(toCents)}`
+    : format(cents);
 }
