@@ -1,20 +1,22 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-
-import { mockQueueAdmitted, mockQueueWaiting } from "@/lib/mock/queue";
-import { getQueueStatus } from "@/services/queue.service";
+import { mockQueueAllowed, mockQueueWaiting } from "@/lib/mock/queue";
+import {
+  getQueueStatus,
+  requestAccess,
+  sendHeartbeat,
+} from "@/services/queue.service";
+import { useBookingStore } from "@/lib/store/booking";
 import type {
   BackendQueueStatus,
   FrontendQueueStatus,
-  QueueEventData,
-  QueueStatusData,
+  WaitRoomResponse,
 } from "@/schemas/queue";
 
 const USE_MOCK = process.env.NEXT_PUBLIC_MOCK_QUEUE === "true";
-const POLL_INTERVAL_MS = 4000;
-const TERMINAL_STATUSES: BackendQueueStatus[] = ["ADMITTED", "LOST_SESSION"];
+const POLL_INTERVAL_MS = 25_000;
 
 function toFrontendStatus(
   backend: BackendQueueStatus,
@@ -22,74 +24,112 @@ function toFrontendStatus(
   switch (backend) {
     case "NOT_OPEN":
       return "not_open";
-    case "QUEUEING":
+    case "QUEUED":
       return "waiting";
-    case "ADMITTED":
+    case "ALLOWED":
       return "ready";
     case "LOST_SESSION":
       return "expired";
   }
 }
 
+function isTerminal(status: BackendQueueStatus | undefined): boolean {
+  return status === "ALLOWED" || status === "LOST_SESSION";
+}
+
 export type UseQueuePollingResult = {
   status: Exclude<FrontendQueueStatus, "redirecting">;
   position: number | null;
-  estimatedWaitSeconds: number | null;
-  purchaseUrl: string | null;
-  eventData: QueueEventData | null;
+  estimatedWait: number | null;
   isLoading: boolean;
   isError: boolean;
 };
 
 export function useQueuePolling(
-  entryCode: string | null,
+  eventId: string | null,
+  userId: string | null,
 ): UseQueuePollingResult {
+  const setWaitRoomToken = useBookingStore((s) => s.setWaitRoomToken);
   const mockTickRef = useRef(0);
+  const tokenRef = useRef<string | null>(null);
 
-  const { data, isLoading, isError } = useQuery<QueueStatusData>({
-    queryKey: ["queue-status", entryCode],
-    queryFn: async (): Promise<QueueStatusData> => {
-      if (USE_MOCK) {
-        mockTickRef.current += 1;
-        // Simulate: tick 1 → position 42, tick 2 → position 14, tick 3+ → admitted
-        if (mockTickRef.current >= 3) return mockQueueAdmitted();
-        return mockQueueWaiting(
-          Math.max(1, 42 - (mockTickRef.current - 1) * 28),
-        );
-      }
-      if (!entryCode) throw new Error("No entryCode");
-      const response = await getQueueStatus(entryCode);
-      return response.data;
+  // Phase 1: Join queue — fires once on mount
+  const accessQuery = useQuery<WaitRoomResponse>({
+    queryKey: ["queue", "access", eventId, userId],
+    queryFn: async () => {
+      if (USE_MOCK) return mockQueueWaiting(42);
+      const res = await requestAccess({ eventId: eventId!, userId: userId! });
+      return res.data;
     },
-    enabled: USE_MOCK || !!entryCode,
-    refetchInterval: (query) => {
-      const status = query.state.data?.status;
-      if (status && TERMINAL_STATUSES.includes(status)) return false;
-      return POLL_INTERVAL_MS;
-    },
-    // axiosRetry in api-client handles HTTP-level retries; disable RQ retries to avoid double retry
+    enabled: !!eventId && !!userId,
+    staleTime: Infinity,
     retry: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
-  if (isError) {
+  // Phase 2: Poll queue status until terminal
+  const statusQuery = useQuery<WaitRoomResponse>({
+    queryKey: ["queue", "status", eventId, userId],
+    queryFn: async () => {
+      if (USE_MOCK) {
+        mockTickRef.current += 1;
+        return mockTickRef.current >= 3
+          ? mockQueueAllowed()
+          : mockQueueWaiting(Math.max(1, 42 - (mockTickRef.current - 1) * 28));
+      }
+      const res = await getQueueStatus({ eventId: eventId!, userId: userId! });
+      return res.data;
+    },
+    enabled: !!accessQuery.data && !isTerminal(accessQuery.data.status),
+    refetchInterval: (query) =>
+      isTerminal(query.state.data?.status) ? false : POLL_INTERVAL_MS,
+    refetchOnWindowFocus: false,
+  });
+
+  const currentData = statusQuery.data ?? accessQuery.data;
+
+  // Sync session token into booking store when ALLOWED
+  useEffect(() => {
+    if (!currentData?.sessionToken || currentData.status !== "ALLOWED") return;
+    tokenRef.current = currentData.sessionToken;
+    setWaitRoomToken(currentData.sessionToken);
+  }, [currentData, setWaitRoomToken]);
+
+  // Fire heartbeat after each status poll while in queue
+  useEffect(() => {
+    if (!statusQuery.data || !tokenRef.current || !eventId || !userId) return;
+    const { status } = statusQuery.data;
+    if (status !== "QUEUED" && status !== "ALLOWED") return;
+
+    sendHeartbeat({ token: tokenRef.current, eventId, userId })
+      .then((hb) => {
+        if (hb.data.newToken) {
+          tokenRef.current = hb.data.newToken;
+          setWaitRoomToken(hb.data.newToken);
+        }
+      })
+      .catch(() => {});
+  }, [statusQuery.data, eventId, userId, setWaitRoomToken]);
+
+  const isLoading = accessQuery.isPending;
+  const isError = accessQuery.isError || statusQuery.isError;
+
+  if (isError || !currentData) {
     return {
-      status: "expired",
+      status: isLoading ? "waiting" : "expired",
       position: null,
-      estimatedWaitSeconds: null,
-      purchaseUrl: null,
-      eventData: null,
-      isLoading: false,
-      isError: true,
+      estimatedWait: null,
+      isLoading,
+      isError,
     };
   }
 
   return {
-    status: data ? toFrontendStatus(data.status) : "waiting",
-    position: data?.position ?? null,
-    estimatedWaitSeconds: data?.estimatedWaitSeconds ?? null,
-    purchaseUrl: data?.purchaseUrl ?? null,
-    eventData: data?.event ?? null,
-    isLoading,
+    status: toFrontendStatus(currentData.status),
+    position: currentData.position ?? null,
+    estimatedWait: currentData.estimatedWait ?? null,
+    isLoading: false,
     isError: false,
   };
 }
