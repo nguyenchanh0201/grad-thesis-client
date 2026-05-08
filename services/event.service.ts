@@ -22,7 +22,7 @@ export const getEvents = async ({
   page = PAGINATION.DEFAULT_PAGE,
   limit = PAGINATION.DEFAULT_LIMIT,
   ...filters
-}: GetEventsParams): Promise<EventPagedListResult> => {
+}: Partial<GetEventsParams> = {}): Promise<EventPagedListResult> => {
   const response = await apiClient.get("/events", {
     params: { page, limit, ...filters },
   });

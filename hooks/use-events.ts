@@ -15,7 +15,8 @@ import type { SearchEventsParams } from "@/schemas/event";
 export const eventKeys = {
   all: ["events"] as const,
   lists: () => [...eventKeys.all, "list"] as const,
-  list: (params: GetEventsParams) => [...eventKeys.lists(), params] as const,
+  list: (params: Partial<GetEventsParams>) =>
+    [...eventKeys.lists(), params] as const,
   search: (params: SearchEventsParams) =>
     [...eventKeys.all, "search", params] as const,
   detail: (id: string) => [...eventKeys.all, "detail", id] as const,
@@ -24,7 +25,7 @@ export const eventKeys = {
   stats: (id: string) => [...eventKeys.all, "stats", id] as const,
 };
 
-export function useEvents(params: GetEventsParams = {}) {
+export function useEvents(params: Partial<GetEventsParams> = {}) {
   return useQuery({
     queryKey: eventKeys.list(params),
     queryFn: () => getEvents(params),
