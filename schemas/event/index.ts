@@ -21,3 +21,21 @@ export {
   type EventVenueDetail,
   type EventItemDetail,
 } from "./event-detail.schema";
+export {
+  GetEventsParamsSchema,
+  type GetEventsParams,
+} from "./event-search-params.schema";
+export {
+  SearchEventsParamsSchema,
+  type SearchEventsParams,
+} from "./event-search.schema";
+export {
+  EventStatsSchema,
+  EventStatsResultSchema,
+  type EventStats,
+  type EventStatsResult,
+} from "./event-stats.schema";
+export {
+  CreateTicketTypeSchema,
+  type CreateTicketTypeDTO,
+} from "./ticket-type-dto.schema";

@@ -4,8 +4,8 @@ import { BaseResponseSchema } from "@/schemas/api";
 
 export const BackendQueueStatusSchema = z.enum([
   "NOT_OPEN",
-  "QUEUEING",
-  "ADMITTED",
+  "QUEUED",
+  "ALLOWED",
   "LOST_SESSION",
 ]);
 export type BackendQueueStatus = z.infer<typeof BackendQueueStatusSchema>;
@@ -18,19 +18,27 @@ export const QueueEventDataSchema = z.object({
 });
 export type QueueEventData = z.infer<typeof QueueEventDataSchema>;
 
-export const QueueStatusDataSchema = z.object({
+export const WaitRoomResponseSchema = z.object({
   status: BackendQueueStatusSchema,
+  sessionToken: z.string().nullable().optional(),
   position: z.number().int().positive().nullable().optional(),
-  estimatedWaitSeconds: z.number().int().nonnegative().nullable().optional(),
-  purchaseUrl: z.string().nullable().optional(),
-  event: QueueEventDataSchema,
+  estimatedWait: z.number().int().nonnegative().nullable().optional(),
 });
-export type QueueStatusData = z.infer<typeof QueueStatusDataSchema>;
+export type WaitRoomResponse = z.infer<typeof WaitRoomResponseSchema>;
 
-export const QueueStatusResponseSchema = BaseResponseSchema(
-  QueueStatusDataSchema,
+export const WaitRoomResultSchema = BaseResponseSchema(WaitRoomResponseSchema);
+export type WaitRoomResult = z.infer<typeof WaitRoomResultSchema>;
+
+export const HeartbeatResponseSchema = z.object({
+  success: z.boolean(),
+  newToken: z.string().nullable().optional(),
+});
+export type HeartbeatResponse = z.infer<typeof HeartbeatResponseSchema>;
+
+export const HeartbeatResultSchema = BaseResponseSchema(
+  HeartbeatResponseSchema,
 );
-export type QueueStatusResponse = z.infer<typeof QueueStatusResponseSchema>;
+export type HeartbeatResult = z.infer<typeof HeartbeatResultSchema>;
 
 export type FrontendQueueStatus =
   | "not_open"

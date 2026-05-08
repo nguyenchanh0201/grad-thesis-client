@@ -1,11 +1,9 @@
 import { z } from "zod";
 
 export const PaginatedMetadataSchema = z.object({
-  totalItems: z.number(),
-  itemCount: z.number(),
-  itemsPerPage: z.number(),
-  totalPages: z.number(),
-  currentPage: z.number(),
+  total: z.number(),
+  page: z.number(),
+  limit: z.number(),
 });
 
 export type PaginatedMetadata = z.infer<typeof PaginatedMetadataSchema>;
@@ -15,6 +13,6 @@ export const PagedResponseSchema = <T extends z.ZodTypeAny>(itemSchema: T) =>
     success: z.boolean(),
     data: z.array(itemSchema),
     message: z.string().optional(),
-    timestamp: z.string().datetime(),
+    timestamp: z.iso.datetime().optional(),
     meta: PaginatedMetadataSchema,
   });
