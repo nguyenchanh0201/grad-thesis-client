@@ -14,6 +14,8 @@ type InitStep1Payload = {
 
 type BookingState = {
   slug: string | null;
+  waitRoomToken: string | null;
+  reservationId: string | null;
   zones: Zone[];
   mapType: MapType;
   selectedZoneId: string | null;
@@ -29,6 +31,8 @@ type BookingState = {
   billingRequested: boolean;
 
   initStep1: (payload: InitStep1Payload) => void;
+  setWaitRoomToken: (token: string | null) => void;
+  setReservationId: (id: string | null) => void;
   reset: () => void;
 
   setSelectedZoneId: (id: string | null) => void;
@@ -59,6 +63,8 @@ const DEFAULT_RECIPIENT: RecipientInfo = {
 
 const INITIAL_STATE = {
   slug: null,
+  waitRoomToken: null as string | null,
+  reservationId: null as string | null,
   zones: [] as Zone[],
   mapType: "zone" as MapType,
   selectedZoneId: null,
@@ -91,6 +97,9 @@ export const useBookingStore = create<BookingState>()(
         }),
 
       reset: () => set(INITIAL_STATE),
+
+      setWaitRoomToken: (token) => set({ waitRoomToken: token }),
+      setReservationId: (id) => set({ reservationId: id }),
 
       // Zone mode
       setSelectedZoneId: (id) => set({ selectedZoneId: id }),
@@ -177,6 +186,8 @@ export const useBookingStore = create<BookingState>()(
       }),
       partialize: ({
         slug,
+        waitRoomToken,
+        reservationId,
         zones,
         mapType,
         selectedZoneId,
@@ -189,6 +200,8 @@ export const useBookingStore = create<BookingState>()(
         billingRequested,
       }) => ({
         slug,
+        waitRoomToken,
+        reservationId,
         zones,
         mapType,
         selectedZoneId,
