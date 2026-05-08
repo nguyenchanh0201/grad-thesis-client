@@ -20,7 +20,7 @@ export const NotificationSchema = z.object({
   title: z.string(),
   message: z.string(),
   isRead: z.boolean(),
-  data: z.record(z.unknown()).optional(),
+  data: z.record(z.string(), z.unknown()).optional(),
   createdAt: z.iso.datetime(),
 });
 export type Notification = z.infer<typeof NotificationSchema>;
