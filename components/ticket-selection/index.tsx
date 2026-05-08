@@ -77,7 +77,8 @@ export function TicketSelection({ slug }: Props) {
 
   const isWarning = timeRemaining <= 60;
 
-  const mapType: MapType = "zone"; // GA flow; seated events TBD via seats API
+  const mapType: MapType = event?.isSeated ? "theater" : "zone";
+  const maxPerZone = event?.maxTicketsPerOrder ?? MAX_PER_ZONE;
 
   const activeZones = useMemo<Zone[]>(() => {
     if (event?.ticketTypes && event.ticketTypes.length > 0) {
@@ -105,8 +106,8 @@ export function TicketSelection({ slug }: Props) {
   );
 
   const handleIncrement = useCallback(
-    (zoneId: string) => incrementTicket(zoneId, MAX_PER_ZONE),
-    [incrementTicket],
+    (zoneId: string) => incrementTicket(zoneId, maxPerZone),
+    [incrementTicket, maxPerZone],
   );
 
   const handleDecrement = useCallback(
@@ -139,7 +140,9 @@ export function TicketSelection({ slug }: Props) {
   const eventDateStr = event
     ? `${fmtIsoDate(event.eventDate)} • ${event.eventDate.slice(11, 16)}`
     : "";
-  const eventLocation = event ? `${event.venue.name}, ${event.venue.city}` : "";
+  const eventLocation = event?.venue
+    ? `${event.venue.name}, ${event.venue.city}`
+    : "";
   const eventImageUrl = event?.featuredImageUrl ?? event?.eventImageUrls?.[0];
 
   return (

@@ -16,6 +16,7 @@ export interface EventItem {
   venue?: string;
   price?: string;
   tag?: string;
+  isFeatured?: boolean;
 }
 
 interface EventCardProps {

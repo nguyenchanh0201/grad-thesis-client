@@ -33,9 +33,9 @@ export function eventToEventDetail(event: Event): EventDetail {
       },
     ],
     venue: {
-      name: event.venue.name,
-      address: event.venue.address ?? event.venue.city,
-      city: event.venue.city,
+      name: event.venue?.name ?? "",
+      address: event.venue?.address ?? event.venue?.city ?? "",
+      city: event.venue?.city ?? "",
     },
     organizer: {
       id: "0",
@@ -48,6 +48,7 @@ export function eventToEventDetail(event: Event): EventDetail {
     termsAndConditions: "",
     relatedEvents: [],
     lowestPrice,
+    tags: event.tags?.map((t) => t.name),
   };
 }
 
@@ -66,11 +67,12 @@ export function eventToEventItem(event: Event): EventItem {
     image,
     title: event.eventName,
     date: fmtIsoDate(event.eventDate),
-    venue: `${event.venue.name}, ${event.venue.city}`,
+    venue: event.venue ? `${event.venue.name}, ${event.venue.city}` : undefined,
     price:
       lowestPrice !== undefined
         ? `From ${(lowestPrice / 100).toLocaleString("vi-VN")} ₫`
         : undefined,
     tag: event.isFeatured ? "FEATURED" : undefined,
+    isFeatured: event.isFeatured,
   };
 }

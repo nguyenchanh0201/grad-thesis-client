@@ -8,33 +8,35 @@ import { buttonVariants } from "@/components/ui/button.variants";
 import { cn } from "@/lib/utils";
 import { EventListing } from "@/components/event/event-listing";
 import { useEvents } from "@/hooks/use-events";
+import { useCategories } from "@/hooks/use-taxonomy";
 import { eventToEventItem } from "@/lib/event/adapters";
 import { EventStatus } from "@/schemas/event";
 import type { EventItem } from "@/components/event/event-card";
 
-const EVENT_CATEGORY_TABS: TabItem[] = [
-  { id: "all", label: "All" },
-  { id: "live-music", label: "Live Music" },
-  { id: "fan-meeting", label: "Fan Meeting" },
-  { id: "merchandise", label: "Merchandise" },
-  { id: "stage-art", label: "Stage & Art" },
-  { id: "sports", label: "Sports" },
-  { id: "conferences", label: "Conferences & Community" },
-  { id: "courses", label: "Courses" },
-];
+const ALL_TAB: TabItem = { id: "all", label: "All" };
 
 export default function Home() {
-  const { data: eventsResult, isLoading } = useEvents({
+  const { data: eventsResult, isLoading: eventsLoading } = useEvents({
     page: 1,
     status: EventStatus.ON_SALE,
     limit: 20,
   });
 
+  const { data: categoriesResult } = useCategories();
+
   const events: EventItem[] = eventsResult?.data?.map(eventToEventItem) ?? [];
 
-  const featuredEvents = events.filter((e) => e.tag === "FEATURED");
+  const categoryTabs: TabItem[] = [
+    ALL_TAB,
+    ...(categoriesResult?.data
+      ?.filter((c) => c.isActive !== false)
+      .map((c) => ({ id: c.slug ?? c.id, label: c.name })) ?? []),
+  ];
+
+  const featuredEvents = events.filter((e) => e.isFeatured);
   const trendingEvents = events.slice(0, 10);
   const upcomingEvents = events.slice(0, 8);
+  const isLoading = eventsLoading;
 
   if (isLoading) {
     return (
@@ -49,11 +51,7 @@ export default function Home() {
       <HeroBanner />
 
       <div className="page-container space-y-16 py-12">
-        <TabBar
-          autoScroll={false}
-          tabs={EVENT_CATEGORY_TABS}
-          className="mb-12"
-        />
+        <TabBar autoScroll={false} tabs={categoryTabs} className="mb-12" />
 
         <EventListing
           variant="horizontal"
