@@ -7,7 +7,9 @@ export type TagStatus = z.infer<typeof TagStatusSchema>;
 export const TagSchema = z.object({
   id: BigIntIdSchema,
   name: z.string(),
+  slug: z.string().optional(),
   metaDescription: z.string().optional(),
+  isTrending: z.boolean().optional(),
   status: TagStatusSchema.optional(),
 });
 export type Tag = z.infer<typeof TagSchema>;

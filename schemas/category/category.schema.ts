@@ -13,6 +13,7 @@ export const CategorySchema = z.object({
   iconName: z.string().optional(),
   colorCode: z.string().optional(),
   imageUrl: z.string().optional(),
+  isActive: z.boolean().optional(),
 });
 export type Category = z.infer<typeof CategorySchema>;
 
