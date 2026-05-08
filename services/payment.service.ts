@@ -5,7 +5,7 @@ import { z } from "zod";
 
 const VNPayUrlDataSchema = z.object({
   paymentUrl: z.string(),
-  vnpParams: z.record(z.string()).optional(),
+  vnpParams: z.record(z.string(), z.string()).optional(),
 });
 
 const VNPayUrlResultSchema = BaseResponseSchema(VNPayUrlDataSchema);
