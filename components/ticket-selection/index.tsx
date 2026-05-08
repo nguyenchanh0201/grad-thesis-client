@@ -4,11 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { clearBuySession, hasBuySession } from "@/lib/booking/buy-session";
 import { useBookingStore } from "@/lib/store/booking";
-import {
-  mockEventDetail,
-  mockEventDetailTheater,
-  mockEventDetailZone,
-} from "@/lib/mock/events";
+import { useEventBySlug } from "@/hooks/use-events";
 import { EventBanner } from "./event-banner";
 import { ProgressSteps } from "./progress-steps";
 import { TicketPanel } from "./ticket-panel";
@@ -17,107 +13,22 @@ import { VenueMap } from "./venue-map";
 import { useTicketTimer } from "../../hooks/use-ticket-timer";
 import { generateTheaterConfig, generateStadiumConfig } from "./seat-map";
 import type { SelectedSeat } from "./seat-map";
-import { Zone } from "@/schemas/seat";
+import type { Zone, ZoneColorKey, MapType } from "@/schemas/seat";
+import type { TicketType } from "@/schemas/ticket-type";
+import { fmtIsoDate } from "@/lib/date";
 
-// Zone Mock
-const ZONE_MAP_ZONES: Zone[] = [
-  { id: "svip", label: "SVIP", price: 4_900_000, colorKey: "a", available: 50 },
-  {
-    id: "vip-l",
-    label: "VIP Left",
-    price: 2_900_000,
-    colorKey: "b",
-    available: 80,
-  },
-  {
-    id: "vip-r",
-    label: "VIP Right",
-    price: 2_900_000,
-    colorKey: "b",
-    available: 80,
-  },
-  {
-    id: "ga1",
-    label: "GA Phase 1",
-    price: 1_399_000,
-    colorKey: "c",
-    available: 200,
-  },
-  {
-    id: "ga2",
-    label: "GA Phase 2",
-    price: 1_099_000,
-    colorKey: "d",
-    available: 300,
-  },
-  { id: "gen", label: "General", price: 799_000, colorKey: "d", available: 0 },
-  { id: "stage", label: "Stage", price: 0, colorKey: "stage", available: 0 },
-];
+const ZONE_COLORS: ZoneColorKey[] = ["a", "b", "c", "d"];
 
-// Theater Mock
-const THEATER_ZONES: Zone[] = [
-  {
-    id: "vip",
-    label: "VIP (Rows A–C)",
-    price: 1_500_000,
-    colorKey: "a",
-    available: 42,
-  },
-  {
-    id: "standard",
-    label: "Standard (Rows D–H)",
-    price: 800_000,
-    colorKey: "c",
-    available: 70,
-  },
-  {
-    id: "economy",
-    label: "Economy (Rows I–L)",
-    price: 400_000,
-    colorKey: "d",
-    available: 56,
-  },
-];
-
-// Stadium Mock
-const STADIUM_ZONES: Zone[] = [
-  {
-    id: "s-vip-front",
-    label: "VIP Front",
-    price: 2_500_000,
-    colorKey: "a",
-    available: 40,
-  },
-  {
-    id: "s-vip-side",
-    label: "VIP Side",
-    price: 1_800_000,
-    colorKey: "b",
-    available: 80,
-  },
-  {
-    id: "s-standard",
-    label: "Standard",
-    price: 900_000,
-    colorKey: "c",
-    available: 120,
-  },
-  {
-    id: "s-economy",
-    label: "Economy",
-    price: 500_000,
-    colorKey: "d",
-    available: 80,
-  },
-];
-
-const MOCK_EVENT_DETAILS = [
-  mockEventDetail,
-  mockEventDetailTheater,
-  mockEventDetailZone,
-];
-function getMockEvent(slug: string) {
-  return MOCK_EVENT_DETAILS.find((e) => e.slug === slug) ?? mockEventDetail;
+function ticketTypeToZone(tt: TicketType, idx: number): Zone {
+  const quantity = tt.quantity ?? 100;
+  const soldCount = tt.soldCount ?? 0;
+  return {
+    id: tt.id,
+    label: tt.name,
+    price: tt.price / 100, // cents → display unit
+    colorKey: ZONE_COLORS[idx % ZONE_COLORS.length],
+    available: Math.max(0, quantity - soldCount),
+  };
 }
 
 const MAX_PER_ZONE = 8;
@@ -151,43 +62,35 @@ export function TicketSelection({ slug }: Props) {
     reset: storeReset,
   } = useBookingStore();
 
-  // TODO: Eliminate later
   const skipGuard = process.env.NEXT_PUBLIC_SKIP_BUY_SESSION === "true";
   const [authorized] = useState(() => skipGuard || hasBuySession(slug));
 
   useEffect(() => {
     if (!authorized) {
-      storeReset(); // clear persisted state so re-queuing always starts fresh
+      storeReset();
       router.replace(`/events/${slug}`);
     }
   }, [authorized, slug, router, storeReset]);
 
+  const { data: eventResult } = useEventBySlug(slug);
+  const event = eventResult?.data;
+
   const isWarning = timeRemaining <= 60;
 
-  const event = useMemo(() => getMockEvent(slug), [slug]);
-  const mapType = event.seatMapType ?? "zone";
+  const mapType: MapType = "zone"; // GA flow; seated events TBD via seats API
 
-  const activeZones = useMemo<Zone[]>(
-    () =>
-      mapType === "theater"
-        ? THEATER_ZONES
-        : mapType === "stadium"
-          ? STADIUM_ZONES
-          : ZONE_MAP_ZONES,
-    [mapType],
-  );
+  const activeZones = useMemo<Zone[]>(() => {
+    if (event?.ticketTypes && event.ticketTypes.length > 0) {
+      return event.ticketTypes.map(ticketTypeToZone);
+    }
+    return [];
+  }, [event]);
 
   const theaterConfig = useMemo(() => generateTheaterConfig(), []);
   const stadiumConfig = useMemo(() => generateStadiumConfig(), []);
-  const seatMapConfig =
-    mapType === "theater"
-      ? theaterConfig
-      : mapType === "stadium"
-        ? stadiumConfig
-        : undefined;
 
-  // Seed store with slug + zones on mount; resets selection if slug changed
   useEffect(() => {
+    if (activeZones.length === 0) return;
     initStep1({ slug, zones: activeZones, mapType });
   }, [slug, activeZones, mapType, initStep1]);
 
@@ -232,6 +135,13 @@ export function TicketSelection({ slug }: Props) {
   const isSeatMode = mapType !== "zone";
   const selectedSeatIds = selectedSeats.map((s) => s.id);
 
+  const eventTitle = event?.eventName ?? "";
+  const eventDateStr = event
+    ? `${fmtIsoDate(event.eventDate)} • ${event.eventDate.slice(11, 16)}`
+    : "";
+  const eventLocation = event ? `${event.venue.name}, ${event.venue.city}` : "";
+  const eventImageUrl = event?.featuredImageUrl ?? event?.eventImageUrls?.[0];
+
   return (
     <div className="flex min-h-[calc(100vh-var(--header-height))] flex-col">
       <ProgressSteps
@@ -241,31 +151,30 @@ export function TicketSelection({ slug }: Props) {
         backHref="/events"
       />
       <EventBanner
-        eventTitle={event.title}
-        eventDate={
-          event.dates[0]
-            ? `${event.dates[0].label} • ${event.dates[0].startTime.slice(11, 16)}`
-            : ""
-        }
-        eventLocation={`${event.venue.name}, ${event.venue.city}`}
+        eventTitle={eventTitle}
+        eventDate={eventDateStr}
+        eventLocation={eventLocation}
       />
-      {/* Two-panel layout */}
       <div className="flex flex-1 flex-col md:flex-row">
-        {/* Left: venue map */}
         <div className="border-b border-border md:w-[55%] md:border-b-0 md:border-r">
           <VenueMap
             zones={activeZones}
-            venueImageUrl={event.seatMapImage}
-            fallbackImageUrl={isSeatMode ? undefined : event.images[0]}
+            venueImageUrl={undefined}
+            fallbackImageUrl={eventImageUrl}
             selectedZoneId={selectedZoneId}
             onZoneClick={handleZoneClick}
-            seatMapConfig={seatMapConfig}
+            seatMapConfig={
+              mapType === "theater"
+                ? theaterConfig
+                : mapType === "stadium"
+                  ? stadiumConfig
+                  : undefined
+            }
             selectedSeats={selectedSeatIds}
             onSeatToggle={handleSeatToggle}
           />
         </div>
 
-        {/* Right: ticket panel */}
         <div
           ref={panelRef}
           className="flex flex-col md:w-[45%] md:overflow-y-auto"
@@ -273,7 +182,7 @@ export function TicketSelection({ slug }: Props) {
         >
           <TicketPanel
             zones={activeZones}
-            eventDate={event.dates[0]?.label ?? ""}
+            eventDate={event ? fmtIsoDate(event.eventDate) : ""}
             onContinue={handleContinue}
             onChangeDate={() => {}}
             mode={isSeatMode ? "seat" : "zone"}

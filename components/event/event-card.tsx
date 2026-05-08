@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { FilledImage } from "../shared/filled-image";
 
 export interface EventItem {
   id: string;
+  slug?: string;
   image: string;
   genre?: string;
   title: string;
@@ -22,12 +24,34 @@ interface EventCardProps {
   className?: string;
 }
 
+function CardWrapper({
+  slug,
+  className,
+  children,
+}: {
+  slug?: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  if (slug) {
+    return (
+      <Link href={`/events/${slug}`} className={className}>
+        {children}
+      </Link>
+    );
+  }
+  return <div className={className}>{children}</div>;
+}
+
 export function EventCard({ item, variant, className }: EventCardProps) {
   const [imgError, setImgError] = useState(false);
 
   if (variant === "horizontal") {
     return (
-      <div className={cn("w-80 shrink-0 cursor-pointer", className)}>
+      <CardWrapper
+        slug={item.slug}
+        className={cn("w-80 shrink-0 cursor-pointer", className)}
+      >
         <div className="relative w-full aspect-3/2 overflow-hidden rounded-xl bg-muted">
           {imgError ? (
             <div className="h-full w-full bg-muted" />
@@ -43,13 +67,16 @@ export function EventCard({ item, variant, className }: EventCardProps) {
         <p className="mt-1 line-clamp-2 text-base font-bold leading-snug text-foreground">
           {item.title}
         </p>
-      </div>
+      </CardWrapper>
     );
   }
 
   if (variant === "grid") {
     return (
-      <div className={cn("group cursor-pointer", className)}>
+      <CardWrapper
+        slug={item.slug}
+        className={cn("group cursor-pointer", className)}
+      >
         <div className="relative aspect-4/3 overflow-hidden rounded-lg bg-muted">
           {imgError ? (
             <div className="h-full w-full bg-muted" />
@@ -86,13 +113,16 @@ export function EventCard({ item, variant, className }: EventCardProps) {
             </div>
           )}
         </div>
-      </div>
+      </CardWrapper>
     );
   }
 
   // Vertical
   return (
-    <div className={cn("flex cursor-pointer flex-row gap-3", className)}>
+    <CardWrapper
+      slug={item.slug}
+      className={cn("flex cursor-pointer flex-row gap-3", className)}
+    >
       <div className="w-1/3 shrink-0 aspect-3/2 overflow-hidden rounded-lg bg-muted">
         {imgError ? (
           <div className="h-full w-full bg-muted" />
@@ -118,6 +148,6 @@ export function EventCard({ item, variant, className }: EventCardProps) {
           <p className="text-sm font-semibold text-foreground">{item.price}</p>
         )}
       </div>
-    </div>
+    </CardWrapper>
   );
 }

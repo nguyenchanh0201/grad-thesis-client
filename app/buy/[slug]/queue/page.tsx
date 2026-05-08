@@ -12,6 +12,8 @@ import { QueueStatusMessage } from "@/components/queue/queue-status-message";
 import { RedirectButton } from "@/components/queue/redirect-button";
 import { useQueuePolling } from "@/hooks/use-queue-polling";
 import { useAuthStore } from "@/lib/store/auth.store";
+import { useEventBySlug } from "@/hooks/use-events";
+import { setBuySession } from "@/lib/booking/buy-session";
 import type { FrontendQueueStatus } from "@/schemas/queue";
 
 const REDIRECT_COUNTDOWN_SECONDS = 8;
@@ -25,6 +27,9 @@ function QueuePageContent() {
   const eventId = searchParams.get("eventId");
   const user = useAuthStore((s) => s.user);
   const userId = user?.id ?? DEFAULT_USER_ID;
+
+  const { data: eventResult } = useEventBySlug(slug);
+  const event = eventResult?.data;
 
   useEffect(() => {
     if (!eventId) {
@@ -53,11 +58,13 @@ function QueuePageContent() {
   useEffect(() => {
     if (polledStatus !== "ready" || countdown !== 0) return;
     if (intervalRef.current) clearInterval(intervalRef.current);
+    setBuySession(slug);
     router.replace(`/buy/${slug}/tickets`);
   }, [polledStatus, countdown, router, slug]);
 
   const handleRedirect = () => {
     if (intervalRef.current) clearInterval(intervalRef.current);
+    setBuySession(slug);
     router.replace(`/buy/${slug}/tickets`);
   };
 
@@ -67,12 +74,15 @@ function QueuePageContent() {
 
   if (!eventId) return null;
 
+  const eventTitle = event?.eventName ?? "Loading event...";
+  const eventImageUrl = event?.featuredImageUrl ?? event?.eventImageUrls?.[0];
+
   return (
-    <QueueCard backgroundImageUrl={undefined}>
-      <EventBanner imageUrl={undefined} eventTitle="Loading event..." />
+    <QueueCard backgroundImageUrl={eventImageUrl}>
+      <EventBanner imageUrl={eventImageUrl} eventTitle={eventTitle} />
       <div className="px-6 pb-6 sm:px-8 sm:pb-8">
         <QueueStatusMessage status={displayStatus} />
-        <EventTitle title="Loading event..." />
+        <EventTitle title={eventTitle} />
         <QueueInstructions status={displayStatus} />
         <CountdownBar status={displayStatus} countdown={countdown} />
         <RedirectButton

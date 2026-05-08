@@ -1,13 +1,16 @@
 "use client";
 
 import { HeroBanner } from "@/components/homepage/hero-banner";
-import { mockEvents } from "@/lib/mock/events";
 import TabBar, { TabItem } from "@/components/shared/tab-bar";
 import { MessagesSquare } from "lucide-react";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button.variants";
 import { cn } from "@/lib/utils";
 import { EventListing } from "@/components/event/event-listing";
+import { useEvents } from "@/hooks/use-events";
+import { eventToEventItem } from "@/lib/event/adapters";
+import { EventStatus } from "@/schemas/event";
+import type { EventItem } from "@/components/event/event-card";
 
 const EVENT_CATEGORY_TABS: TabItem[] = [
   { id: "all", label: "All" },
@@ -21,6 +24,26 @@ const EVENT_CATEGORY_TABS: TabItem[] = [
 ];
 
 export default function Home() {
+  const { data: eventsResult, isLoading } = useEvents({
+    page: 1,
+    status: EventStatus.ON_SALE,
+    limit: 20,
+  });
+
+  const events: EventItem[] = eventsResult?.data?.map(eventToEventItem) ?? [];
+
+  const featuredEvents = events.filter((e) => e.tag === "FEATURED");
+  const trendingEvents = events.slice(0, 10);
+  const upcomingEvents = events.slice(0, 8);
+
+  if (isLoading) {
+    return (
+      <main className="flex min-h-screen items-center justify-center">
+        <div className="size-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </main>
+    );
+  }
+
   return (
     <main>
       <HeroBanner />
@@ -32,35 +55,34 @@ export default function Home() {
           className="mb-12"
         />
 
-        {/* Horizontal */}
         <EventListing
           variant="horizontal"
           label="TRENDING NOW"
           labelBorder="top"
-          items={mockEvents}
+          items={trendingEvents}
           maxItems={10}
           onViewMore={() => {}}
         />
 
-        {/* Grid */}
         <EventListing
           variant="grid"
           label="UPCOMING EVENTS"
           labelBorder="bottom"
-          items={mockEvents}
+          items={upcomingEvents}
           maxItems={8}
           onViewMore={() => {}}
         />
 
-        {/* Vertical */}
-        <EventListing
-          variant="vertical"
-          label="FEATURED"
-          labelBorder="left"
-          items={mockEvents}
-          maxItems={5}
-          onViewMore={() => {}}
-        />
+        {featuredEvents.length > 0 && (
+          <EventListing
+            variant="vertical"
+            label="FEATURED"
+            labelBorder="left"
+            items={featuredEvents}
+            maxItems={5}
+            onViewMore={() => {}}
+          />
+        )}
       </div>
 
       <Link
