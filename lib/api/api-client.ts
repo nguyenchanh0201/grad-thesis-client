@@ -37,10 +37,12 @@ apiClient.interceptors.request.use((config) => {
   config.headers = config.headers ?? {};
   config.headers[API_CONFIG.HEADERS.CORRELATION_ID] = correlationId;
   config.headers[API_CONFIG.HEADERS.REQUEST_ID] = correlationId;
-  const token = useAuthStore.getState().accessToken;
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  const { accessToken, user } = useAuthStore.getState();
+  if (accessToken) {
+    config.headers.Authorization = `Bearer ${accessToken}`;
   }
+  const userId = user?.id ?? process.env.NEXT_PUBLIC_DEFAULT_USER_ID ?? "1";
+  config.headers["x-mock-user-id"] = userId;
   return config;
 });
 
