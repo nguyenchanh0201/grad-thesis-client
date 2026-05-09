@@ -117,7 +117,9 @@ function EventSearchInner() {
       q: debouncedQuery,
       venueCity: location ? slugToVenueCity(location) : undefined,
       eventDateFrom: startDate ? localDateToIso(startDate) : undefined,
-      eventDateTo: endDate ? localDateToIso(endDate) : undefined,
+      eventDateTo: startDate
+        ? localDateToEndOfDayIso(endDate ?? startDate)
+        : undefined,
       status: EventStatus.ON_SALE,
       limit: 8,
     },
@@ -135,8 +137,10 @@ function EventSearchInner() {
     const q = inputValue.trim();
     if (q) params.set("q", q);
     if (location) params.set("venue", location);
-    if (startDate) params.set("dateFrom", localDateToIso(startDate));
-    if (endDate) params.set("dateTo", localDateToIso(endDate));
+    if (startDate) {
+      params.set("dateFrom", localDateToIso(startDate));
+      params.set("dateTo", localDateToEndOfDayIso(endDate ?? startDate));
+    }
     setShowDropdown(false);
     router.push(`/events?${params.toString()}`);
   }
