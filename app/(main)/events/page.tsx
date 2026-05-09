@@ -12,6 +12,9 @@ import { getLocations, slugToVenueCity } from "@/lib/locations/vi-cities";
 import { EventStatus } from "@/schemas/event";
 import { EventListing } from "@/components/event/event-listing";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Chip } from "@/components/shared/chip";
+import { Category } from "@/schemas/category";
 
 const ALL_LOCATIONS = getLocations().flatMap((g) => g.locations);
 
@@ -95,54 +98,35 @@ function EventsContent() {
       {/* Category chips */}
       {categories.length > 0 && (
         <div className="flex flex-wrap gap-2">
-          <button
+          <Chip
+            label="All"
+            active={!categoryId}
             onClick={() => updateParams({ categoryId: undefined })}
-            className={cn(
-              "rounded-full border px-4 py-1.5 text-sm font-medium transition-colors",
-              !categoryId
-                ? "border-foreground bg-foreground text-background"
-                : "border-border hover:border-foreground/50",
-            )}
-          >
-            All
-          </button>
-          {categories.map((cat) => (
-            <button
+          />
+          {categories.map((cat: Category) => (
+            <Chip
               key={cat.id}
+              label={cat.name}
+              active={categoryId === cat.id}
               onClick={() => updateParams({ categoryId: cat.id })}
-              className={cn(
-                "rounded-full border px-4 py-1.5 text-sm font-medium transition-colors",
-                categoryId === cat.id
-                  ? "border-foreground bg-foreground text-background"
-                  : "border-border hover:border-foreground/50",
-              )}
-            >
-              {cat.name}
-            </button>
+            />
           ))}
         </div>
       )}
 
       {/* Active filter chips */}
-      {activeFilters.length > 0 && (
+      {activeFilters && (
         <div className="flex flex-wrap gap-2">
           {activeFilters.map((f) => (
-            <span
+            <Chip
               key={f.key}
-              className="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-sm"
-            >
-              {f.label}
-              <button
-                onClick={() => updateParams({ [f.key]: undefined })}
-                aria-label={`Remove ${f.key} filter`}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <X className="size-3.5" />
-              </button>
-            </span>
+              label={f.label}
+              onDismiss={() => updateParams({ [f.key]: undefined })}
+            />
           ))}
-          {activeFilters.length > 1 && (
-            <button
+          {activeFilters.length > 0 && (
+            <Chip
+              label="Clear all"
               onClick={() =>
                 updateParams({
                   q: undefined,
@@ -151,10 +135,7 @@ function EventsContent() {
                   dateTo: undefined,
                 })
               }
-              className="rounded-full border border-border px-3 py-1 text-sm text-muted-foreground hover:border-foreground/50 hover:text-foreground transition-colors"
-            >
-              Clear all
-            </button>
+            />
           )}
         </div>
       )}

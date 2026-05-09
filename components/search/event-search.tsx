@@ -304,7 +304,7 @@ function EventSearchInner() {
           </button>
           {datesAdornment}
           {datePickerOpen && (
-            <div className="absolute top-full left-0 z-[60] mt-2">
+            <div className="absolute top-full left-0 z-60 mt-2">
               <DatePicker {...pickerProps} />
             </div>
           )}
@@ -399,7 +399,7 @@ function EventSearchInner() {
             </button>
             {datesAdornment}
             {datePickerOpen && (
-              <div className="absolute top-full right-0 z-[60] mt-1">
+              <div className="absolute top-full right-0 z-60 mt-1">
                 <DatePicker {...pickerProps} isMobile />
               </div>
             )}
