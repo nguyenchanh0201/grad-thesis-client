@@ -114,7 +114,6 @@ export const mockEventDetail: EventDetail = {
   id: "1",
   slug: "ravolution-music-festival-2026",
   title: "Ravolution Music Festival 2026",
-  subtitle: "Đêm nhạc đỉnh cao với những nghệ sĩ hàng đầu Việt Nam",
   images: [
     "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=1200&q=80",
     "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=1200&q=80",
@@ -181,7 +180,6 @@ export const mockEventDetailTheater: EventDetail = {
   id: "2",
   slug: "phantom-of-the-opera-2026",
   title: "The Phantom of the Opera",
-  subtitle: "Vở nhạc kịch kinh điển trở lại Hà Nội",
   seatMapType: "theater",
   lowestPrice: 40_000_000,
   relatedEvents: mockEvents.slice(0, 4),
@@ -192,7 +190,6 @@ export const mockEventDetailZone: EventDetail = {
   id: "3",
   slug: "underground-rave-2026",
   title: "Underground Rave Night 2026",
-  subtitle: "General admission — no assigned seats",
   seatMapType: "zone",
   lowestPrice: 79_900_000,
   relatedEvents: mockEvents.slice(0, 4),

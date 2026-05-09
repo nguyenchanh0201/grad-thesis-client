@@ -38,7 +38,6 @@ export const EventDetailSchema = z.object({
   id: BigIntIdSchema,
   slug: z.string(),
   title: z.string().max(255),
-  subtitle: z.string().optional(),
   images: z.array(z.string()).min(1),
   status: z.nativeEnum(EventStatus),
   dates: z.array(EventDateSchema).min(1),

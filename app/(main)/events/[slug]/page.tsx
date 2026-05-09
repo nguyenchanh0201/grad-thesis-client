@@ -21,8 +21,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const result = await getEventBySlug(slug);
     const event = eventToEventDetail(result.data);
 
-    const description =
-      event.subtitle ?? stripHtml(event.description).slice(0, 155);
+    const description = stripHtml(event.description).slice(0, 155);
     const image = event.images[0];
     const url = `${SITE_URL}/events/${event.slug}`;
 
