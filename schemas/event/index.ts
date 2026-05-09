@@ -39,3 +39,4 @@ export {
   CreateTicketTypeSchema,
   type CreateTicketTypeDTO,
 } from "./ticket-type-dto.schema";
+export { PerformerSchema, type Performer } from "./performer.schema";

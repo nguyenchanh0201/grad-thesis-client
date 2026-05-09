@@ -1,19 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import TabBar, { TabItem } from "@/components/shared/tab-bar";
 import { Button } from "@/components/ui/button";
 import type { EventDetail } from "@/schemas/event";
 import { AboutSection } from "./about-section";
 import { ScheduleSection } from "./schedule-section";
 import { OrganizerSection } from "./organizer-section";
+import { PerformersSection } from "./performers-section";
 import { useUserProfile } from "@/hooks/user-profile";
-
-const SECTION_TABS: TabItem[] = [
-  { id: "about", label: "About" },
-  { id: "schedule", label: "Schedule" },
-  { id: "organizer", label: "Organizer" },
-];
 
 interface Props {
   event: EventDetail;
@@ -21,7 +16,19 @@ interface Props {
 }
 
 export function EventDetailSections({ event, onCTAClick }: Props) {
-  const [activeTab, setActiveTab] = useState(SECTION_TABS[0].id);
+  const tabs = useMemo(() => {
+    const items: TabItem[] = [
+      { id: "about", label: "About" },
+      { id: "schedule", label: "Schedule" },
+    ];
+    if (event.performers && event.performers.length > 0) {
+      items.push({ id: "performers", label: "Performers" });
+    }
+    items.push({ id: "organizer", label: "Organizer" });
+    return items;
+  }, [event.performers]);
+
+  const [activeTab, setActiveTab] = useState(tabs[0].id);
   const { data: user } = useUserProfile();
   const isLoggedIn = user !== null;
 
@@ -35,13 +42,13 @@ export function EventDetailSections({ event, onCTAClick }: Props) {
       { rootMargin: "-100px 0px -80% 0px", threshold: 0 },
     );
 
-    SECTION_TABS.forEach(({ id }) => {
+    tabs.forEach(({ id }) => {
       const el = document.getElementById(id);
       if (el) observer.observe(el);
     });
 
     return () => observer.disconnect();
-  }, []);
+  }, [tabs]);
 
   const handleTabChange = (id: string) => {
     setActiveTab(id);
@@ -63,11 +70,7 @@ export function EventDetailSections({ event, onCTAClick }: Props) {
             {isLoggedIn ? "Buy Tickets" : "Log in to buy"}
           </Button>
         </div>
-        <TabBar
-          tabs={SECTION_TABS}
-          selected={activeTab}
-          onChange={handleTabChange}
-        />
+        <TabBar tabs={tabs} selected={activeTab} onChange={handleTabChange} />
       </div>
 
       <AboutSection
@@ -76,6 +79,9 @@ export function EventDetailSections({ event, onCTAClick }: Props) {
         termsAndConditions={event.termsAndConditions}
       />
       <ScheduleSection dates={event.dates} seatMapImage={event.seatMapImage} />
+      {event.performers && event.performers.length > 0 && (
+        <PerformersSection performers={event.performers} />
+      )}
       <OrganizerSection organizer={event.organizer} />
     </>
   );

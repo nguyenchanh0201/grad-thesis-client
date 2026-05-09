@@ -48,6 +48,7 @@ export function eventToEventDetail(event: Event): EventDetail {
     relatedEvents: [],
     lowestPrice,
     tags: event.tags?.map((t) => t.name),
+    performers: event.performers ?? [],
   };
 }
 

@@ -4,6 +4,7 @@ import { VenueSchema } from "../venue";
 import { TicketTypeSchema } from "../ticket-type";
 import { CategorySchema } from "../category";
 import { TagSchema } from "../tag";
+import { PerformerSchema } from "./performer.schema";
 
 export enum EventStatus {
   DRAFT = 0,
@@ -60,6 +61,7 @@ export const EventSchema = z.object({
   eventImageUrls: z.array(z.string()).optional(),
 
   ticketTypes: z.array(TicketTypeSchema).optional(),
+  performers: z.array(PerformerSchema).optional(),
 
   cancelReason: z.string().nullish(),
   publishedAt: z.iso.datetime().nullish(),

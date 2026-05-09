@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { BigIntIdSchema } from "../api";
 import { EventStatus } from "./event.schema";
+import { PerformerSchema } from "./performer.schema";
 
 export const EventDateSchema = z.object({
   date: z.string(),
@@ -59,6 +60,7 @@ export const EventDetailSchema = z.object({
     })
     .optional(),
   relatedEvents: z.array(EventItemSchema),
+  performers: z.array(PerformerSchema).optional(),
 });
 
 export type EventDate = z.infer<typeof EventDateSchema>;
