@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const url = `${SITE_URL}/events/${event.slug}`;
 
     return {
-      title: `${event.title} | ${event.venue.city} | TicketGo`,
+      title: `${event.title} - TicketGo`,
       description,
       keywords: event.tags,
       alternates: { canonical: url },
