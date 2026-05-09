@@ -10,6 +10,7 @@ export const SearchEventsParamsSchema = z.object({
   maxPrice: z.coerce.number().nonnegative().optional(),
   eventDateFrom: z.iso.datetime().optional(),
   eventDateTo: z.iso.datetime().optional(),
+  venueCity: z.string().optional(),
   sortBy: z.string().optional(),
   sortOrder: z.enum(["asc", "desc"]).optional(),
   page: z.coerce.number().min(1).optional(),

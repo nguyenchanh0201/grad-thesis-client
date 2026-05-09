@@ -25,10 +25,14 @@ export const eventKeys = {
   stats: (id: string) => [...eventKeys.all, "stats", id] as const,
 };
 
-export function useEvents(params: Partial<GetEventsParams> = {}) {
+export function useEvents(
+  params: Partial<GetEventsParams> = {},
+  enabled = true,
+) {
   return useQuery({
     queryKey: eventKeys.list(params),
     queryFn: () => getEvents(params),
+    enabled,
   });
 }
 

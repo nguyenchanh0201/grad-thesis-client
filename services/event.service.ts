@@ -3,8 +3,6 @@ import { apiClient } from "@/lib/api/api-client";
 import { parseOrThrow } from "@/lib/api/api-utils";
 import {
   CreateEventDTO,
-  EventDetailPageResult,
-  EventDetailPageResultSchema,
   EventDetailResult,
   EventDetailResultSchema,
   EventPagedListResult,

@@ -1,5 +1,81 @@
 import type { GetLocations } from ".";
 
+/**
+ * Maps UI location slugs to exact venue.city values stored in the DB.
+ * The search endpoint uses a case-sensitive keyword term filter — values
+ * must match exactly what was saved when the venue was created.
+ */
+export const VENUE_CITY_MAP: Record<string, string> = {
+  "ho-chi-minh": "Ho Chi Minh",
+  "ha-noi": "Hanoi",
+  "da-nang": "Da Nang",
+  "hai-phong": "Hai Phong",
+  "can-tho": "Can Tho",
+  "an-giang": "An Giang",
+  "ba-ria-vung-tau": "Ba Ria - Vung Tau",
+  "bac-giang": "Bac Giang",
+  "bac-kan": "Bac Kan",
+  "bac-lieu": "Bac Lieu",
+  "bac-ninh": "Bac Ninh",
+  "ben-tre": "Ben Tre",
+  "binh-dinh": "Binh Dinh",
+  "binh-duong": "Binh Duong",
+  "binh-phuoc": "Binh Phuoc",
+  "binh-thuan": "Binh Thuan",
+  "ca-mau": "Ca Mau",
+  "cao-bang": "Cao Bang",
+  "dak-lak": "Dak Lak",
+  "dak-nong": "Dak Nong",
+  "dien-bien": "Dien Bien",
+  "dong-nai": "Dong Nai",
+  "dong-thap": "Dong Thap",
+  "gia-lai": "Gia Lai",
+  "ha-giang": "Ha Giang",
+  "ha-nam": "Ha Nam",
+  "ha-tinh": "Ha Tinh",
+  "hai-duong": "Hai Duong",
+  "hau-giang": "Hau Giang",
+  "hoa-binh": "Hoa Binh",
+  "hung-yen": "Hung Yen",
+  "khanh-hoa": "Khanh Hoa",
+  "kien-giang": "Kien Giang",
+  "kon-tum": "Kon Tum",
+  "lai-chau": "Lai Chau",
+  "lam-dong": "Lam Dong",
+  "lang-son": "Lang Son",
+  "lao-cai": "Lao Cai",
+  "long-an": "Long An",
+  "nam-dinh": "Nam Dinh",
+  "nghe-an": "Nghe An",
+  "ninh-binh": "Ninh Binh",
+  "ninh-thuan": "Ninh Thuan",
+  "phu-tho": "Phu Tho",
+  "phu-yen": "Phu Yen",
+  "quang-binh": "Quang Binh",
+  "quang-nam": "Quang Nam",
+  "quang-ngai": "Quang Ngai",
+  "quang-ninh": "Quang Ninh",
+  "quang-tri": "Quang Tri",
+  "soc-trang": "Soc Trang",
+  "son-la": "Son La",
+  "tay-ninh": "Tay Ninh",
+  "thai-binh": "Thai Binh",
+  "thai-nguyen": "Thai Nguyen",
+  "thanh-hoa": "Thanh Hoa",
+  "thua-thien-hue": "Hue",
+  "tien-giang": "Tien Giang",
+  "tra-vinh": "Tra Vinh",
+  "tuyen-quang": "Tuyen Quang",
+  "vinh-long": "Vinh Long",
+  "vinh-phuc": "Vinh Phuc",
+  "yen-bai": "Yen Bai",
+};
+
+/** Convert a UI location slug to the exact city name expected by the search API. */
+export function slugToVenueCity(slug: string): string | undefined {
+  return VENUE_CITY_MAP[slug];
+}
+
 export const getLocations: GetLocations = () => [
   {
     label: "Thành phố",

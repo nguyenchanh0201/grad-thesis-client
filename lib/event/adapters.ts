@@ -19,7 +19,7 @@ export function eventToEventDetail(event: Event): EventDetail {
       : undefined;
 
   return {
-    id: event.id,
+    id: event.id ?? event.slug,
     slug: event.slug,
     title: event.eventName,
     description: event.desc ?? "",
@@ -62,7 +62,7 @@ export function eventToEventItem(event: Event): EventItem {
       : undefined;
 
   return {
-    id: event.id,
+    id: event.id ?? event.slug,
     slug: event.slug,
     image,
     title: event.eventName,
@@ -73,6 +73,6 @@ export function eventToEventItem(event: Event): EventItem {
         ? `From ${(lowestPrice / 100).toLocaleString("vi-VN")} ₫`
         : undefined,
     tag: event.isFeatured ? "FEATURED" : undefined,
-    isFeatured: event.isFeatured,
+    isFeatured: event.isFeatured ?? undefined,
   };
 }
