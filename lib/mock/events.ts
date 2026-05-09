@@ -142,11 +142,10 @@ export const mockEventDetail: EventDetail = {
   },
   organizer: {
     id: "1",
-    name: "Ravolution Entertainment",
-    logo: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=200&q=80",
-    followerCount: 125000,
-    description:
-      "Ravolution Entertainment là đơn vị tổ chức sự kiện âm nhạc hàng đầu Việt Nam, với hơn 10 năm kinh nghiệm.",
+    displayName: "Ravolution Entertainment",
+    avatarUrl:
+      "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=200&q=80",
+    bio: "Ravolution Entertainment là đơn vị tổ chức sự kiện âm nhạc hàng đầu Việt Nam, với hơn 10 năm kinh nghiệm.",
   },
   description: `<h2>GIỚI THIỆU VỀ CHƯƠNG TRÌNH</h2>
 <p>Ravolution Music Festival 2026 là sự kiện âm nhạc lớn nhất trong năm, quy tụ hơn 50 nghệ sĩ hàng đầu Việt Nam và quốc tế trên một sân khấu hoành tráng.</p>

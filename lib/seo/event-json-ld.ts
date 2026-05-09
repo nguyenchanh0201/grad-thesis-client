@@ -29,7 +29,7 @@ export function buildEventJsonLd(event: EventDetail): string {
     },
     organizer: {
       "@type": "Organization",
-      name: event.organizer.name,
+      name: event.organizer.displayName,
       url: `${SITE_URL}/organizers/${event.organizer.id}`,
     },
     ...(event.lowestPrice != null && {

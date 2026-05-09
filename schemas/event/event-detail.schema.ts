@@ -11,10 +11,9 @@ export const EventDateSchema = z.object({
 
 export const EventOrganizerSchema = z.object({
   id: BigIntIdSchema,
-  name: z.string(),
-  logo: z.string().url(),
-  followerCount: z.number().int().nonnegative(),
-  description: z.string(),
+  displayName: z.string(),
+  avatarUrl: z.string().url(),
+  bio: z.string(),
 });
 
 export const EventVenueDetailSchema = z.object({

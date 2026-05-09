@@ -33,6 +33,14 @@ export const EventSchema = z.object({
   tags: z.array(TagSchema).optional(),
 
   organizerId: BigIntIdSchema.nullish(),
+  organizer: z
+    .object({
+      id: BigIntIdSchema,
+      displayName: z.string(),
+      avatarUrl: z.string().url(),
+      bio: z.string(),
+    })
+    .nullish(),
 
   eventDate: z.iso.datetime(),
   saleStartDate: z.iso.datetime(),
