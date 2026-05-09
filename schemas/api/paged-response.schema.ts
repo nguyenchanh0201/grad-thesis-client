@@ -1,9 +1,11 @@
 import { z } from "zod";
 
 export const PaginatedMetadataSchema = z.object({
-  total: z.number(),
-  page: z.number(),
-  limit: z.number(),
+  totalItems: z.number(),
+  itemCount: z.number(),
+  itemsPerPage: z.number(),
+  totalPages: z.number(),
+  currentPage: z.number(),
 });
 
 export type PaginatedMetadata = z.infer<typeof PaginatedMetadataSchema>;
