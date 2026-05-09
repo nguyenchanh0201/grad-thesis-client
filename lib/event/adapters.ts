@@ -33,7 +33,7 @@ export function eventToEventDetail(event: Event): EventDetail {
       },
     ],
     venue: {
-      name: event.venue?.name ?? "",
+      name: event.venue?.venueName ?? "",
       address: event.venue?.address ?? event.venue?.city ?? "",
       city: event.venue?.city ?? "",
     },
@@ -66,7 +66,9 @@ export function eventToEventItem(event: Event): EventItem {
     image,
     title: event.eventName,
     date: fmtIsoDate(event.eventDate),
-    venue: event.venue ? `${event.venue.name}, ${event.venue.city}` : undefined,
+    venue: event.venue
+      ? `${event.venue.venueName}, ${event.venue.city}`
+      : undefined,
     price:
       lowestPrice !== undefined
         ? `From ${(lowestPrice / 100).toLocaleString("vi-VN")} ₫`

@@ -7,6 +7,7 @@ import type { EventDetail } from "@/schemas/event";
 import { AboutSection } from "./about-section";
 import { ScheduleSection } from "./schedule-section";
 import { OrganizerSection } from "./organizer-section";
+import { useUserProfile } from "@/hooks/user-profile";
 
 const SECTION_TABS: TabItem[] = [
   { id: "about", label: "About" },
@@ -16,16 +17,13 @@ const SECTION_TABS: TabItem[] = [
 
 interface Props {
   event: EventDetail;
-  isLoggedIn?: boolean;
   onCTAClick?: () => void;
 }
 
-export function EventDetailSections({
-  event,
-  isLoggedIn = false,
-  onCTAClick,
-}: Props) {
+export function EventDetailSections({ event, onCTAClick }: Props) {
   const [activeTab, setActiveTab] = useState(SECTION_TABS[0].id);
+  const { data: user } = useUserProfile();
+  const isLoggedIn = user !== null;
 
   useEffect(() => {
     const observer = new IntersectionObserver(

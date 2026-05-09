@@ -141,7 +141,7 @@ export function TicketSelection({ slug }: Props) {
     ? `${fmtIsoDate(event.eventDate)} • ${event.eventDate.slice(11, 16)}`
     : "";
   const eventLocation = event?.venue
-    ? `${event.venue.name}, ${event.venue.city}`
+    ? `${event.venue.venueName}, ${event.venue.city}`
     : "";
   const eventImageUrl = event?.featuredImageUrl ?? event?.eventImageUrls?.[0];
 
