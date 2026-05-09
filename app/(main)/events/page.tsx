@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 
-import { useEventSearch, useEvents } from "@/hooks/use-events";
+import { useEvents } from "@/hooks/use-events";
 import { useCategories } from "@/hooks/use-taxonomy";
 import { eventToEventItem } from "@/lib/event/adapters";
 import { fmtShort } from "@/lib/date";
@@ -30,38 +30,19 @@ function EventsContent() {
   const categoryId = searchParams.get("categoryId") ?? undefined;
   const page = Math.max(1, Number(searchParams.get("page") ?? "1"));
 
-  const isSearchMode = !!(q || categoryId);
-
-  const { data: searchResult, isLoading: searchLoading } = useEventSearch(
-    {
-      q,
-      categoryId,
-      eventDateFrom: dateFrom,
-      eventDateTo: dateTo,
-      venueCity: venue ? slugToVenueCity(venue) : undefined,
-      status: EventStatus.ON_SALE,
-      page,
-      limit: 20,
-    },
-    isSearchMode,
-  );
-
-  const { data: listResult, isLoading: listLoading } = useEvents(
-    {
-      venue,
-      eventDateFrom: dateFrom,
-      eventDateTo: dateTo,
-      status: EventStatus.ON_SALE,
-      page,
-      limit: 20,
-    },
-    !isSearchMode,
-  );
+  const { data: result, isLoading } = useEvents({
+    q,
+    categoryId,
+    venueCity: venue ? slugToVenueCity(venue) : undefined,
+    eventDateFrom: dateFrom,
+    eventDateTo: dateTo,
+    status: EventStatus.ON_SALE,
+    page,
+    limit: 20,
+  });
 
   const { data: categoriesResult } = useCategories();
 
-  const result = isSearchMode ? searchResult : listResult;
-  const isLoading = isSearchMode ? searchLoading : listLoading;
   const events = result?.data?.map(eventToEventItem) ?? [];
   const meta = result?.meta;
   const totalItems = meta?.totalItems ?? 0;

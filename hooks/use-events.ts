@@ -2,23 +2,19 @@
 
 import { useQuery } from "@tanstack/react-query";
 import {
-  getEvents,
+  searchEvents,
   getEventBySlug,
   getEventDetail,
   getEventSeats,
   getEventStats,
-  searchEvents,
 } from "@/services/event.service";
-import type { GetEventsParams } from "@/schemas/event";
 import type { SearchEventsParams } from "@/schemas/event";
 
 export const eventKeys = {
   all: ["events"] as const,
   lists: () => [...eventKeys.all, "list"] as const,
-  list: (params: Partial<GetEventsParams>) =>
+  list: (params: Partial<SearchEventsParams>) =>
     [...eventKeys.lists(), params] as const,
-  search: (params: SearchEventsParams) =>
-    [...eventKeys.all, "search", params] as const,
   detail: (id: string) => [...eventKeys.all, "detail", id] as const,
   slug: (slug: string) => [...eventKeys.all, "slug", slug] as const,
   seats: (eventId: string) => [...eventKeys.all, "seats", eventId] as const,
@@ -26,12 +22,12 @@ export const eventKeys = {
 };
 
 export function useEvents(
-  params: Partial<GetEventsParams> = {},
+  params: Partial<SearchEventsParams> = {},
   enabled = true,
 ) {
   return useQuery({
     queryKey: eventKeys.list(params),
-    queryFn: () => getEvents(params),
+    queryFn: () => searchEvents(params as SearchEventsParams),
     enabled,
   });
 }
@@ -49,14 +45,6 @@ export function useEventDetail(id: string | undefined) {
     queryKey: eventKeys.detail(id ?? ""),
     queryFn: () => getEventDetail(id!),
     enabled: !!id,
-  });
-}
-
-export function useEventSearch(params: SearchEventsParams, enabled = true) {
-  return useQuery({
-    queryKey: eventKeys.search(params),
-    queryFn: () => searchEvents(params),
-    enabled: enabled && (!!params.q || Object.keys(params).length > 2),
   });
 }
 

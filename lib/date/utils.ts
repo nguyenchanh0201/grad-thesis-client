@@ -29,15 +29,13 @@ export function parseIso(iso: string): Date {
 /**
  * ISO datetime string → "13 Jun, 2026"
  *
- * Reads the date component directly from the string to avoid timezone shifts —
- * the displayed date is always the event's local calendar date, not UTC.
+ * Converts to local time first so the displayed date matches the viewer's
+ * calendar (avoids UTC-vs-local off-by-one for UTC+ timezones).
  */
 export function fmtIsoDate(iso: string): string {
-  const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
-  const month = new Date(y, m - 1, 1).toLocaleDateString(LOCALE, {
-    month: "short",
-  });
-  return `${d} ${month}, ${y}`;
+  const date = new Date(iso);
+  const month = date.toLocaleDateString(LOCALE, { month: "short" });
+  return `${date.getDate()} ${month}, ${date.getFullYear()}`;
 }
 
 /** ISO datetime string → "HH:MM" */
@@ -85,3 +83,19 @@ export function autoFormatDateInput(raw: string): string {
 }
 
 export const WDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+
+/** Date → ISO string at local midnight (start-of-day) for API date-range filters. */
+export function localDateToIso(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}T00:00:00.000Z`;
+}
+
+/** Date → ISO string at local end-of-day for API date-range filters. */
+export function localDateToEndOfDayIso(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}T23:59:59.999Z`;
+}

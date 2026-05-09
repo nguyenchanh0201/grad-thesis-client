@@ -23,9 +23,9 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { getLocations, slugToVenueCity } from "@/lib/locations/vi-cities";
-import { fmtShort } from "@/lib/date";
+import { fmtShort, localDateToIso, localDateToEndOfDayIso } from "@/lib/date";
 import { DatePicker } from "@/components/date/date-picker";
-import { useEventSearch } from "@/hooks/use-events";
+import { useEvents } from "@/hooks/use-events";
 import { eventToEventItem } from "@/lib/event/adapters";
 import { EventStatus } from "@/schemas/event";
 import { EventListing } from "@/components/event/event-listing";
@@ -112,12 +112,12 @@ function EventSearchInner() {
 
   // Dropdown search — only fires when query is ≥2 chars
   const searchEnabled = debouncedQuery.length >= 2;
-  const { data: dropdownResult, isLoading: dropdownLoading } = useEventSearch(
+  const { data: dropdownResult, isLoading: dropdownLoading } = useEvents(
     {
       q: debouncedQuery,
       venueCity: location ? slugToVenueCity(location) : undefined,
-      eventDateFrom: startDate?.toISOString(),
-      eventDateTo: endDate?.toISOString(),
+      eventDateFrom: startDate ? localDateToIso(startDate) : undefined,
+      eventDateTo: endDate ? localDateToIso(endDate) : undefined,
       status: EventStatus.ON_SALE,
       limit: 8,
     },
@@ -135,8 +135,8 @@ function EventSearchInner() {
     const q = inputValue.trim();
     if (q) params.set("q", q);
     if (location) params.set("venue", location);
-    if (startDate) params.set("dateFrom", startDate.toISOString());
-    if (endDate) params.set("dateTo", endDate.toISOString());
+    if (startDate) params.set("dateFrom", localDateToIso(startDate));
+    if (endDate) params.set("dateTo", localDateToIso(endDate));
     setShowDropdown(false);
     router.push(`/events?${params.toString()}`);
   }
