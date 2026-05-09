@@ -15,73 +15,15 @@ import {
   type CarouselApi,
 } from "@/components/ui/carousel";
 import { cn } from "@/lib/utils";
-
-interface FeaturedEvent {
-  id: string;
-  title: string;
-  category: string;
-  date: string;
-  venue: string;
-  imageUrl: string;
-  href: string;
-}
-
-const FEATURED_EVENTS: FeaturedEvent[] = [
-  {
-    id: "1",
-    title: "Coldplay: Music Of The Spheres World Tour",
-    category: "Concert",
-    date: "Sat, Aug 2 · 7:00 PM",
-    venue: "My Dinh National Stadium, Hanoi",
-    imageUrl:
-      "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=1400&q=80",
-    href: "/events/1",
-  },
-  {
-    id: "2",
-    title: "UEFA Champions League Final 2026",
-    category: "Sports",
-    date: "Sat, May 30 · 8:00 PM",
-    venue: "Allianz Arena, Munich",
-    imageUrl:
-      "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=1400&q=80",
-    href: "/events/2",
-  },
-  {
-    id: "3",
-    title: "The Weeknd: Hurry Up Tomorrow Tour",
-    category: "Concert",
-    date: "Fri, Sep 19 · 9:00 PM",
-    venue: "Nha Thi Dau Nguyen Du, Ho Chi Minh City",
-    imageUrl:
-      "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=1400&q=80",
-    href: "/events/3",
-  },
-  {
-    id: "4",
-    title: "F1 Vietnam Grand Prix 2026",
-    category: "Motorsport",
-    date: "Sun, Apr 5 · 2:00 PM",
-    venue: "Hanoi Street Circuit, Hanoi",
-    imageUrl:
-      "https://images.unsplash.com/photo-1541889413457-4aec9b418977?w=1400&q=80",
-    href: "/events/4",
-  },
-  {
-    id: "5",
-    title: "Cirque du Soleil: ALEGRÍA",
-    category: "Theater",
-    date: "Thu, Oct 9 · 7:30 PM",
-    venue: "Saigon Exhibition Center, Ho Chi Minh City",
-    imageUrl:
-      "https://images.unsplash.com/photo-1524368535928-5b5e00ddc76b?w=1400&q=80",
-    href: "/events/5",
-  },
-];
+import type { EventItem } from "@/components/event/event-card";
 
 const AUTOPLAY_DELAY = 5000;
 
-export function HeroBanner() {
+interface HeroBannerProps {
+  items: EventItem[];
+}
+
+export function HeroBanner({ items }: HeroBannerProps) {
   const [api, setApi] = React.useState<CarouselApi>();
   const [current, setCurrent] = React.useState(0);
   const plugin = React.useRef(
@@ -94,6 +36,8 @@ export function HeroBanner() {
     api.on("select", () => setCurrent(api.selectedScrollSnap()));
   }, [api]);
 
+  if (items.length === 0) return null;
+
   return (
     <section aria-label="Featured events" className="w-full">
       <Carousel
@@ -103,9 +47,9 @@ export function HeroBanner() {
         className="w-full"
       >
         <CarouselContent className="ml-0">
-          {FEATURED_EVENTS.map((event) => (
-            <CarouselItem key={event.id} className="pl-0">
-              <Slide event={event} />
+          {items.map((item) => (
+            <CarouselItem key={item.id} className="pl-0">
+              <Slide item={item} />
             </CarouselItem>
           ))}
         </CarouselContent>
@@ -124,7 +68,7 @@ export function HeroBanner() {
 
         {/* Dot indicators */}
         <div className="absolute bottom-5 left-1/2 flex -translate-x-1/2 gap-2">
-          {FEATURED_EVENTS.map((_, i) => (
+          {items.map((_, i) => (
             <button
               key={i}
               onClick={() => api?.scrollTo(i)}
@@ -143,12 +87,15 @@ export function HeroBanner() {
   );
 }
 
-function Slide({ event }: { event: FeaturedEvent }) {
+function Slide({ item }: { item: EventItem }) {
+  const href = item.slug ? `/events/${item.slug}` : `/events/${item.id}`;
+  const category = item.genre ?? item.tag;
+
   return (
     <div className="relative h-[calc(100dvh-var(--header-height))] w-full overflow-hidden">
       <Image
-        src={event.imageUrl}
-        alt={event.title}
+        src={item.image}
+        alt={item.title}
         fill
         sizes="100vw"
         className="object-cover"
@@ -160,24 +107,30 @@ function Slide({ event }: { event: FeaturedEvent }) {
       {/* Content */}
       <div className="absolute bottom-0 left-0 right-0 px-5 pb-14 md:px-10 lg:px-16">
         <div className="mx-auto max-w-4xl">
-          <Badge className="mb-3 border-0 bg-primary text-primary-foreground">
-            {event.category}
-          </Badge>
+          {category && (
+            <Badge className="mb-3 border-0 bg-primary text-primary-foreground">
+              {category}
+            </Badge>
+          )}
           <h2 className="mb-3 text-2xl font-bold leading-tight text-white drop-shadow md:text-4xl lg:text-5xl">
-            {event.title}
+            {item.title}
           </h2>
           <div className="mb-5 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-sm text-white/80 md:text-base">
-            <span className="flex items-center gap-1.5">
-              <CalendarDays className="h-4 w-4 shrink-0" />
-              {event.date}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <MapPin className="h-4 w-4 shrink-0" />
-              {event.venue}
-            </span>
+            {item.date && (
+              <span className="flex items-center gap-1.5">
+                <CalendarDays className="h-4 w-4 shrink-0" />
+                {item.date}
+              </span>
+            )}
+            {item.venue && (
+              <span className="flex items-center gap-1.5">
+                <MapPin className="h-4 w-4 shrink-0" />
+                {item.venue}
+              </span>
+            )}
           </div>
           <Link
-            href={event.href}
+            href={href}
             className={buttonVariants({
               size: "lg",
               className: "font-semibold",

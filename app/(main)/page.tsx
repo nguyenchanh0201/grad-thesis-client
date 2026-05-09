@@ -34,6 +34,8 @@ export default function Home() {
   ];
 
   const featuredEvents = events.filter((e) => e.isFeatured);
+  const heroBannerItems =
+    featuredEvents.length > 0 ? featuredEvents : events.slice(0, 5);
   const trendingEvents = events.slice(0, 10);
   const upcomingEvents = events.slice(0, 8);
   const isLoading = eventsLoading;
@@ -48,7 +50,7 @@ export default function Home() {
 
   return (
     <main>
-      <HeroBanner />
+      <HeroBanner items={heroBannerItems} />
 
       <div className="page-container space-y-16 py-12">
         <TabBar autoScroll={false} tabs={categoryTabs} className="mb-12" />
