@@ -149,12 +149,6 @@ export const mockEventDetail: EventDetail = {
   description: `<h2>GIỚI THIỆU VỀ CHƯƠNG TRÌNH</h2>
 <p>Ravolution Music Festival 2026 là sự kiện âm nhạc lớn nhất trong năm, quy tụ hơn 50 nghệ sĩ hàng đầu Việt Nam và quốc tế trên một sân khấu hoành tráng.</p>
 <p>Với hệ thống âm thanh ánh sáng đỉnh cao và không gian sáng tạo độc đáo, đây hứa hẹn là một đêm nhạc không thể quên dành cho tất cả người yêu âm nhạc.</p>`,
-  timeVenueNotes: [
-    "Ngày: Thứ Bảy & Chủ Nhật, 13–14/06/2026",
-    "Giờ: 19:00 – 23:00 (mở cửa từ 17:00)",
-    "Địa điểm: Sân Vận Động Quốc Gia Mỹ Đình, Hà Nội",
-    "Phân loại: 16+ (dưới 16 tuổi cần có người lớn đi kèm)",
-  ],
   seatMapImage:
     "https://images.unsplash.com/photo-1578849278619-e73505e9610f?w=1200&q=80",
   seatMapType: "stadium",
