@@ -24,9 +24,9 @@ export const EventSchema = z.object({
 
   eventCode: z.string().max(32),
   eventName: z.string().max(255),
-  summary: z.string().max(500).nullish(),
+  summary: z.string().nullish(),
   desc: z.string().nullish(),
-  descAttachmentUrl: z.string().url().nullish(),
+  descAttachmentUrl: z.string().nullish(),
   termsAndConditions: z.string().nullish(),
 
   venue: VenueSchema.nullish(),
@@ -59,10 +59,10 @@ export const EventSchema = z.object({
 
   socialLinks: z
     .object({
-      facebook: z.string().url().optional(),
-      website: z.string().url().optional(),
-      instagram: z.string().url().optional(),
-      twitter: z.string().url().optional(),
+      facebook: z.string().nullish(),
+      website: z.string().nullish(),
+      instagram: z.string().nullish(),
+      twitter: z.string().nullish(),
     })
     .nullish(),
 

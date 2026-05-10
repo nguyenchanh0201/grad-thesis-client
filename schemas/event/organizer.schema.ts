@@ -8,13 +8,13 @@ export const EventOrganizerSchema = z.object({
   bio: z.string().nullish(),
   contactInfo: z
     .object({
-      email: z.email().optional(),
-      phone: z.string().optional(),
-      website: z.url().optional(),
-      facebook: z.url().optional(),
-      instagram: z.url().optional(),
+      email: z.string().nullish(),
+      phone: z.string().nullish(),
+      website: z.string().nullish(),
+      facebook: z.string().nullish(),
+      instagram: z.string().nullish(),
     })
-    .optional(),
+    .nullish(),
 });
 
 export type EventOrganizer = z.infer<typeof EventOrganizerSchema>;

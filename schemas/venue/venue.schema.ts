@@ -7,13 +7,13 @@ import {
 
 export const VenueSchema = z.object({
   id: BigIntIdSchema,
-  venueName: z.string(),
-  address: z.string().optional(),
-  city: z.string(),
-  country: z.string().optional(),
-  latitude: z.string().optional(),
-  longitude: z.string().optional(),
-  placeId: z.string().optional(),
+  venueName: z.string().nullish(),
+  address: z.string().nullish(),
+  city: z.string().nullish(),
+  country: z.string().nullish(),
+  latitude: z.string().nullish(),
+  longitude: z.string().nullish(),
+  placeId: z.string().nullish(),
 });
 export type Venue = z.infer<typeof VenueSchema>;
 

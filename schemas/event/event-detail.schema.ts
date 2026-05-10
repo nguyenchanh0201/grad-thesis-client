@@ -51,12 +51,12 @@ export const EventDetailSchema = z.object({
   performerName: z.string().optional(),
   socialLinks: z
     .object({
-      facebook: z.url().optional(),
-      website: z.url().optional(),
-      instagram: z.url().optional(),
-      twitter: z.url().optional(),
+      facebook: z.string().nullish(),
+      website: z.string().nullish(),
+      instagram: z.string().nullish(),
+      twitter: z.string().nullish(),
     })
-    .optional(),
+    .nullish(),
   relatedEvents: z.array(EventItemSchema),
   performers: z.array(PerformerSchema).optional(),
 });
