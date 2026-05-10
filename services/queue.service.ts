@@ -1,10 +1,10 @@
 import { apiClient } from "@/lib/api/api-client";
 import { parseOrThrow } from "@/lib/api/api-utils";
 import {
-  HeartbeatResult,
-  HeartbeatResultSchema,
-  WaitRoomResult,
-  WaitRoomResultSchema,
+  HeartbeatResponse,
+  HeartbeatResponseSchema,
+  WaitRoomResponse,
+  WaitRoomResponseSchema,
 } from "@/schemas/queue";
 
 export type RequestAccessPayload = {
@@ -20,25 +20,26 @@ export type QueueStatusParams = {
 export type HeartbeatPayload = {
   eventId: string;
   userId: string;
+  token: string;
 };
 
 export const requestAccess = async (
   payload: RequestAccessPayload,
-): Promise<WaitRoomResult> => {
+): Promise<WaitRoomResponse> => {
   const response = await apiClient.post("/tickets/request-access", payload);
-  return parseOrThrow(WaitRoomResultSchema, response);
+  return parseOrThrow(WaitRoomResponseSchema, response);
 };
 
 export const getQueueStatus = async (
   params: QueueStatusParams,
-): Promise<WaitRoomResult> => {
+): Promise<WaitRoomResponse> => {
   const response = await apiClient.get("/tickets/queue-status", { params });
-  return parseOrThrow(WaitRoomResultSchema, response);
+  return parseOrThrow(WaitRoomResponseSchema, response);
 };
 
 export const sendHeartbeat = async (
   payload: HeartbeatPayload,
-): Promise<HeartbeatResult> => {
+): Promise<HeartbeatResponse> => {
   const response = await apiClient.post("/tickets/heartbeat", payload);
-  return parseOrThrow(HeartbeatResultSchema, response);
+  return parseOrThrow(HeartbeatResponseSchema, response);
 };

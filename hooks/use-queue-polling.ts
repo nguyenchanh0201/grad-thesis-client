@@ -51,14 +51,14 @@ export function useQueuePolling(
 ): UseQueuePollingResult {
   const setWaitRoomToken = useBookingStore((s) => s.setWaitRoomToken);
   const mockTickRef = useRef(0);
+  const tokenRef = useRef<string | null>(null);
 
   // Phase 1: Join queue — fires once on mount
   const accessQuery = useQuery<WaitRoomResponse>({
     queryKey: ["queue", "access", eventId, userId],
     queryFn: async () => {
       if (USE_MOCK) return mockQueueWaiting(42);
-      const res = await requestAccess({ eventId: eventId!, userId: userId! });
-      return res.data;
+      return await requestAccess({ eventId: eventId!, userId: userId! });
     },
     enabled: !!eventId && !!userId,
     staleTime: Infinity,
@@ -77,8 +77,7 @@ export function useQueuePolling(
           ? mockQueueAllowed()
           : mockQueueWaiting(Math.max(1, 42 - (mockTickRef.current - 1) * 28));
       }
-      const res = await getQueueStatus({ eventId: eventId!, userId: userId! });
-      return res.data;
+      return await getQueueStatus({ eventId: eventId!, userId: userId! });
     },
     enabled: !!accessQuery.data && !isTerminal(accessQuery.data.status),
     refetchInterval: (query) =>
@@ -88,19 +87,20 @@ export function useQueuePolling(
 
   const currentData = statusQuery.data ?? accessQuery.data;
 
-  // Sync session token into booking store when ADMITTED
+  // Sync session token into ref + booking store when ADMITTED
   useEffect(() => {
     if (!currentData?.token || currentData.status !== "ADMITTED") return;
+    tokenRef.current = currentData.token;
     setWaitRoomToken(currentData.token);
   }, [currentData, setWaitRoomToken]);
 
   // Fire heartbeat after each status poll while in queue
   useEffect(() => {
-    if (!statusQuery.data || !eventId || !userId) return;
+    if (!statusQuery.data || !tokenRef.current || !eventId || !userId) return;
     const { status } = statusQuery.data;
     if (status !== "QUEUEING" && status !== "ADMITTED") return;
 
-    sendHeartbeat({ eventId, userId }).catch(() => {});
+    sendHeartbeat({ eventId, userId, token: tokenRef.current }).catch(() => {});
   }, [statusQuery.data, eventId, userId]);
 
   const isLoading = accessQuery.isPending;

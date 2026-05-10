@@ -1,7 +1,5 @@
 import { z } from "zod";
 
-import { BaseResponseSchema } from "@/schemas/api";
-
 export const BackendQueueStatusSchema = z.enum([
   "NOT_OPEN",
   "QUEUEING",
@@ -31,19 +29,11 @@ export const WaitRoomResponseSchema = z.object({
 });
 export type WaitRoomResponse = z.infer<typeof WaitRoomResponseSchema>;
 
-export const WaitRoomResultSchema = BaseResponseSchema(WaitRoomResponseSchema);
-export type WaitRoomResult = z.infer<typeof WaitRoomResultSchema>;
-
 export const HeartbeatResponseSchema = z.object({
   success: z.boolean(),
   activeCount: z.number().int().nonnegative(),
 });
 export type HeartbeatResponse = z.infer<typeof HeartbeatResponseSchema>;
-
-export const HeartbeatResultSchema = BaseResponseSchema(
-  HeartbeatResponseSchema,
-);
-export type HeartbeatResult = z.infer<typeof HeartbeatResultSchema>;
 
 export type FrontendQueueStatus =
   | "not_open"
