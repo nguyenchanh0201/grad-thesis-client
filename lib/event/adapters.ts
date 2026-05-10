@@ -44,6 +44,7 @@ export function eventToEventDetail(event: Event): EventDetail {
       displayName: event.organizer?.displayName ?? "Organizer",
       avatarUrl: event.organizer?.avatarUrl ?? PLACEHOLDER_IMG,
       bio: event.organizer?.bio ?? "",
+      contactInfo: event.organizer?.contactInfo ?? undefined,
     },
     socialLinks: event.socialLinks ?? undefined,
     termsAndConditions: "",

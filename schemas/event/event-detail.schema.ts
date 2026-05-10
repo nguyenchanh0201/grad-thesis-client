@@ -2,19 +2,13 @@ import { z } from "zod";
 import { BigIntIdSchema } from "../api";
 import { EventStatus } from "./event.schema";
 import { PerformerSchema } from "./performer.schema";
+import { EventOrganizerSchema } from "./organizer.schema";
 
 export const EventDateSchema = z.object({
   date: z.string(),
   label: z.string(),
   startTime: z.iso.datetime(),
   endTime: z.iso.datetime().optional(),
-});
-
-export const EventOrganizerSchema = z.object({
-  id: BigIntIdSchema,
-  displayName: z.string(),
-  avatarUrl: z.url(),
-  bio: z.string(),
 });
 
 export const EventVenueDetailSchema = z.object({
@@ -67,7 +61,6 @@ export const EventDetailSchema = z.object({
 });
 
 export type EventDate = z.infer<typeof EventDateSchema>;
-export type EventOrganizer = z.infer<typeof EventOrganizerSchema>;
 export type EventVenueDetail = z.infer<typeof EventVenueDetailSchema>;
 export type EventItemDetail = z.infer<typeof EventItemSchema>;
 export type EventDetail = z.infer<typeof EventDetailSchema>;

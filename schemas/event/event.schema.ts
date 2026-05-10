@@ -5,6 +5,7 @@ import { TicketTypeSchema } from "../ticket-type";
 import { CategorySchema } from "../category";
 import { TagSchema } from "../tag";
 import { PerformerSchema } from "./performer.schema";
+import { EventOrganizerSchema } from "./organizer.schema";
 
 export enum EventStatus {
   DRAFT = 0,
@@ -34,14 +35,7 @@ export const EventSchema = z.object({
   tags: z.array(TagSchema).optional(),
 
   organizerId: BigIntIdSchema.nullish(),
-  organizer: z
-    .object({
-      id: BigIntIdSchema,
-      displayName: z.string(),
-      avatarUrl: z.string().url(),
-      bio: z.string(),
-    })
-    .nullish(),
+  organizer: EventOrganizerSchema.nullish(),
 
   eventDate: z.iso.datetime(),
   saleStartDate: z.iso.datetime(),

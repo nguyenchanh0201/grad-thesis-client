@@ -9,15 +9,14 @@ export {
   EventDetailPageResultSchema,
 } from "./event-response.schema";
 export { type UpdateEventDTO, UpdateEventSchema } from "./update-event.schema";
+export { EventOrganizerSchema, type EventOrganizer } from "./organizer.schema";
 export {
   EventDetailSchema,
   EventDateSchema,
-  EventOrganizerSchema,
   EventVenueDetailSchema,
   EventItemSchema,
   type EventDetail,
   type EventDate,
-  type EventOrganizer,
   type EventVenueDetail,
   type EventItemDetail,
 } from "./event-detail.schema";
