@@ -11,18 +11,28 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import type { MyTicket } from "@/schemas/ticket";
+import type { BackendTicket } from "@/schemas/ticket";
 
 type Props = {
   open: boolean;
   onClose: () => void;
-  ticket: MyTicket;
+  ticket: BackendTicket;
 };
 
 export function TicketQRModal({ open, onClose, ticket }: Props) {
-  const { event, invoiceId, lineItems } = ticket;
-  const totalTickets = lineItems.reduce((sum, item) => sum + item.quantity, 0);
+  const { event, code } = ticket;
   const qrRef = useRef<HTMLCanvasElement>(null);
+
+  const eventDt = new Date(event.eventDate);
+  const dateStr = eventDt.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+  const timeStr = eventDt.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 
   const handleDownload = () => {
     const canvas = qrRef.current;
@@ -45,7 +55,7 @@ export function TicketQRModal({ open, onClose, ticket }: Props) {
       const url = downloadCanvas.toDataURL("image/png");
       const a = document.createElement("a");
       a.href = url;
-      a.download = `ticket-${invoiceId}.png`;
+      a.download = `ticket-${code}.png`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -57,10 +67,10 @@ export function TicketQRModal({ open, onClose, ticket }: Props) {
       <DialogContent className="w-[min(90vw,24rem)] max-w-full p-4 sm:p-6">
         <DialogHeader className="space-y-1">
           <DialogTitle className="line-clamp-2 pr-6 text-base sm:text-lg">
-            {event.title}
+            {event.eventName}
           </DialogTitle>
           <DialogDescription className="text-xs sm:text-sm">
-            {event.date} at {event.time} · {event.venue}
+            {dateStr} at {timeStr} · {event.venue.venueName}
           </DialogDescription>
         </DialogHeader>
 
@@ -70,9 +80,9 @@ export function TicketQRModal({ open, onClose, ticket }: Props) {
             <QRCodeCanvas
               id="ticket-qr-code"
               ref={qrRef}
-              value={invoiceId}
-              size={400} // High res for download
-              style={{ width: "100%", height: "100%" }} // Responsive display
+              value={code}
+              size={400}
+              style={{ width: "100%", height: "100%" }}
               level="H"
               includeMargin={false}
             />
@@ -80,11 +90,9 @@ export function TicketQRModal({ open, onClose, ticket }: Props) {
 
           <div className="text-center">
             <p className="font-mono text-sm font-semibold text-foreground sm:text-base">
-              {invoiceId}
+              {code}
             </p>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              {totalTickets} ticket{totalTickets > 1 ? "s" : ""}
-            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">1 ticket</p>
           </div>
 
           <Button

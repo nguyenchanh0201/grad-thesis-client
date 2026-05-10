@@ -5,40 +5,61 @@ import Image from "next/image";
 import { Calendar, MapPin, Ticket, QrCode } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { fmt } from "@/lib/strings/money";
-import type { MyTicket, TicketStatus } from "@/schemas/ticket";
+import { formatPrice } from "@/lib/strings/money";
+import { BackendTicket, BackendTicketStatus } from "@/schemas/ticket";
 import { TicketQRModal } from "./ticket-qr-modal";
 
 const STATUS_CONFIG: Record<
-  TicketStatus,
+  BackendTicketStatus,
   {
     label: string;
     variant: "success" | "warning" | "secondary" | "destructive";
   }
 > = {
-  confirmed: { label: "Confirmed", variant: "success" },
-  pending: { label: "Pending", variant: "warning" },
-  used: { label: "Used", variant: "secondary" },
-  cancelled: { label: "Cancelled", variant: "destructive" },
+  [BackendTicketStatus.VALID]: { label: "Valid", variant: "success" },
+  [BackendTicketStatus.USED]: { label: "Used", variant: "secondary" },
+  [BackendTicketStatus.CANCELLED]: {
+    label: "Cancelled",
+    variant: "destructive",
+  },
+  [BackendTicketStatus.TRANSFERRED]: {
+    label: "Transferred",
+    variant: "warning",
+  },
 };
 
-type Props = { ticket: MyTicket };
+type Props = { ticket: BackendTicket };
 
 export function TicketCard({ ticket }: Props) {
   const [qrOpen, setQrOpen] = useState(false);
-  const { event, lineItems, totalAmount, status, invoiceId } = ticket;
+  const { event, seat, ticketType, status, code } = ticket;
   const { label: statusLabel, variant: statusVariant } = STATUS_CONFIG[status];
-  const canShowQR = status === "confirmed" || status === "used";
+  const canShowQR =
+    status === BackendTicketStatus.VALID || status === BackendTicketStatus.USED;
+
+  const eventDt = new Date(event.eventDate);
+  const dateStr = eventDt.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+  const timeStr = eventDt.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const seatLabel = seat
+    ? `Row ${seat.row}, Seat ${seat.column}`
+    : ticketType.name;
 
   return (
     <>
       <article className="flex flex-col overflow-hidden rounded-sm border border-border transition-shadow hover:shadow-md sm:flex-row">
         {/* Image — banner on mobile, sidebar on desktop */}
-        <div className="relative aspect-[5/2] w-full shrink-0 sm:aspect-auto sm:w-44 sm:self-stretch">
-          {event.image ? (
+        <div className="relative aspect-5/2 w-full shrink-0 sm:aspect-auto sm:w-44 sm:self-stretch">
+          {event.featuredImageUrl ? (
             <Image
-              src={event.image}
-              alt={event.title}
+              src={event.featuredImageUrl}
+              alt={event.eventName}
               fill
               sizes="(max-width: 640px) 100vw, 176px"
               className="object-cover"
@@ -50,10 +71,10 @@ export function TicketCard({ ticket }: Props) {
 
         {/* Details */}
         <div className="flex flex-1 flex-col gap-3 p-4 sm:p-5">
-          {/* Genre + status */}
+          {/* Ticket type + status */}
           <div className="flex items-start justify-between gap-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              {event.genre}
+              {ticketType.name}
             </p>
             <Badge variant={statusVariant} className="shrink-0">
               {statusLabel}
@@ -62,7 +83,7 @@ export function TicketCard({ ticket }: Props) {
 
           {/* Event title */}
           <p className="line-clamp-2 text-base font-bold leading-snug text-foreground">
-            {event.title}
+            {event.eventName}
           </p>
 
           {/* Date + Venue */}
@@ -70,38 +91,35 @@ export function TicketCard({ ticket }: Props) {
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Calendar className="h-3.5 w-3.5 shrink-0" />
               <span>
-                {event.date} at {event.time}
+                {dateStr} at {timeStr}
               </span>
             </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <MapPin className="h-3.5 w-3.5 shrink-0" />
               <span className="truncate">
-                {event.venue}, {event.city}
+                {event.venue.venueName}
+                {event.venue.city ? `, ${event.venue.city}` : ""}
               </span>
             </div>
           </div>
 
           <div className="border-t border-border" />
 
-          {/* Ticket line items + invoice */}
+          {/* Seat / zone + code */}
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
               <Ticket className="h-3.5 w-3.5 shrink-0" />
-              <span>
-                {lineItems
-                  .map((item) => `${item.label} ×${item.quantity}`)
-                  .join(" · ")}
-              </span>
+              <span>{seatLabel}</span>
             </div>
             <span className="ml-auto font-mono text-xs text-muted-foreground/70">
-              {invoiceId}
+              {code}
             </span>
           </div>
 
-          {/* Total + action */}
+          {/* Price + action */}
           <div className="flex items-center justify-between gap-3">
             <span className="text-base font-bold text-primary">
-              {fmt(totalAmount)} VND
+              {formatPrice(ticketType.price, ticketType.currency)}
             </span>
             {canShowQR && (
               <Button

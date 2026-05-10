@@ -6,36 +6,66 @@ import { Ticket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import TabBar from "@/components/shared/tab-bar";
 import { LabelBlock } from "@/components/event/label-block";
-import { mockTickets } from "@/lib/mock/tickets";
+import { useMyTickets } from "@/hooks/use-tickets";
+import { BackendTicket, BackendTicketStatus } from "@/schemas/ticket";
 import { TicketCard } from "./ticket-card";
-import type { MyTicket } from "@/schemas/ticket";
+
+type TAB_ID = "upcoming" | "past" | string;
 
 const TABS = [
   { id: "upcoming", label: "Upcoming" },
   { id: "past", label: "Past" },
 ];
 
-function isUpcoming(ticket: MyTicket): boolean {
+function isUpcoming(ticket: BackendTicket): boolean {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const eventDate = new Date(ticket.event.eventDate);
   return (
     eventDate >= today &&
-    ticket.status !== "cancelled" &&
-    ticket.status !== "used"
+    ticket.status !== BackendTicketStatus.CANCELLED &&
+    ticket.status !== BackendTicketStatus.USED
   );
 }
 
 export function MyTickets() {
-  const [activeTab, setActiveTab] = useState("upcoming");
+  const [activeTab, setActiveTab] = useState<TAB_ID>("upcoming");
+  const { data, isLoading, isError } = useMyTickets();
 
   const { upcoming, past } = useMemo(() => {
-    const upcoming = mockTickets.filter(isUpcoming);
-    const past = mockTickets.filter((t) => !isUpcoming(t));
-    return { upcoming, past };
-  }, []);
+    const all = data?.data ?? [];
+    return {
+      upcoming: all.filter(isUpcoming),
+      past: all.filter((t) => !isUpcoming(t)),
+    };
+  }, [data]);
 
   const tickets = activeTab === "upcoming" ? upcoming : past;
+
+  if (isLoading) {
+    return (
+      <main className="page-container py-10">
+        <div className="flex flex-col gap-4">
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="h-40 animate-pulse rounded-sm bg-muted sm:h-32"
+            />
+          ))}
+        </div>
+      </main>
+    );
+  }
+
+  if (isError) {
+    return (
+      <main className="page-container py-10">
+        <p className="text-sm text-destructive">
+          Failed to load tickets. Please try again.
+        </p>
+      </main>
+    );
+  }
 
   return (
     <main className="page-container py-10">
@@ -74,9 +104,6 @@ export function MyTickets() {
 function EmptyState({ tab }: { tab: string }) {
   return (
     <div className="flex flex-col items-center gap-5 py-20 text-center">
-      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-        <Ticket className="h-8 w-8 text-muted-foreground" />
-      </div>
       <div className="space-y-1">
         <p className="font-semibold text-foreground">
           {tab === "upcoming" ? "No upcoming tickets" : "No past tickets"}

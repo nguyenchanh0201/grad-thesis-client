@@ -27,7 +27,7 @@ export async function login(
   }
 
   return {
-    user: { id: "mock-user-1", email: data.email, role: "USER" },
+    user: { id: "1", email: data.email, role: "USER" },
     accessToken: "mock-access-token",
   };
 }

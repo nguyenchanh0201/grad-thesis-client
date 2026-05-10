@@ -6,20 +6,15 @@ import { PAGINATION } from "@/core/constants";
 
 export const ticketKeys = {
   all: ["tickets"] as const,
-  myTickets: (userId: string, page: number) =>
-    [...ticketKeys.all, "my", userId, page] as const,
+  myTickets: (page: number) => [...ticketKeys.all, "my", page] as const,
   myOrders: (userId: string, page: number) =>
     [...ticketKeys.all, "orders", userId, page] as const,
 };
 
-export function useMyTickets(
-  userId: string | undefined,
-  page = PAGINATION.DEFAULT_PAGE,
-) {
+export function useMyTickets(page = PAGINATION.DEFAULT_PAGE) {
   return useQuery({
-    queryKey: ticketKeys.myTickets(userId ?? "", page),
-    queryFn: () => getMyTickets({ userId: userId!, page }),
-    enabled: !!userId,
+    queryKey: ticketKeys.myTickets(page),
+    queryFn: () => getMyTickets({ page }),
   });
 }
 

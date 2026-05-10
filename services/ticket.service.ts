@@ -11,16 +11,14 @@ import {
 } from "@/schemas/ticket";
 
 export const getMyTickets = async ({
-  userId,
   page = PAGINATION.DEFAULT_PAGE,
   limit = PAGINATION.DEFAULT_LIMIT,
 }: {
-  userId: string;
   page?: number;
   limit?: number;
-}): Promise<TicketListResult> => {
+} = {}): Promise<TicketListResult> => {
   const response = await apiClient.get("/tickets/my", {
-    params: { userId, page, limit },
+    params: { page, limit },
   });
   return parseOrThrow(TicketListResultSchema, response);
 };
