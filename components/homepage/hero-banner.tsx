@@ -93,14 +93,16 @@ function Slide({ item }: { item: EventItem }) {
 
   return (
     <div className="relative h-[calc(100dvh-var(--header-height))] w-full overflow-hidden">
-      <Image
-        src={item.image}
-        alt={item.title}
-        fill
-        sizes="100vw"
-        className="object-cover"
-        priority
-      />
+      {item.image && (
+        <Image
+          src={item.image}
+          alt={item.title}
+          fill
+          sizes="100vw"
+          className="object-cover"
+          priority
+        />
+      )}
       {/* Gradient overlay */}
       <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/30 to-transparent" />
 

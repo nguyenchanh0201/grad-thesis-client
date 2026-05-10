@@ -22,7 +22,7 @@ export const EventVenueDetailSchema = z.object({
 
 export const EventItemSchema = z.object({
   id: z.string(),
-  image: z.string(),
+  image: z.string().optional(),
   genre: z.string().optional(),
   title: z.string(),
   date: z.string().optional(),
@@ -35,7 +35,7 @@ export const EventDetailSchema = z.object({
   id: BigIntIdSchema,
   slug: z.string(),
   title: z.string().max(255),
-  images: z.array(z.string()).min(1),
+  images: z.array(z.string()),
   status: z.nativeEnum(EventStatus),
   dates: z.array(EventDateSchema).min(1),
   venue: EventVenueDetailSchema,

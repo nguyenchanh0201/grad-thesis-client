@@ -9,7 +9,7 @@ import { FilledImage } from "../shared/filled-image";
 export interface EventItem {
   id: string;
   slug?: string;
-  image: string;
+  image?: string;
   genre?: string;
   title: string;
   date?: string;

@@ -1,6 +1,12 @@
 import Image from "next/image";
 import { EventItem } from "../event/event-card";
 
+function eventColor(title: string): string {
+  let h = 0;
+  for (let i = 0; i < title.length; i++) h = (h * 31 + title.charCodeAt(i)) | 0;
+  return `hsl(${(h >>> 0) % 360}, 40%, 30%)`;
+}
+
 export function FilledImage({
   event,
   onError,
@@ -8,6 +14,15 @@ export function FilledImage({
   event: EventItem;
   onError: () => void;
 }) {
+  if (!event.image) {
+    return (
+      <div
+        className="relative aspect-square overflow-hidden rounded-sm"
+        style={{ backgroundColor: eventColor(event.title) }}
+      />
+    );
+  }
+
   return (
     <div className="relative aspect-square overflow-hidden rounded-sm bg-muted">
       <Image

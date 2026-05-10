@@ -3,15 +3,11 @@ import type { EventDetail } from "@/schemas/event";
 import type { EventItem } from "@/components/event/event-card";
 import { fmtIsoDate } from "@/lib/date";
 
-const PLACEHOLDER_IMG =
-  "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=800&q=80";
-
 export function eventToEventDetail(event: Event): EventDetail {
   const images = [
     event.featuredImageUrl,
     ...(event.eventImageUrls ?? []),
   ].filter((u): u is string => !!u);
-  if (images.length === 0) images.push(PLACEHOLDER_IMG);
 
   const lowestPrice =
     event.ticketTypes && event.ticketTypes.length > 0
@@ -44,7 +40,7 @@ export function eventToEventDetail(event: Event): EventDetail {
     organizer: {
       id: event.organizer?.id ?? "0",
       displayName: event.organizer?.displayName ?? "Organizer",
-      avatarUrl: event.organizer?.avatarUrl ?? PLACEHOLDER_IMG,
+      avatarUrl: event.organizer?.avatarUrl ?? undefined,
       bio: event.organizer?.bio ?? "",
       contactInfo: event.organizer?.contactInfo ?? undefined,
     },
@@ -61,8 +57,7 @@ export function eventToEventDetail(event: Event): EventDetail {
 }
 
 export function eventToEventItem(event: Event): EventItem {
-  const image =
-    event.featuredImageUrl ?? event.eventImageUrls?.[0] ?? PLACEHOLDER_IMG;
+  const image = event.featuredImageUrl ?? event.eventImageUrls?.[0];
 
   const lowestPrice =
     event.ticketTypes && event.ticketTypes.length > 0

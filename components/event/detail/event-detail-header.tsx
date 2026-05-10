@@ -20,6 +20,12 @@ import { EventStatus } from "@/schemas/event";
 import type { EventDetail } from "@/schemas/event";
 import { useUserProfile } from "@/hooks/user-profile";
 
+function eventBgColor(title: string): string {
+  let h = 0;
+  for (let i = 0; i < title.length; i++) h = (h * 31 + title.charCodeAt(i)) | 0;
+  return `hsl(${(h >>> 0) % 360}, 40%, 30%)`;
+}
+
 interface EventDetailHeaderProps {
   event: EventDetail;
   ctaLabel?: string;
@@ -99,15 +105,24 @@ export function EventDetailHeader({
       <div className="page-container relative z-10 py-8 md:py-12">
         <div className="flex flex-col gap-6 md:grid md:grid-cols-[2fr_3fr] md:gap-10">
           <div className="flex flex-col gap-4">
-            <div className="relative aspect-video overflow-hidden rounded-md md:aspect-auto md:flex-1 md:min-h-0">
-              <Image
-                src={event.images[0]}
-                alt={`${event.title} - event poster`}
-                fill
-                sizes="(max-width: 768px) 100vw, 40vw"
-                className="object-cover"
-                priority
-              />
+            <div
+              className="relative aspect-video overflow-hidden rounded-md md:aspect-auto md:flex-1 md:min-h-0"
+              style={
+                !event.images[0]
+                  ? { backgroundColor: eventBgColor(event.title) }
+                  : undefined
+              }
+            >
+              {event.images[0] && (
+                <Image
+                  src={event.images[0]}
+                  alt={`${event.title} - event poster`}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 40vw"
+                  className="object-cover"
+                  priority
+                />
+              )}
             </div>
             <Button
               onClick={onCTAClick}

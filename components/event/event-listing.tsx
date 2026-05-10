@@ -88,7 +88,7 @@ export function EventListing({
         ))}
       </div>
       {onViewMore && (
-        <div className="mt-6 flex justify-center">
+        <div className="mt-3 flex justify-center">
           <ViewMoreBtn
             label={viewMoreLabel}
             loading={loadingMore}
