@@ -8,17 +8,17 @@ import {
 } from "@/schemas/queue";
 
 export type RequestAccessPayload = {
-  eventId: string;
+  slug: string;
   userId: string;
 };
 
 export type QueueStatusParams = {
-  eventId: string;
+  slug: string;
   userId: string;
 };
 
 export type HeartbeatPayload = {
-  eventId: string;
+  slug: string;
   userId: string;
   token: string;
 };

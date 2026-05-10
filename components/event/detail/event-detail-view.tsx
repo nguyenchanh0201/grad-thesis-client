@@ -14,7 +14,7 @@ export function EventDetailView({ event, detail }: EventDetailViewProps) {
   const router = useRouter();
 
   const handleBuy = () => {
-    router.push(`/buy/${event.slug}/queue?eventId=${event.id}`);
+    router.push(`/buy/${event.slug}/queue`);
   };
 
   return <EventDetailHeader event={detail} onCTAClick={handleBuy} />;

@@ -8,14 +8,6 @@ export const BackendQueueStatusSchema = z.enum([
 ]);
 export type BackendQueueStatus = z.infer<typeof BackendQueueStatusSchema>;
 
-export const QueueEventDataSchema = z.object({
-  eventId: z.string(),
-  title: z.string(),
-  bannerImageUrl: z.string().nullable().optional(),
-  eventSlug: z.string().nullable().optional(),
-});
-export type QueueEventData = z.infer<typeof QueueEventDataSchema>;
-
 export const WaitRoomResponseSchema = z.object({
   status: BackendQueueStatusSchema,
   token: z.string().nullable().optional(),

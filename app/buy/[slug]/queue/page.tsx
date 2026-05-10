@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useRef, useState } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 
 import { CountdownBar } from "@/components/queue/countdown-bar";
 import { EventBanner } from "@/components/queue/event-banner";
@@ -20,24 +20,16 @@ const REDIRECT_COUNTDOWN_SECONDS = 8;
 const DEFAULT_USER_ID = process.env.NEXT_PUBLIC_DEFAULT_USER_ID ?? "1";
 
 function QueuePageContent() {
-  const searchParams = useSearchParams();
   const router = useRouter();
   const { slug } = useParams<{ slug: string }>();
 
-  const eventId = searchParams.get("eventId");
   const user = useAuthStore((s) => s.user);
   const userId = user?.id ?? DEFAULT_USER_ID;
 
   const { data: eventResult } = useEventBySlug(slug);
   const event = eventResult?.data;
 
-  useEffect(() => {
-    if (!eventId) {
-      router.replace(slug ? `/events/${slug}` : "/events");
-    }
-  }, [eventId, slug, router]);
-
-  const { status: polledStatus } = useQueuePolling(eventId, userId);
+  const { status: polledStatus } = useQueuePolling(slug, userId);
 
   const [countdown, setCountdown] = useState(REDIRECT_COUNTDOWN_SECONDS);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -72,10 +64,10 @@ function QueuePageContent() {
     router.replace(slug ? `/events/${slug}` : "/events");
   };
 
-  if (!eventId) return null;
-
   const eventTitle = event?.eventName ?? "Loading event...";
   const eventImageUrl = event?.featuredImageUrl ?? event?.eventImageUrls?.[0];
+
+  console.log(event);
 
   return (
     <QueueCard backgroundImageUrl={eventImageUrl}>

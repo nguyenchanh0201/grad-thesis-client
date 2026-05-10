@@ -17,7 +17,7 @@ export function QueueInstructions({
   return (
     <p
       className={cn(
-        "text-[14px] leading-relaxed text-foreground/80",
+        "text-[14px] leading-relaxed text-foreground/80 line-clamp-none",
         hidden && "invisible",
       )}
       aria-hidden={hidden}

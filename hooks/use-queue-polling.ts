@@ -46,7 +46,7 @@ export type UseQueuePollingResult = {
 };
 
 export function useQueuePolling(
-  eventId: string | null,
+  slug: string | null,
   userId: string | null,
 ): UseQueuePollingResult {
   const setWaitRoomToken = useBookingStore((s) => s.setWaitRoomToken);
@@ -55,12 +55,12 @@ export function useQueuePolling(
 
   // Phase 1: Join queue — fires once on mount
   const accessQuery = useQuery<WaitRoomResponse>({
-    queryKey: ["queue", "access", eventId, userId],
+    queryKey: ["queue", "access", slug, userId],
     queryFn: async () => {
       if (USE_MOCK) return mockQueueWaiting(42);
-      return await requestAccess({ eventId: eventId!, userId: userId! });
+      return await requestAccess({ slug: slug!, userId: userId! });
     },
-    enabled: !!eventId && !!userId,
+    enabled: !!slug && !!userId,
     staleTime: Infinity,
     retry: false,
     refetchOnWindowFocus: false,
@@ -69,7 +69,7 @@ export function useQueuePolling(
 
   // Phase 2: Poll queue status until terminal
   const statusQuery = useQuery<WaitRoomResponse>({
-    queryKey: ["queue", "status", eventId, userId],
+    queryKey: ["queue", "status", slug, userId],
     queryFn: async () => {
       if (USE_MOCK) {
         mockTickRef.current += 1;
@@ -77,7 +77,7 @@ export function useQueuePolling(
           ? mockQueueAllowed()
           : mockQueueWaiting(Math.max(1, 42 - (mockTickRef.current - 1) * 28));
       }
-      return await getQueueStatus({ eventId: eventId!, userId: userId! });
+      return await getQueueStatus({ slug: slug!, userId: userId! });
     },
     enabled: !!accessQuery.data && !isTerminal(accessQuery.data.status),
     refetchInterval: (query) =>
@@ -96,12 +96,12 @@ export function useQueuePolling(
 
   // Fire heartbeat after each status poll while in queue
   useEffect(() => {
-    if (!statusQuery.data || !tokenRef.current || !eventId || !userId) return;
+    if (!statusQuery.data || !tokenRef.current || !slug || !userId) return;
     const { status } = statusQuery.data;
     if (status !== "QUEUEING" && status !== "ADMITTED") return;
 
-    sendHeartbeat({ eventId, userId, token: tokenRef.current }).catch(() => {});
-  }, [statusQuery.data, eventId, userId]);
+    sendHeartbeat({ slug, userId, token: tokenRef.current }).catch(() => {});
+  }, [statusQuery.data, slug, userId]);
 
   const isLoading = accessQuery.isPending;
   const isError = accessQuery.isError || statusQuery.isError;
