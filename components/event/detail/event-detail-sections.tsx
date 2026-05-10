@@ -8,6 +8,7 @@ import { AboutSection } from "./about-section";
 import { ScheduleSection } from "./schedule-section";
 import { OrganizerSection } from "./organizer-section";
 import { PerformersSection } from "./performers-section";
+import { LocationSection } from "./location-section";
 import { useUserProfile } from "@/hooks/user-profile";
 
 interface Props {
@@ -24,6 +25,7 @@ export function EventDetailSections({ event, onCTAClick }: Props) {
     if (event.performers && event.performers.length > 0) {
       items.push({ id: "performers", label: "Performers" });
     }
+    items.push({ id: "location", label: "Location" });
     items.push({ id: "organizer", label: "Organizer" });
     return items;
   }, [event.performers]);
@@ -81,6 +83,7 @@ export function EventDetailSections({ event, onCTAClick }: Props) {
       {event.performers && event.performers.length > 0 && (
         <PerformersSection performers={event.performers} />
       )}
+      <LocationSection venue={event.venue} />
       <OrganizerSection organizer={event.organizer} />
     </>
   );

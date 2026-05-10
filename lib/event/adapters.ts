@@ -36,6 +36,8 @@ export function eventToEventDetail(event: Event): EventDetail {
       name: event.venue?.venueName ?? "",
       address: event.venue?.address ?? event.venue?.city ?? "",
       city: event.venue?.city ?? "",
+      latitude: event.venue?.latitude ?? undefined,
+      longitude: event.venue?.longitude ?? undefined,
     },
     organizer: {
       id: event.organizer?.id ?? "0",

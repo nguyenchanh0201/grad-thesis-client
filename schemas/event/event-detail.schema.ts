@@ -13,7 +13,7 @@ export const EventDateSchema = z.object({
 export const EventOrganizerSchema = z.object({
   id: BigIntIdSchema,
   displayName: z.string(),
-  avatarUrl: z.string().url(),
+  avatarUrl: z.url(),
   bio: z.string(),
 });
 
@@ -21,7 +21,9 @@ export const EventVenueDetailSchema = z.object({
   name: z.string(),
   address: z.string(),
   city: z.string(),
-  mapUrl: z.string().url().optional(),
+  mapUrl: z.url().optional(),
+  latitude: z.string().optional(),
+  longitude: z.string().optional(),
 });
 
 export const EventItemSchema = z.object({
@@ -54,10 +56,10 @@ export const EventDetailSchema = z.object({
   performerName: z.string().optional(),
   socialLinks: z
     .object({
-      facebook: z.string().url().optional(),
-      website: z.string().url().optional(),
-      instagram: z.string().url().optional(),
-      twitter: z.string().url().optional(),
+      facebook: z.url().optional(),
+      website: z.url().optional(),
+      instagram: z.url().optional(),
+      twitter: z.url().optional(),
     })
     .optional(),
   relatedEvents: z.array(EventItemSchema),
