@@ -2,7 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { Calendar, MapPin, Ticket, Facebook, Globe } from "lucide-react";
+import {
+  Calendar,
+  MapPin,
+  Ticket,
+  Facebook,
+  Globe,
+  Instagram,
+  Twitter,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/strings/money";
@@ -60,7 +68,10 @@ export function EventDetailHeader({
     ? "Buy Tickets"
     : (ctaLabel ?? "Login required to purchase tickets");
   const hasSocialLinks =
-    event.socialLinks?.facebook || event.socialLinks?.website;
+    event.socialLinks?.facebook ||
+    event.socialLinks?.website ||
+    event.socialLinks?.instagram ||
+    event.socialLinks?.twitter;
 
   return (
     <section
@@ -213,16 +224,32 @@ export function EventDetailHeader({
                     <Globe size={20} aria-hidden />
                   </a>
                 )}
+                {event.socialLinks?.instagram && (
+                  <a
+                    href={event.socialLinks.instagram}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Instagram profile"
+                    className="flex size-10 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20"
+                  >
+                    <Instagram size={20} aria-hidden />
+                  </a>
+                )}
+                {event.socialLinks?.twitter && (
+                  <a
+                    href={event.socialLinks.twitter}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Twitter profile"
+                    className="flex size-10 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20"
+                  >
+                    <Twitter size={20} aria-hidden />
+                  </a>
+                )}
               </div>
             )}
           </div>
         </div>
-
-        <div
-          className="block md:hidden"
-          style={{ height: mobileCTAHeight }}
-          aria-hidden
-        />
       </div>
 
       <Button

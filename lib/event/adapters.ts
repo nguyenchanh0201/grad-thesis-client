@@ -43,7 +43,7 @@ export function eventToEventDetail(event: Event): EventDetail {
       avatarUrl: event.organizer?.avatarUrl ?? PLACEHOLDER_IMG,
       bio: event.organizer?.bio ?? "",
     },
-    timeVenueNotes: [],
+    socialLinks: event.socialLinks ?? undefined,
     termsAndConditions: "",
     relatedEvents: [],
     lowestPrice,

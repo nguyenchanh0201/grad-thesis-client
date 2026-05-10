@@ -75,7 +75,6 @@ export function EventDetailSections({ event, onCTAClick }: Props) {
 
       <AboutSection
         description={event.description}
-        timeVenueNotes={event.timeVenueNotes}
         termsAndConditions={event.termsAndConditions}
       />
       <ScheduleSection dates={event.dates} seatMapImage={event.seatMapImage} />

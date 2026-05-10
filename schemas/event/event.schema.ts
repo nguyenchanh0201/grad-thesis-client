@@ -60,6 +60,15 @@ export const EventSchema = z.object({
   featuredImageUrl: z.string().nullish(),
   eventImageUrls: z.array(z.string()).optional(),
 
+  socialLinks: z
+    .object({
+      facebook: z.string().url().optional(),
+      website: z.string().url().optional(),
+      instagram: z.string().url().optional(),
+      twitter: z.string().url().optional(),
+    })
+    .nullish(),
+
   ticketTypes: z.array(TicketTypeSchema).optional(),
   performers: z.array(PerformerSchema).optional(),
 

@@ -45,7 +45,6 @@ export const EventDetailSchema = z.object({
   venue: EventVenueDetailSchema,
   organizer: EventOrganizerSchema,
   description: z.string(),
-  timeVenueNotes: z.array(z.string()),
   seatMapImage: z.string().optional(),
   seatMapType: z.enum(["zone", "theater", "stadium"]).optional(),
   termsAndConditions: z.string(),
@@ -57,6 +56,8 @@ export const EventDetailSchema = z.object({
     .object({
       facebook: z.string().url().optional(),
       website: z.string().url().optional(),
+      instagram: z.string().url().optional(),
+      twitter: z.string().url().optional(),
     })
     .optional(),
   relatedEvents: z.array(EventItemSchema),
