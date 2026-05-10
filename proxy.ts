@@ -14,7 +14,7 @@ export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   const buyMatch = pathname.match(/^\/buy\/([^/]+)\/tickets/);
-  if (buyMatch && process.env.NEXT_PUBLIC_SKIP_BUY_SESSION !== "true") {
+  if (buyMatch) {
     const slug = buyMatch[1];
     const cookieName = `buy_session_${slug.replace(/[^a-z0-9-]/gi, "_")}`;
     if (!req.cookies.get(cookieName)) {

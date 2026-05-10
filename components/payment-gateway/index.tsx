@@ -62,8 +62,7 @@ export function PaymentGateway({ slug }: Props) {
   const { tickets, selectedSeats, zones, mapType, discountCode } =
     useBookingStore();
 
-  const skipGuard = process.env.NEXT_PUBLIC_SKIP_BUY_SESSION === "true";
-  const [authorized] = useState(() => skipGuard || hasBuySession(slug));
+  const [authorized] = useState(() => hasBuySession(slug));
 
   useEffect(() => {
     if (!authorized) {
