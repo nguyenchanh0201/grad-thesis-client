@@ -14,6 +14,7 @@ import { ProfileFormValues, profileSchema } from "@/schemas/user";
 import { ROLES } from "@/schemas/user/role";
 import { UserProfilePicture } from "./profile-picture";
 import { useUpdateUserProfile, useUserProfile } from "@/hooks/user-profile";
+import { AcCOUNT_TYPES } from "@/schemas/user/account-type";
 
 export function ProfileSettings() {
   const { data: user } = useUserProfile();
@@ -26,7 +27,10 @@ export function ProfileSettings() {
     formState: { errors, isDirty },
   } = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
-    defaultValues: { name: user?.name ?? "", phone: user?.phone ?? "" },
+    defaultValues: {
+      name: user?.name ?? "",
+      phone: user?.phone ?? "",
+    },
   });
 
   useEffect(() => {
@@ -68,9 +72,11 @@ export function ProfileSettings() {
           </div>
           <div className="flex items-center justify-between px-4 py-3">
             <span className="text-sm text-muted-foreground">Account type</span>
-            <Badge variant="secondary" className="text-xs">
-              {ROLES[user.role] ?? user.role}
-            </Badge>
+            {user.accountType && (
+              <Badge variant="secondary" className="text-xs">
+                {user.accountType}
+              </Badge>
+            )}
           </div>
         </div>
         <p className="mt-2 text-xs text-muted-foreground">

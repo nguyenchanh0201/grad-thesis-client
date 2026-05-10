@@ -1,6 +1,7 @@
 import { PHONE_RE } from "@/core/constants";
 import { z } from "zod";
 import { Role, ROLES } from "./role";
+import { AcCOUNT_TYPES } from "./account-type";
 
 export const profileSchema = z.object({
   name: z
@@ -13,6 +14,7 @@ export const profileSchema = z.object({
     .refine((val) => !val || PHONE_RE.test(val), "Invalid phone number")
     .optional(),
   role: z.enum(ROLES),
+  accountType: z.enum(AcCOUNT_TYPES),
   profilePic: z.string().optional(),
 });
 
