@@ -48,6 +48,8 @@ export function eventToEventDetail(event: Event): EventDetail {
       bio: event.organizer?.bio ?? "",
       contactInfo: event.organizer?.contactInfo ?? undefined,
     },
+    seatMapImage:
+      event.seatMap?.previewImageUrl ?? event.featuredImageUrl ?? images[0],
     socialLinks: event.socialLinks ?? undefined,
     termsAndConditions: event.termsAndConditions ?? "",
     relatedEvents: [],

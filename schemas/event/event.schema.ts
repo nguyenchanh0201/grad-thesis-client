@@ -51,6 +51,15 @@ export const EventSchema = z.object({
   isFeatured: z.boolean().nullish(),
   isSeated: z.boolean().nullish(),
 
+  seatMap: z
+    .object({
+      id: BigIntIdSchema,
+      name: z.string().nullish(),
+      previewImageUrl: z.string().nullish(),
+      canvas: z.unknown().optional(),
+    })
+    .nullish(),
+
   maxTicketsPerOrder: z.number().int().positive().nullish(),
   maxTicketsPerUser: z.number().int().positive().nullish(),
 
