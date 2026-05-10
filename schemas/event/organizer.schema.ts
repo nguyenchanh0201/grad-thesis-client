@@ -4,8 +4,8 @@ import { BigIntIdSchema } from "../api";
 export const EventOrganizerSchema = z.object({
   id: BigIntIdSchema,
   displayName: z.string(),
-  avatarUrl: z.url(),
-  bio: z.string(),
+  avatarUrl: z.string().nullish(),
+  bio: z.string().nullish(),
   contactInfo: z
     .object({
       email: z.email().optional(),

@@ -53,8 +53,8 @@ export function OrganizerSection({ organizer }: Props) {
         <div className="flex items-start gap-5">
           <div className="relative size-20 shrink-0 overflow-hidden rounded-full ring-2 ring-primary/20">
             <Image
-              src={organizer.avatarUrl}
-              alt={organizer.displayName}
+              src={organizer.avatarUrl ?? ""}
+              alt={organizer.displayName ?? ""}
               fill
               className="object-cover"
             />
