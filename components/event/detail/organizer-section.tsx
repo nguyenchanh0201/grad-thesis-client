@@ -32,7 +32,7 @@ function ContactLink({
       className="inline-flex items-center gap-2 rounded-full border border-border bg-muted/50 px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
     >
       <Icon className="size-3.5 shrink-0" />
-      <span className="max-w-45 truncate">{label}</span>
+      <span className="hidden sm:inline max-w-45 truncate">{label}</span>
     </a>
   );
 }
