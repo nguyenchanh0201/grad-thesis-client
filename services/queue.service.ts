@@ -18,7 +18,6 @@ export type QueueStatusParams = {
 };
 
 export type HeartbeatPayload = {
-  token: string;
   eventId: string;
   userId: string;
 };

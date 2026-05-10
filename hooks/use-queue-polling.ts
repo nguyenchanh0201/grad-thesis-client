@@ -24,9 +24,9 @@ function toFrontendStatus(
   switch (backend) {
     case "NOT_OPEN":
       return "not_open";
-    case "QUEUED":
+    case "QUEUEING":
       return "waiting";
-    case "ALLOWED":
+    case "ADMITTED":
       return "ready";
     case "LOST_SESSION":
       return "expired";
@@ -34,13 +34,13 @@ function toFrontendStatus(
 }
 
 function isTerminal(status: BackendQueueStatus | undefined): boolean {
-  return status === "ALLOWED" || status === "LOST_SESSION";
+  return status === "ADMITTED" || status === "LOST_SESSION";
 }
 
 export type UseQueuePollingResult = {
   status: Exclude<FrontendQueueStatus, "redirecting">;
   position: number | null;
-  estimatedWait: number | null;
+  queueSize: number | null;
   isLoading: boolean;
   isError: boolean;
 };
@@ -51,7 +51,6 @@ export function useQueuePolling(
 ): UseQueuePollingResult {
   const setWaitRoomToken = useBookingStore((s) => s.setWaitRoomToken);
   const mockTickRef = useRef(0);
-  const tokenRef = useRef<string | null>(null);
 
   // Phase 1: Join queue — fires once on mount
   const accessQuery = useQuery<WaitRoomResponse>({
@@ -89,28 +88,20 @@ export function useQueuePolling(
 
   const currentData = statusQuery.data ?? accessQuery.data;
 
-  // Sync session token into booking store when ALLOWED
+  // Sync session token into booking store when ADMITTED
   useEffect(() => {
-    if (!currentData?.sessionToken || currentData.status !== "ALLOWED") return;
-    tokenRef.current = currentData.sessionToken;
-    setWaitRoomToken(currentData.sessionToken);
+    if (!currentData?.token || currentData.status !== "ADMITTED") return;
+    setWaitRoomToken(currentData.token);
   }, [currentData, setWaitRoomToken]);
 
   // Fire heartbeat after each status poll while in queue
   useEffect(() => {
-    if (!statusQuery.data || !tokenRef.current || !eventId || !userId) return;
+    if (!statusQuery.data || !eventId || !userId) return;
     const { status } = statusQuery.data;
-    if (status !== "QUEUED" && status !== "ALLOWED") return;
+    if (status !== "QUEUEING" && status !== "ADMITTED") return;
 
-    sendHeartbeat({ token: tokenRef.current, eventId, userId })
-      .then((hb) => {
-        if (hb.data.newToken) {
-          tokenRef.current = hb.data.newToken;
-          setWaitRoomToken(hb.data.newToken);
-        }
-      })
-      .catch(() => {});
-  }, [statusQuery.data, eventId, userId, setWaitRoomToken]);
+    sendHeartbeat({ eventId, userId }).catch(() => {});
+  }, [statusQuery.data, eventId, userId]);
 
   const isLoading = accessQuery.isPending;
   const isError = accessQuery.isError || statusQuery.isError;
@@ -119,7 +110,7 @@ export function useQueuePolling(
     return {
       status: isLoading ? "waiting" : "expired",
       position: null,
-      estimatedWait: null,
+      queueSize: null,
       isLoading,
       isError,
     };
@@ -127,8 +118,8 @@ export function useQueuePolling(
 
   return {
     status: toFrontendStatus(currentData.status),
-    position: currentData.position ?? null,
-    estimatedWait: currentData.estimatedWait ?? null,
+    position: currentData.position?.position ?? null,
+    queueSize: currentData.position?.size ?? null,
     isLoading: false,
     isError: false,
   };
