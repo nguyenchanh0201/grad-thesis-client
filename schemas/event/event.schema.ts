@@ -24,7 +24,10 @@ export const EventSchema = z.object({
 
   eventCode: z.string().max(32),
   eventName: z.string().max(255),
+  summary: z.string().max(500).nullish(),
   desc: z.string().nullish(),
+  descAttachmentUrl: z.string().url().nullish(),
+  termsAndConditions: z.string().nullish(),
 
   venue: VenueSchema.nullish(),
   venueId: BigIntIdSchema.nullish(),

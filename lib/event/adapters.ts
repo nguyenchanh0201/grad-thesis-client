@@ -22,7 +22,9 @@ export function eventToEventDetail(event: Event): EventDetail {
     id: event.id ?? event.slug,
     slug: event.slug,
     title: event.eventName,
+    summary: event.summary ?? undefined,
     description: event.desc ?? "",
+    descAttachmentUrl: event.descAttachmentUrl ?? undefined,
     images,
     status: event.status,
     dates: [
@@ -47,7 +49,7 @@ export function eventToEventDetail(event: Event): EventDetail {
       contactInfo: event.organizer?.contactInfo ?? undefined,
     },
     socialLinks: event.socialLinks ?? undefined,
-    termsAndConditions: "",
+    termsAndConditions: event.termsAndConditions ?? "",
     relatedEvents: [],
     lowestPrice,
     tags: event.tags?.map((t) => t.name),
