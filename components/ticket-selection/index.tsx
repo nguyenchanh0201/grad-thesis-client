@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { clearBuySession, hasBuySession } from "@/lib/booking/buy-session";
 import { useBookingStore } from "@/lib/store/booking";
 import { useEventBySlug } from "@/hooks/use-events";
@@ -11,11 +12,13 @@ import { TicketPanel } from "./ticket-panel";
 import { TimeoutModal } from "./timeout-modal";
 import { VenueMap } from "./venue-map";
 import { useTicketTimer } from "../../hooks/use-ticket-timer";
-import { generateTheaterConfig, generateStadiumConfig } from "./seat-map";
 import type { SelectedSeat } from "./seat-map";
-import type { Zone, ZoneColorKey, MapType } from "@/schemas/seat";
+import type { Zone, ZoneColorKey } from "@/schemas/seat";
 import type { TicketType } from "@/schemas/ticket-type";
 import { fmtIsoDate } from "@/lib/date";
+import { getEventSeatMap } from "@/services/seat-map.service";
+import { getEventSeats } from "@/services/event.service";
+import { SectionAvailability } from "@/schemas/seat";
 
 const ZONE_COLORS: ZoneColorKey[] = ["a", "b", "c", "d"];
 
@@ -25,13 +28,12 @@ function ticketTypeToZone(tt: TicketType, idx: number): Zone {
   return {
     id: tt.id,
     label: tt.name,
-    price: tt.price / 100, // cents → display unit
+    price: tt.price / 100,
     colorKey: ZONE_COLORS[idx % ZONE_COLORS.length],
     available: Math.max(0, quantity - soldCount),
   };
 }
 
-const MAX_PER_ZONE = 8;
 const MAX_SEATS = 8;
 
 type Props = { slug: string };
@@ -74,11 +76,30 @@ export function TicketSelection({ slug }: Props) {
 
   const { data: eventResult } = useEventBySlug(slug);
   const event = eventResult?.data;
+  const eventId = event?.id;
+  const isSeated = event?.isSeated ?? false;
+
+  // Fetch canvas only for seated events
+  const { data: seatMapResult } = useQuery({
+    queryKey: ["seatMap", "event", eventId],
+    queryFn: () => getEventSeatMap(eventId!),
+    enabled: !!eventId && isSeated,
+    staleTime: 5 * 60 * 1000,
+  });
+  const canvas = seatMapResult?.data?.canvas;
+
+  // Fetch availability, refresh every 10s while user is on this page
+  const { data: seatsResult } = useQuery({
+    queryKey: ["seatMap", "availability", eventId],
+    queryFn: () => getEventSeats(eventId!),
+    enabled: !!eventId && isSeated,
+    refetchInterval: 10_000,
+    staleTime: 5_000,
+  });
+  const availability: SectionAvailability[] = seatsResult?.data ?? [];
 
   const isWarning = timeRemaining <= 60;
-
-  const mapType: MapType = event?.isSeated ? "theater" : "zone";
-  const maxPerZone = event?.maxTicketsPerOrder ?? MAX_PER_ZONE;
+  const maxPerZone = event?.maxTicketsPerOrder ?? MAX_SEATS;
 
   const activeZones = useMemo<Zone[]>(() => {
     if (event?.ticketTypes && event.ticketTypes.length > 0) {
@@ -87,13 +108,14 @@ export function TicketSelection({ slug }: Props) {
     return [];
   }, [event]);
 
-  const theaterConfig = useMemo(() => generateTheaterConfig(), []);
-  const stadiumConfig = useMemo(() => generateStadiumConfig(), []);
-
   useEffect(() => {
     if (activeZones.length === 0) return;
-    initStep1({ slug, zones: activeZones, mapType });
-  }, [slug, activeZones, mapType, initStep1]);
+    initStep1({
+      slug,
+      zones: activeZones,
+      mapType: isSeated ? "seated" : "zone",
+    });
+  }, [slug, activeZones, isSeated, initStep1]);
 
   const handleZoneClick = useCallback(
     (zoneId: string) => {
@@ -133,7 +155,6 @@ export function TicketSelection({ slug }: Props) {
 
   if (!authorized) return null;
 
-  const isSeatMode = mapType !== "zone";
   const selectedSeatIds = selectedSeats.map((s) => s.id);
 
   const eventTitle = event?.eventName ?? "";
@@ -166,15 +187,11 @@ export function TicketSelection({ slug }: Props) {
             fallbackImageUrl={eventImageUrl}
             selectedZoneId={selectedZoneId}
             onZoneClick={handleZoneClick}
-            seatMapConfig={
-              mapType === "theater"
-                ? theaterConfig
-                : mapType === "stadium"
-                  ? stadiumConfig
-                  : undefined
-            }
+            canvas={canvas}
+            availability={availability}
             selectedSeats={selectedSeatIds}
             onSeatToggle={handleSeatToggle}
+            maxSeats={maxPerZone}
           />
         </div>
 
@@ -188,7 +205,7 @@ export function TicketSelection({ slug }: Props) {
             eventDate={event ? fmtIsoDate(event.eventDate) : ""}
             onContinue={handleContinue}
             onChangeDate={() => {}}
-            mode={isSeatMode ? "seat" : "zone"}
+            mode={isSeated && canvas ? "seat" : "zone"}
             tickets={tickets}
             selectedZoneId={selectedZoneId}
             onIncrement={handleIncrement}

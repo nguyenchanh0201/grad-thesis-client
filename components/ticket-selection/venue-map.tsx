@@ -3,12 +3,10 @@
 import { ChevronDown, ChevronUp, MapPin } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
-import { SeatMap } from "./seat-map";
-import type {
-  TheaterMapConfig,
-  StadiumMapConfig,
-  SelectedSeat,
-} from "./seat-map";
+import { CanvasSeatMap } from "./seat-map";
+import type { SelectedSeat } from "./seat-map";
+import type { SeatMapCanvas } from "@/schemas/seat-map";
+import type { SectionAvailability } from "@/schemas/seat";
 import { Zone } from "@/schemas/seat";
 
 const COLOR_VARS: Record<string, { bg: string; fg: string }> = {
@@ -26,10 +24,12 @@ type Props = {
   // Zone mode
   selectedZoneId?: string | null;
   onZoneClick?: (zoneId: string) => void;
-  // Seat mode
-  seatMapConfig?: TheaterMapConfig | StadiumMapConfig;
+  // Canvas seat mode
+  canvas?: SeatMapCanvas;
+  availability?: SectionAvailability[];
   selectedSeats?: string[];
   onSeatToggle?: (seat: SelectedSeat) => void;
+  maxSeats?: number;
 };
 
 export function VenueMap({
@@ -38,16 +38,18 @@ export function VenueMap({
   fallbackImageUrl,
   selectedZoneId = null,
   onZoneClick,
-  seatMapConfig,
+  canvas,
+  availability = [],
   selectedSeats = [],
   onSeatToggle,
+  maxSeats,
 }: Props) {
   const [mapOpen, setMapOpen] = useState(true);
   const imageUrl = venueImageUrl ?? fallbackImageUrl;
   const ticketZones = zones.filter(
     (z) => z.colorKey !== "stage" && z.price > 0,
   );
-  const isSeatMode = !!seatMapConfig;
+  const isCanvasMode = !!canvas;
 
   return (
     <div className="flex h-full flex-col">
@@ -77,15 +79,16 @@ export function VenueMap({
             : "hidden md:flex md:flex-1 md:flex-col md:gap-4 md:overflow-y-auto md:p-4"
         }
       >
-        {isSeatMode ? (
-          /* ── Seat-based map ── */
-          <SeatMap
-            config={seatMapConfig}
+        {isCanvasMode ? (
+          <CanvasSeatMap
+            canvas={canvas}
+            availability={availability}
             selectedSeats={selectedSeats}
             onSeatToggle={onSeatToggle ?? (() => {})}
+            onZoneSelect={onZoneClick}
+            maxSeats={maxSeats}
           />
         ) : imageUrl ? (
-          /* ── Image-based zone map ── */
           <>
             <div className="relative w-full overflow-hidden rounded-md border border-border bg-muted/30">
               <div className="relative aspect-4/3 w-full">
@@ -112,7 +115,6 @@ export function VenueMap({
             />
           </>
         ) : (
-          /* ── SVG zone map fallback ── */
           <>
             <SVGZoneMap
               zones={zones}

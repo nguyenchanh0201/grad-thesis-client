@@ -1,1 +1,1 @@
-export type MapType = "zone" | "theater" | "stadium" | string;
+export type MapType = "zone" | "seated" | string;

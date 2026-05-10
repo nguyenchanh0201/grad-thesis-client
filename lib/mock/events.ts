@@ -151,7 +151,6 @@ export const mockEventDetail: EventDetail = {
 <p>Với hệ thống âm thanh ánh sáng đỉnh cao và không gian sáng tạo độc đáo, đây hứa hẹn là một đêm nhạc không thể quên dành cho tất cả người yêu âm nhạc.</p>`,
   seatMapImage:
     "https://images.unsplash.com/photo-1578849278619-e73505e9610f?w=1200&q=80",
-  seatMapType: "stadium",
   termsAndConditions: `<p>1. Vé đã mua không được hoàn trả hoặc đổi dưới mọi hình thức.</p>
 <p>2. Khán giả cần xuất trình vé (bản cứng hoặc bản mềm) khi vào cổng.</p>
 <p>3. Ban tổ chức có quyền từ chối phục vụ khán giả có hành vi gây rối trật tự.</p>
@@ -174,7 +173,6 @@ export const mockEventDetailTheater: EventDetail = {
   id: "2",
   slug: "phantom-of-the-opera-2026",
   title: "The Phantom of the Opera",
-  seatMapType: "theater",
   lowestPrice: 40_000_000,
   relatedEvents: mockEvents.slice(0, 4),
 };
@@ -183,8 +181,7 @@ export const mockEventDetailZone: EventDetail = {
   ...mockEventDetail,
   id: "3",
   slug: "underground-rave-2026",
-  title: "Underground Rave Night 2026",
-  seatMapType: "zone",
+  title: "UndergroundRave Night 2026",
   lowestPrice: 79_900_000,
   relatedEvents: mockEvents.slice(0, 4),
 };

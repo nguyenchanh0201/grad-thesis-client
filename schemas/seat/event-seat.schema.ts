@@ -1,33 +1,22 @@
 import { z } from "zod";
 import { BaseResponseSchema } from "../api";
 
-export const SeatStatusSchema = z.enum([
-  "AVAILABLE",
-  "RESERVED",
-  "SOLD",
-  "UNAVAILABLE",
-]);
-export type SeatStatus = z.infer<typeof SeatStatusSchema>;
-
-export const EventSeatSchema = z.object({
+export const SeatAvailabilitySchema = z.object({
   seatIndex: z.number().int().nonnegative(),
-  row: z.string(),
-  column: z.string(),
-  status: SeatStatusSchema,
-  label: z.string().optional(),
+  seatRow: z.string(),
+  seatNumber: z.number().int(),
+  seatLabel: z.string(),
+  status: z.enum(["available", "locked", "sold"]),
 });
-export type EventSeat = z.infer<typeof EventSeatSchema>;
+export type SeatAvailability = z.infer<typeof SeatAvailabilitySchema>;
 
-export const SeatRowSchema = z.object({
-  row: z.string(),
-  seats: z.array(EventSeatSchema),
+export const SectionAvailabilitySchema = z.object({
+  ticketTypeId: z.string(),
+  seats: z.array(SeatAvailabilitySchema),
 });
-export type SeatRow = z.infer<typeof SeatRowSchema>;
+export type SectionAvailability = z.infer<typeof SectionAvailabilitySchema>;
 
-export const EventSeatsDataSchema = z.object({
-  rows: z.array(SeatRowSchema),
-  seatMapType: z.enum(["theater", "zone", "stadium"]).optional(),
-});
+export const EventSeatsDataSchema = z.array(SectionAvailabilitySchema);
 export type EventSeatsData = z.infer<typeof EventSeatsDataSchema>;
 
 export const EventSeatsResultSchema = BaseResponseSchema(EventSeatsDataSchema);
