@@ -39,13 +39,18 @@ export function ScheduleSection({ dates, seatMapImage }: Props) {
       </ul>
 
       {seatMapImage && (
-        <div className="relative mt-8 aspect-[4/3] sm:aspect-video w-full overflow-hidden rounded-md border border-border bg-muted/30">
-          <Image
-            src={seatMapImage}
-            alt="Venue Seating Map"
-            fill
-            className="object-contain p-2"
-          />
+        <div className="mt-8">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            Venue Map
+          </p>
+          <div className="relative w-full overflow-hidden rounded-md border border-border bg-muted/30 aspect-[4/3] sm:aspect-video">
+            <Image
+              src={seatMapImage}
+              alt="Venue Seating Map"
+              fill
+              className="object-contain p-2"
+            />
+          </div>
         </div>
       )}
     </EventSection>

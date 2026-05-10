@@ -50,6 +50,7 @@ export function eventToEventDetail(event: Event): EventDetail {
     },
     seatMapImage:
       event.seatMap?.previewImageUrl ?? event.featuredImageUrl ?? images[0],
+    hasSeatMapPreview: !!event.seatMap?.previewImageUrl,
     socialLinks: event.socialLinks ?? undefined,
     termsAndConditions: event.termsAndConditions ?? "",
     relatedEvents: [],

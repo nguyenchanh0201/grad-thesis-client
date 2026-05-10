@@ -44,6 +44,7 @@ export const EventDetailSchema = z.object({
   description: z.string(),
   descAttachmentUrl: z.url().optional(),
   seatMapImage: z.string().optional(),
+  hasSeatMapPreview: z.boolean().optional(),
   termsAndConditions: z.string(),
   tags: z.array(z.string()).optional(),
   followerCount: z.number().int().nonnegative().optional(),
