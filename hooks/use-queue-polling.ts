@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { mockQueueAllowed, mockQueueWaiting } from "@/lib/mock/queue";
 import {
   getQueueStatus,
@@ -35,9 +35,7 @@ function toFrontendStatus(
 }
 
 function isTerminal(status: BackendQueueStatus | undefined): boolean {
-  return (
-    status === "ADMITTED" || status === "LOST_SESSION" || status === "NOT_OPEN"
-  );
+  return status === "ADMITTED" || status === "LOST_SESSION";
 }
 
 export type UseQueuePollingResult = {
@@ -53,6 +51,7 @@ export function useQueuePolling(
   userId: string | null,
 ): UseQueuePollingResult {
   const setWaitRoomToken = useBookingStore((s) => s.setWaitRoomToken);
+  const queryClient = useQueryClient();
   const mockTickRef = useRef(0);
   const tokenRef = useRef<string | null>(null);
 
@@ -88,7 +87,14 @@ export function useQueuePolling(
           ? mockQueueAllowed()
           : mockQueueWaiting(Math.max(1, 42 - (mockTickRef.current - 1) * 28));
       }
-      return await getQueueStatus({ slug: slug!, userId: userId! });
+      try {
+        return await getQueueStatus({ slug: slug!, userId: userId! });
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 403) {
+          return { status: "NOT_OPEN" } satisfies WaitRoomResponse;
+        }
+        throw err;
+      }
     },
     enabled: !!accessQuery.data && !isTerminal(accessQuery.data.status),
     gcTime: 0,
@@ -105,6 +111,15 @@ export function useQueuePolling(
     tokenRef.current = currentData.token;
     setWaitRoomToken(currentData.token);
   }, [currentData, setWaitRoomToken]);
+
+  // Auto-rejoin: when session expires, clear stale state and re-run requestAccess
+  useEffect(() => {
+    if (currentData?.status !== "LOST_SESSION") return;
+    tokenRef.current = null;
+    setWaitRoomToken(null);
+    queryClient.resetQueries({ queryKey: ["queue", "access", slug, userId] });
+    queryClient.resetQueries({ queryKey: ["queue", "status", slug, userId] });
+  }, [currentData?.status, queryClient, slug, userId, setWaitRoomToken]);
 
   // Fire heartbeat after each status poll while in queue
   useEffect(() => {
