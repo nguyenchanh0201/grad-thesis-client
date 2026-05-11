@@ -9,6 +9,7 @@ import {
   sendHeartbeat,
 } from "@/services/queue.service";
 import { useBookingStore } from "@/lib/store/booking";
+import { ApiError } from "@/core/error";
 import type {
   BackendQueueStatus,
   FrontendQueueStatus,
@@ -34,7 +35,9 @@ function toFrontendStatus(
 }
 
 function isTerminal(status: BackendQueueStatus | undefined): boolean {
-  return status === "ADMITTED" || status === "LOST_SESSION";
+  return (
+    status === "ADMITTED" || status === "LOST_SESSION" || status === "NOT_OPEN"
+  );
 }
 
 export type UseQueuePollingResult = {
@@ -58,10 +61,18 @@ export function useQueuePolling(
     queryKey: ["queue", "access", slug, userId],
     queryFn: async () => {
       if (USE_MOCK) return mockQueueWaiting(42);
-      return await requestAccess({ slug: slug!, userId: userId! });
+      try {
+        return await requestAccess({ slug: slug!, userId: userId! });
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 403) {
+          return { status: "NOT_OPEN" } satisfies WaitRoomResponse;
+        }
+        throw err;
+      }
     },
     enabled: !!slug && !!userId,
     staleTime: Infinity,
+    gcTime: 0,
     retry: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
@@ -80,6 +91,7 @@ export function useQueuePolling(
       return await getQueueStatus({ slug: slug!, userId: userId! });
     },
     enabled: !!accessQuery.data && !isTerminal(accessQuery.data.status),
+    gcTime: 0,
     refetchInterval: (query) =>
       isTerminal(query.state.data?.status) ? false : POLL_INTERVAL_MS,
     refetchOnWindowFocus: false,

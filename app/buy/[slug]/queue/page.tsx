@@ -67,8 +67,6 @@ function QueuePageContent() {
   const eventTitle = event?.eventName ?? "Loading event...";
   const eventImageUrl = event?.featuredImageUrl ?? event?.eventImageUrls?.[0];
 
-  console.log(event);
-
   return (
     <QueueCard backgroundImageUrl={eventImageUrl}>
       <EventBanner imageUrl={eventImageUrl} eventTitle={eventTitle} />

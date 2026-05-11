@@ -76,6 +76,7 @@ const SKIP_REFRESH_PATHS = [
   "/auth/refresh",
   "/auth/logout",
   "/auth/google",
+  "/tickets/heartbeat",
 ];
 
 type RetryableConfig = AxiosRequestConfig & { _retry?: boolean };
