@@ -29,7 +29,11 @@ function QueuePageContent() {
   const { data: eventResult } = useEventBySlug(slug);
   const event = eventResult?.data;
 
-  const { status: polledStatus } = useQueuePolling(slug, userId);
+  const {
+    status: polledStatus,
+    position,
+    queueSize,
+  } = useQueuePolling(slug, userId);
 
   const [countdown, setCountdown] = useState(REDIRECT_COUNTDOWN_SECONDS);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -74,7 +78,12 @@ function QueuePageContent() {
         <QueueStatusMessage status={displayStatus} />
         <EventTitle title={eventTitle} />
         <QueueInstructions status={displayStatus} />
-        <CountdownBar status={displayStatus} countdown={countdown} />
+        <CountdownBar
+          status={displayStatus}
+          countdown={countdown}
+          position={position}
+          queueSize={queueSize}
+        />
         <RedirectButton
           status={displayStatus}
           onRedirect={handleRedirect}
