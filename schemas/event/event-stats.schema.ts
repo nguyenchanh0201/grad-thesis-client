@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { BaseResponseSchema } from "../api";
 
-const CentsSchema = z
+const AmountSchema = z
   .union([z.string(), z.number()])
   .transform((val) => Number(val));
 
@@ -11,7 +11,7 @@ export const EventStatsSchema = z.object({
   availableCount: z.number().int().nonnegative(),
   occupancyRate: z.number().nonnegative(),
   checkedInCount: z.number().int().nonnegative(),
-  totalRevenue: CentsSchema,
+  totalRevenue: AmountSchema,
 });
 export type EventStats = z.infer<typeof EventStatsSchema>;
 

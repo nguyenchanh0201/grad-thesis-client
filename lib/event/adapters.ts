@@ -75,7 +75,7 @@ export function eventToEventItem(event: Event): EventItem {
       : undefined,
     price:
       lowestPrice !== undefined
-        ? `From ${(lowestPrice / 100).toLocaleString("vi-VN")} ₫`
+        ? `From ${lowestPrice.toLocaleString("vi-VN")} ₫`
         : undefined,
     tag: event.isFeatured ? "FEATURED" : undefined,
     isFeatured: event.isFeatured ?? undefined,

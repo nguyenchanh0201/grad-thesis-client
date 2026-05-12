@@ -41,7 +41,7 @@ export enum BackendTicketStatus {
   TRANSFERRED = 4,
 }
 
-const CentsSchema = z
+const AmountSchema = z
   .union([z.string(), z.number()])
   .transform((val) => Number(val));
 
@@ -67,7 +67,7 @@ export const BackendTicketSchema = z.object({
   ticketType: z.object({
     id: BigIntIdSchema,
     name: z.string(),
-    price: CentsSchema,
+    price: AmountSchema,
     currency: z.string(),
   }),
   checkedInAt: z.iso.datetime().nullable().optional(),
@@ -83,7 +83,7 @@ export type TicketListResult = z.infer<typeof TicketListResultSchema>;
 export const OrderItemSchema = z.object({
   ticketTypeName: z.string(),
   quantity: z.number().int().positive(),
-  unitPrice: CentsSchema,
+  unitPrice: AmountSchema,
   currency: z.string(),
 });
 
@@ -98,7 +98,7 @@ export const OrderSchema = z.object({
     slug: z.string(),
   }),
   items: z.array(OrderItemSchema),
-  totalAmount: CentsSchema,
+  totalAmount: AmountSchema,
   currency: z.string().optional(),
   paidAt: z.iso.datetime().optional(),
   createdAt: z.iso.datetime(),

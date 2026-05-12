@@ -4,40 +4,54 @@ import {
   BaseResponseSchema,
   PagedResponseSchema,
 } from "../api";
-import { TicketTypeSchema } from "../ticket-type";
 
-export enum ReservationStatus {
-  PENDING = 0,
-  EXPIRED = 1,
-  PAID = 2,
-  CANCELLED = 3,
-  PAYMENT_LOCKED = 4,
-}
+// BE sends string status names
+export const RESERVATION_STATUS = {
+  PENDING: "PENDING",
+  EXPIRED: "EXPIRED",
+  PAID: "PAID",
+  CANCELLED: "CANCELLED",
+  PAYMENT_LOCKED: "PAYMENT_LOCKED",
+} as const;
 
-const CentsSchema = z
+export type ReservationStatus =
+  (typeof RESERVATION_STATUS)[keyof typeof RESERVATION_STATUS];
+
+const AmountSchema = z
   .union([z.string(), z.number()])
   .transform((val) => Number(val));
 
 export const ReservationItemSchema = z.object({
   id: BigIntIdSchema,
-  ticketType: TicketTypeSchema,
+  ticketTypeId: BigIntIdSchema,
+  ticketTypeName: z.string(),
   quantity: z.number().int().positive(),
-  unitPrice: CentsSchema,
-  seatIndex: z.number().int().nonnegative().optional(),
-  row: z.string().optional(),
-  column: z.string().optional(),
+  unitPrice: AmountSchema,
+  seatIndex: z.number().int().nonnegative().nullable().optional(),
+  row: z.string().nullable().optional(),
+  column: z.string().nullable().optional(),
+});
+
+const ReservationRecipientSchema = z.object({
+  fullName: z.string(),
+  email: z.string(),
+  phoneCountryCode: z.string(),
+  phoneNumber: z.string(),
+  idPassport: z.string().nullable().optional(),
 });
 
 export const ReservationSchema = z.object({
   id: BigIntIdSchema,
   eventId: BigIntIdSchema,
-  userId: BigIntIdSchema,
-  status: z.nativeEnum(ReservationStatus),
-  totalAmount: CentsSchema,
+  userId: BigIntIdSchema.optional(),
+  status: z.enum(["PENDING", "EXPIRED", "PAID", "CANCELLED", "PAYMENT_LOCKED"]),
+  totalAmount: AmountSchema,
   currency: z.string().optional(),
   items: z.array(ReservationItemSchema).optional(),
   expiresAt: z.iso.datetime().optional(),
   createdAt: z.iso.datetime().optional(),
+  recipient: ReservationRecipientSchema.nullable().optional(),
+  deliveryMethod: z.string().nullable().optional(),
 });
 
 export type Reservation = z.infer<typeof ReservationSchema>;
@@ -49,3 +63,12 @@ export type ReservationResult = z.infer<typeof ReservationResultSchema>;
 export const ReservationListResultSchema =
   PagedResponseSchema(ReservationSchema);
 export type ReservationListResult = z.infer<typeof ReservationListResultSchema>;
+
+// Shape returned by POST /reservations/ga and POST /reservations/seated
+export const CreateReservationResponseSchema = z.object({
+  status: z.boolean(),
+  reservationId: BigIntIdSchema,
+});
+export type CreateReservationResponse = z.infer<
+  typeof CreateReservationResponseSchema
+>;
