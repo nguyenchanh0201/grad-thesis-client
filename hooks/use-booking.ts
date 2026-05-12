@@ -15,16 +15,11 @@ export const reservationKeys = {
   detail: (id: string) => [...reservationKeys.all, id] as const,
 };
 
-export function useReservation(id: string | undefined, userId: string) {
+export function useReservation(id: string | undefined) {
   return useQuery({
     queryKey: reservationKeys.detail(id ?? ""),
-    queryFn: () => getReservation(id!, userId),
-    enabled: !!id && !!userId,
-    refetchInterval: (query) => {
-      const status = query.state.data?.data?.status;
-      // Stop polling once reservation is no longer pending
-      return status === 0 ? 10_000 : false;
-    },
+    queryFn: () => getReservation(id!),
+    enabled: !!id,
     retry: false,
   });
 }
@@ -47,11 +42,11 @@ export function useCreateGAReservation() {
   });
 }
 
+// userId is sent via x-mock-user-id header — no param needed here
 export function useCancelReservation() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, userId }: { id: string; userId: string }) =>
-      cancelReservation(id, userId),
+    mutationFn: (id: string) => cancelReservation(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: reservationKeys.all }),
   });
 }

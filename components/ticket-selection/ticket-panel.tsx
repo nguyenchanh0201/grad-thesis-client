@@ -14,6 +14,7 @@ type Props = {
   eventDate: string;
   onContinue: () => void;
   onChangeDate: () => void;
+  isLoading?: boolean;
   // Zone mode
   mode?: ZoneMode;
   tickets?: SelectedTicket[];
@@ -34,6 +35,7 @@ export function TicketPanel({
   eventDate,
   onContinue,
   onChangeDate,
+  isLoading = false,
   mode = "zone",
   tickets = [],
   selectedZoneId = null,
@@ -280,15 +282,17 @@ export function TicketPanel({
       <div className="border-t border-border p-4">
         <Button
           onClick={onContinue}
-          disabled={totalQty === 0}
+          disabled={totalQty === 0 || isLoading}
           className={cn(
             "h-11 w-full text-sm font-semibold",
-            totalQty === 0 && "opacity-50",
+            (totalQty === 0 || isLoading) && "opacity-50",
           )}
         >
-          {totalQty === 0
-            ? "Select tickets to continue"
-            : `${fmt(totalPrice)} VND - Continue`}
+          {isLoading
+            ? "Processing..."
+            : totalQty === 0
+              ? "Select tickets to continue"
+              : `${fmt(totalPrice)} VND - Continue`}
         </Button>
       </div>
     </div>

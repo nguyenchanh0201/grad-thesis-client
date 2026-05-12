@@ -13,6 +13,7 @@ export type SelectedSeat = {
   id: string; // seatLabel e.g. "A-1"
   label: string; // display e.g. "VIP Front · A-1"
   zoneId: string; // ticketTypeId
+  seatIndex: number;
 };
 
 type Props = {
@@ -408,6 +409,7 @@ function SectionDetail({
                           id: seat.seatLabel,
                           label: `${section.name} · ${seat.seatLabel}`,
                           zoneId: section.ticketTypeId ?? section.id,
+                          seatIndex: seat.seatIndex,
                         });
                       }}
                       className={[

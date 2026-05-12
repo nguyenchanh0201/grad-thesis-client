@@ -6,6 +6,10 @@ import { useQuery } from "@tanstack/react-query";
 import { clearBuySession, hasBuySession } from "@/lib/booking/buy-session";
 import { useBookingStore } from "@/lib/store/booking";
 import { useEventBySlug } from "@/hooks/use-events";
+import {
+  useCreateGAReservation,
+  useCreateSeatedReservation,
+} from "@/hooks/use-booking";
 import { EventBanner } from "./event-banner";
 import { ProgressSteps } from "./progress-steps";
 import { TicketPanel } from "./ticket-panel";
@@ -28,7 +32,7 @@ function ticketTypeToZone(tt: TicketType, idx: number): Zone {
   return {
     id: tt.id,
     label: tt.name,
-    price: tt.price / 100,
+    price: tt.price, // raw VND — no division
     colorKey: ZONE_COLORS[idx % ZONE_COLORS.length],
     available: Math.max(0, quantity - soldCount),
   };
@@ -45,6 +49,7 @@ export function TicketSelection({ slug }: Props) {
     timeRemaining,
     timedOut,
     reset: timerReset,
+    syncToExpiry,
   } = useTicketTimer();
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -52,8 +57,10 @@ export function TicketSelection({ slug }: Props) {
     tickets,
     selectedSeats,
     selectedZoneId,
+    waitRoomToken,
     initStep1,
     setSelectedZoneId,
+    setReservationId,
     incrementTicket,
     decrementTicket,
     deleteTicket,
@@ -65,6 +72,10 @@ export function TicketSelection({ slug }: Props) {
   } = useBookingStore();
 
   const [authorized] = useState(() => hasBuySession(slug));
+  const [isCreating, setIsCreating] = useState(false);
+
+  const gaReservationMutation = useCreateGAReservation();
+  const seatedReservationMutation = useCreateSeatedReservation();
 
   useEffect(() => {
     if (!authorized) {
@@ -87,7 +98,7 @@ export function TicketSelection({ slug }: Props) {
   });
   const canvas = seatMapResult?.data?.canvas;
 
-  // Fetch availability, refresh every 10s while user is on this page
+  // Poll seat availability every 10s
   const { data: seatsResult } = useQuery({
     queryKey: ["seatMap", "availability", eventId],
     queryFn: () => getEventSeats(eventId!),
@@ -141,8 +152,40 @@ export function TicketSelection({ slug }: Props) {
     [toggleSeat],
   );
 
-  const handleContinue = () => {
-    router.replace(`/buy/${slug}/info`);
+  const handleContinue = async () => {
+    if (isCreating) return;
+    setIsCreating(true);
+    try {
+      let result;
+      if (isSeated && canvas) {
+        result = await seatedReservationMutation.mutateAsync({
+          eventSlug: slug,
+          seatIndices: selectedSeats.map((s) => s.seatIndex),
+          waitRoomToken: waitRoomToken ?? undefined,
+        });
+      } else {
+        result = await gaReservationMutation.mutateAsync({
+          eventSlug: slug,
+          items: tickets.map((t) => ({
+            ticketTypeId: t.zoneId,
+            quantity: t.quantity,
+          })),
+          waitRoomToken: waitRoomToken ?? undefined,
+        });
+      }
+      const reservationId = result.data.id;
+      setReservationId(reservationId);
+      if (result.data.expiresAt) {
+        syncToExpiry(result.data.expiresAt);
+      }
+      router.replace(`/buy/${slug}/info`);
+    } catch {
+      clearBuySession(slug);
+      storeReset();
+      router.replace(`/events/${slug}`);
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   const handleTimeoutOk = () => {
@@ -215,6 +258,7 @@ export function TicketSelection({ slug }: Props) {
             selectedSeats={selectedSeats}
             onSeatRemove={removeSeat}
             onSeatClearAll={clearSeats}
+            isLoading={isCreating}
           />
         </div>
       </div>

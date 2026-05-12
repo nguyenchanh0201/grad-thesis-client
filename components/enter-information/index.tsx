@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { clearBuySession, hasBuySession } from "@/lib/booking/buy-session";
 import { isValidEmail } from "@/lib/form/email";
+import { isAppError } from "@/core/error";
 import { useBookingStore } from "@/lib/store/booking";
-import {
-  mockEventDetail,
-  mockEventDetailTheater,
-  mockEventDetailZone,
-} from "@/lib/mock/events";
+import { useEventBySlug } from "@/hooks/use-events";
+import { useReservation } from "@/hooks/use-booking";
+import { updateReservationRecipient } from "@/services/reservation.service";
+import { fmtIsoDate, fmtIsoTime } from "@/lib/date/utils";
 import { EventBanner } from "@/components/ticket-selection/event-banner";
 import { ProgressSteps } from "@/components/ticket-selection/progress-steps";
 import { TimeoutModal } from "@/components/ticket-selection/timeout-modal";
@@ -22,27 +22,21 @@ import {
 import { TicketDeliveryMethod } from "./ticket-delivery-method";
 import { StickyValidationBar } from "./sticky-validation-bar";
 
-const MOCK_EVENTS = [
-  mockEventDetail,
-  mockEventDetailTheater,
-  mockEventDetailZone,
-];
-function getMockEvent(slug: string) {
-  return MOCK_EVENTS.find((e) => e.slug === slug) ?? mockEventDetail;
-}
-
 type Props = { slug: string };
 
 export function EnterInformation({ slug }: Props) {
   const router = useRouter();
-  const { formatted, timeRemaining, timedOut, reset } = useTicketTimer();
+  const { formatted, timeRemaining, timedOut, reset, syncToExpiry } =
+    useTicketTimer();
 
   const {
+    reservationId,
     tickets,
     selectedSeats,
     zones,
     mapType,
     recipient,
+    deliveryMethod,
     reset: storeReset,
   } = useBookingStore();
 
@@ -50,17 +44,47 @@ export function EnterInformation({ slug }: Props) {
 
   useEffect(() => {
     if (!authorized) {
-      storeReset(); // clear persisted state so re-queuing always starts fresh
+      storeReset();
       router.replace(`/events/${slug}`);
     }
   }, [authorized, slug, router, storeReset]);
 
+  // Redirect when reservationId is missing (shouldn't reach this page without one)
+  useEffect(() => {
+    if (authorized && reservationId === null) {
+      router.replace(`/events/${slug}`);
+    }
+  }, [authorized, reservationId, slug, router]);
+
+  const { data: eventResult } = useEventBySlug(slug);
+  const event = eventResult?.data;
+
+  const { data: reservationResult, error: reservationError } = useReservation(
+    reservationId ?? undefined,
+  );
+
+  // Handle reservation errors: 404, 403 → redirect; 409 NOT_PENDING → clear + redirect
+  useEffect(() => {
+    if (!reservationError) return;
+    if (isAppError(reservationError)) {
+      if (reservationError.code === "RESERVATION_NOT_PENDING") {
+        clearBuySession(slug);
+      }
+      router.replace(`/events/${slug}`);
+    }
+  }, [reservationError, slug, router]);
+
+  // Sync countdown to server expiry once the reservation loads
+  useEffect(() => {
+    const expiresAt = reservationResult?.data?.expiresAt;
+    if (expiresAt) syncToExpiry(expiresAt);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reservationResult?.data?.expiresAt]);
+
   const isWarning = timeRemaining <= 60;
-  const event = useMemo(() => getMockEvent(slug), [slug]);
-
   const formRef = useRef<RecipientFormHandle>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Derives validity from the store so the bar updates on every keystroke
   const isFormValid =
     !!recipient.fullName?.trim() &&
     !!recipient.email?.trim() &&
@@ -68,10 +92,29 @@ export function EnterInformation({ slug }: Props) {
     !!recipient.phoneNumber?.trim();
 
   const handleContinue = async () => {
-    // Trigger RHF validation to surface inline error messages
     const valid = await formRef.current?.triggerValidation();
-    if (!valid) return;
-    router.replace(`/buy/${slug}/payment`);
+    if (!valid || !reservationId) return;
+    setIsSubmitting(true);
+    try {
+      await updateReservationRecipient(reservationId, {
+        recipient: {
+          fullName: recipient.fullName,
+          email: recipient.email,
+          phoneCountryCode: recipient.phoneCountryCode,
+          phoneNumber: recipient.phoneNumber,
+          idPassport: recipient.idPassport || null,
+        },
+        deliveryMethod,
+      });
+      router.replace(`/buy/${slug}/payment`);
+    } catch (err) {
+      if (isAppError(err) && err.status === 409) {
+        clearBuySession(slug);
+        router.replace(`/events/${slug}`);
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleBack = () => {
@@ -87,13 +130,15 @@ export function EnterInformation({ slug }: Props) {
   if (!authorized) return null;
 
   const eventSummary = {
-    title: event.title,
-    image: event.images[0] ?? "",
-    dateLabel: event.dates[0]
-      ? `${event.dates[0].label} • ${event.dates[0].startTime.slice(11, 16)}`
+    title: event?.eventName ?? "",
+    image: event?.featuredImageUrl ?? event?.eventImageUrls?.[0] ?? "",
+    dateLabel: event?.eventDate
+      ? `${fmtIsoDate(event.eventDate)} • ${fmtIsoTime(event.eventDate)}`
       : "",
-    venueVi: `${event.venue.name}, ${event.venue.city}`,
-    venueAddress: event.venue.address,
+    venueVi: event?.venue
+      ? `${event.venue.venueName ?? ""}, ${event.venue.city ?? ""}`
+      : "",
+    venueAddress: event?.venue?.address ?? "",
   };
 
   return (
@@ -105,9 +150,9 @@ export function EnterInformation({ slug }: Props) {
         backHref={`/buy/${slug}/tickets`}
       />
       <EventBanner
-        eventTitle={event.title}
+        eventTitle={eventSummary.title}
         eventDate={eventSummary.dateLabel}
-        eventLocation={`${event.venue.name}, ${event.venue.city}`}
+        eventLocation={eventSummary.venueVi}
       />
 
       {/* Two-panel layout — mobile: form on top, summary below */}
@@ -142,7 +187,7 @@ export function EnterInformation({ slug }: Props) {
       </div>
 
       <StickyValidationBar
-        isValid={isFormValid}
+        isValid={isFormValid && !isSubmitting}
         onBack={handleBack}
         onContinue={handleContinue}
       />
