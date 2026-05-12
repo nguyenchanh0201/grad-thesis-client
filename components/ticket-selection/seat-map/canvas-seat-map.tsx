@@ -6,6 +6,7 @@ import type {
   SeatMapCanvas,
   SectionElement,
   ZoneElement,
+  RowConfig,
 } from "@/schemas/seat-map";
 import type { SectionAvailability, SeatAvailability } from "@/schemas/seat";
 
@@ -39,9 +40,14 @@ export function CanvasSeatMap({
   const selectedSet = new Set(selectedSeats);
 
   if (activeSection) {
-    const sectionSeats =
+    // Prefer real seat data; fall back to seats derived from rowConfigs.
+    const fromApi =
       availability.find((a) => a.ticketTypeId === activeSection.ticketTypeId)
         ?.seats ?? [];
+    const sectionSeats =
+      fromApi.length > 0
+        ? fromApi
+        : generateSeatsFromRowConfigs(activeSection.rowConfigs ?? []);
     return (
       <SectionDetail
         section={activeSection}
@@ -539,6 +545,27 @@ function MiniMap({
       </svg>
     </div>
   );
+}
+
+// Generate seats from section rowConfigs when the backend provides no seat data.
+// Status defaults to "available"; actual availability supersedes this when present.
+function generateSeatsFromRowConfigs(
+  rowConfigs: RowConfig[],
+): SeatAvailability[] {
+  const seats: SeatAvailability[] = [];
+  let seatIndex = 0;
+  for (const row of rowConfigs) {
+    for (let i = 1; i <= row.seatCount; i++) {
+      seats.push({
+        seatIndex: seatIndex++,
+        seatRow: row.label,
+        seatNumber: i,
+        seatLabel: `${row.label}-${i}`,
+        status: "available",
+      });
+    }
+  }
+  return seats;
 }
 
 // Helpers

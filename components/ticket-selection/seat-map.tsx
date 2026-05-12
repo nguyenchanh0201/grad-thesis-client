@@ -3,8 +3,10 @@
 import { ChevronDown, ChevronUp, MapPin } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
-import { CanvasSeatMap } from "./seat-map";
-import type { SelectedSeat } from "./seat-map";
+import { CanvasSeatMap } from "./seat-map/canvas-seat-map";
+import type { SelectedSeat } from "./seat-map/canvas-seat-map";
+
+export type { SelectedSeat } from "./seat-map/canvas-seat-map";
 import type { SeatMapCanvas } from "@/schemas/seat-map";
 import type { SectionAvailability } from "@/schemas/seat";
 import { Zone } from "@/schemas/seat";
@@ -32,7 +34,7 @@ type Props = {
   maxSeats?: number;
 };
 
-export function VenueMap({
+export function SeatMap({
   zones,
   venueImageUrl,
   fallbackImageUrl,
@@ -62,7 +64,7 @@ export function VenueMap({
       >
         <span className="flex items-center gap-2 text-sm font-semibold">
           <MapPin className="size-4 text-muted-foreground" />
-          Venue map
+          Seat map
         </span>
         {mapOpen ? (
           <ChevronUp className="size-4 text-muted-foreground" />
@@ -102,7 +104,7 @@ export function VenueMap({
                 {!venueImageUrl && (
                   <div className="absolute inset-0 flex items-end bg-linear-to-t from-black/60 to-transparent">
                     <p className="p-3 text-xs text-white/80">
-                      Venue map not available — select a zone from the list
+                      Seat map not available — select a zone from the list
                     </p>
                   </div>
                 )}

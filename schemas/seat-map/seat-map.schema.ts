@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { BaseResponseSchema } from "../api/base-response.schema";
+import { PagedResponseSchema } from "../api/paged-response.schema";
 import { BigIntIdSchema } from "../api/bigint-id.schema";
 
 const RowConfigSchema = z.object({
@@ -89,7 +90,14 @@ export const SeatMapSchema = z.object({
   createdAt: z.iso.datetime().optional(),
 });
 
+// Full admin seat map (used internally/admin)
 export const SeatMapResultSchema = BaseResponseSchema(SeatMapSchema);
+
+// Public event endpoint returns the full SeatMap object; we extract the canvas.
+export const EventSeatMapResultSchema = BaseResponseSchema(
+  SeatMapSchema.transform((sm) => sm.canvas),
+);
+export type EventSeatMapResult = z.infer<typeof EventSeatMapResultSchema>;
 
 export type SeatMapElement = z.infer<typeof SeatMapElementSchema>;
 export type SeatMapCanvas = z.infer<typeof SeatMapCanvasSchema>;
@@ -100,3 +108,10 @@ export type ZoneElement = z.infer<typeof ZoneElementSchema>;
 export type StageElement = z.infer<typeof StageElementSchema>;
 export type LabelElement = z.infer<typeof LabelElementSchema>;
 export type RowConfig = z.infer<typeof RowConfigSchema>;
+
+export const SeatMapListItemSchema = SeatMapSchema.omit({ canvas: true });
+export const SeatMapListResultSchema = PagedResponseSchema(
+  SeatMapListItemSchema,
+);
+export type SeatMapListItem = z.infer<typeof SeatMapListItemSchema>;
+export type SeatMapListResult = z.infer<typeof SeatMapListResultSchema>;

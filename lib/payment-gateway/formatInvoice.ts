@@ -4,7 +4,8 @@ export function formatInvoiceId(id: string, maxLen = 22): string {
   return `${id.slice(0, keep)}...${id.slice(-keep)}`;
 }
 
-export function formatDeadline(date: Date): string {
+export function formatDeadline(date: Date | null | undefined): string {
+  if (!date) return "—";
   const month = date.toLocaleString("en-US", { month: "long" });
   const day = date.getDate();
   const year = date.getFullYear();
