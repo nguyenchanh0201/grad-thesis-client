@@ -1,4 +1,5 @@
 import type { ProfileUser } from "@/schemas/user";
+import { AcCOUNT_TYPES } from "@/schemas/user/account-type";
 import { ROLES } from "@/schemas/user/role";
 
 // TODO: Delete later
@@ -11,6 +12,7 @@ let _mock: ProfileUser = {
   phone: undefined,
   profilePic: undefined,
   role: ROLES["USER"],
+  accountType: AcCOUNT_TYPES.MEMBER,
 };
 
 export async function fetchUserProfile(): Promise<ProfileUser> {
