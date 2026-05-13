@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { clearBuySession, hasBuySession } from "@/lib/booking/buy-session";
@@ -14,15 +14,15 @@ import { EventBanner } from "./event-banner";
 import { ProgressSteps } from "./progress-steps";
 import { TicketPanel } from "./ticket-panel";
 import { TimeoutModal } from "./timeout-modal";
-import { VenueMap } from "./venue-map";
+import { SeatMap } from "./seat-map";
 import { useTicketTimer } from "../../hooks/use-ticket-timer";
 import type { SelectedSeat } from "./seat-map";
 import type { Zone, ZoneColorKey } from "@/schemas/seat";
 import type { TicketType } from "@/schemas/ticket-type";
 import { fmtIsoDate } from "@/lib/date";
-import { getEventSeatMap } from "@/services/seat-map.service";
 import { getEventSeats } from "@/services/event.service";
 import { SectionAvailability } from "@/schemas/seat";
+import { SeatMapCanvasSchema } from "@/schemas/seat-map";
 
 const ZONE_COLORS: ZoneColorKey[] = ["a", "b", "c", "d"];
 
@@ -51,8 +51,6 @@ export function TicketSelection({ slug }: Props) {
     reset: timerReset,
     syncToExpiry,
   } = useTicketTimer();
-  const panelRef = useRef<HTMLDivElement>(null);
-
   const {
     tickets,
     selectedSeats,
@@ -71,32 +69,33 @@ export function TicketSelection({ slug }: Props) {
     reset: storeReset,
   } = useBookingStore();
 
-  const [authorized] = useState(() => hasBuySession(slug));
+  // Initialize to true so server and client render the same initial tree.
+  // hasBuySession reads sessionStorage (client-only) — checked in useEffect.
+  const [authorized, setAuthorized] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
 
   const gaReservationMutation = useCreateGAReservation();
   const seatedReservationMutation = useCreateSeatedReservation();
 
   useEffect(() => {
-    if (!authorized) {
+    if (!hasBuySession(slug)) {
+      setAuthorized(false);
       storeReset();
       router.replace(`/events/${slug}`);
     }
-  }, [authorized, slug, router, storeReset]);
+  }, [slug, router, storeReset]);
 
   const { data: eventResult } = useEventBySlug(slug);
   const event = eventResult?.data;
   const eventId = event?.id;
   const isSeated = event?.isSeated ?? false;
 
-  // Fetch canvas only for seated events
-  const { data: seatMapResult } = useQuery({
-    queryKey: ["seatMap", "event", eventId],
-    queryFn: () => getEventSeatMap(eventId!),
-    enabled: !!eventId && isSeated,
-    staleTime: 5 * 60 * 1000,
-  });
-  const canvas = seatMapResult?.data?.canvas;
+  // Canvas is embedded in the event response — no separate network call needed
+  const canvas = useMemo(() => {
+    if (!isSeated || !event?.seatMap?.canvas) return undefined;
+    const result = SeatMapCanvasSchema.safeParse(event.seatMap.canvas);
+    return result.success ? result.data : undefined;
+  }, [isSeated, event?.seatMap?.canvas]);
 
   // Poll seat availability every 10s
   const { data: seatsResult } = useQuery({
@@ -119,13 +118,15 @@ export function TicketSelection({ slug }: Props) {
   }, [event]);
 
   useEffect(() => {
-    if (activeZones.length === 0) return;
+    // Wait for event to load before initialising — sets mapType even for seated
+    // events that have no ticket types yet.
+    if (!event) return;
     initStep1({
       slug,
       zones: activeZones,
       mapType: isSeated ? "seated" : "zone",
     });
-  }, [slug, activeZones, isSeated, initStep1]);
+  }, [slug, activeZones, isSeated, initStep1, event]);
 
   const handleZoneClick = useCallback(
     (zoneId: string) => {
@@ -223,7 +224,7 @@ export function TicketSelection({ slug }: Props) {
       />
       <div className="flex flex-1 flex-col md:flex-row">
         <div className="border-b border-border md:w-[55%] md:border-b-0 md:border-r">
-          <VenueMap
+          <SeatMap
             zones={activeZones}
             venueImageUrl={undefined}
             fallbackImageUrl={eventImageUrl}
@@ -238,7 +239,6 @@ export function TicketSelection({ slug }: Props) {
         </div>
 
         <div
-          ref={panelRef}
           className="flex flex-col md:w-[45%] md:overflow-y-auto"
           style={{ maxHeight: "calc(100vh - var(--header-height) - 6rem)" }}
         >

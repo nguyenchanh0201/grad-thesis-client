@@ -40,14 +40,17 @@ export function EnterInformation({ slug }: Props) {
     reset: storeReset,
   } = useBookingStore();
 
-  const [authorized] = useState(() => hasBuySession(slug));
+  // Initialize to true so server and client render the same initial tree.
+  // hasBuySession reads sessionStorage (client-only) — checked in useEffect.
+  const [authorized, setAuthorized] = useState(true);
 
   useEffect(() => {
-    if (!authorized) {
+    if (!hasBuySession(slug)) {
+      setAuthorized(false);
       storeReset();
       router.replace(`/events/${slug}`);
     }
-  }, [authorized, slug, router, storeReset]);
+  }, [slug, router, storeReset]);
 
   // Redirect when reservationId is missing (shouldn't reach this page without one)
   useEffect(() => {

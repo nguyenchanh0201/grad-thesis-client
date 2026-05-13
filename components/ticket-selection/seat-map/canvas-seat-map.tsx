@@ -96,10 +96,7 @@ function CanvasOverview({
       <p className="text-center text-xs text-muted-foreground">
         Click a section to choose your seats
       </p>
-      <div
-        className="relative w-full overflow-hidden rounded-md border border-border"
-        style={{ background: canvas.backgroundColor ?? "var(--muted)/30" }}
-      >
+      <div className="relative w-full overflow-hidden rounded-md border border-border">
         <svg
           viewBox={`0 0 ${canvas.width} ${canvas.height}`}
           className="w-full"
