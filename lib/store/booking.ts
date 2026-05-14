@@ -2,13 +2,14 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import type { SelectedTicket } from "@/schemas/seat/types";
 import type { SelectedSeat } from "@/components/ticket-selection/seat-map";
-import { MapType, Zone } from "@/schemas/seat";
+import { MapType } from "@/schemas/seat";
 import { DeliveryMethod, RecipientInfo } from "@/schemas/booking";
 import type { DiscountCode, PaymentMethodId } from "@/schemas/payment";
+import type { TicketType } from "@/schemas/ticket-type";
 
 type InitStep1Payload = {
   slug: string;
-  zones: Zone[];
+  ticketTypes: TicketType[];
   mapType: MapType;
 };
 
@@ -16,7 +17,7 @@ type BookingState = {
   slug: string | null;
   waitRoomToken: string | null;
   reservationId: string | null;
-  zones: Zone[];
+  ticketTypes: TicketType[];
   mapType: MapType;
   selectedZoneId: string | null;
   tickets: SelectedTicket[];
@@ -36,9 +37,9 @@ type BookingState = {
   reset: () => void;
 
   setSelectedZoneId: (id: string | null) => void;
-  incrementTicket: (zoneId: string, maxPerZone: number) => void;
-  decrementTicket: (zoneId: string) => void;
-  deleteTicket: (zoneId: string) => void;
+  incrementTicket: (ticketTypeId: string, maxPerOrder: number) => void;
+  decrementTicket: (ticketTypeId: string) => void;
+  deleteTicket: (ticketTypeId: string) => void;
   clearTickets: () => void;
 
   toggleSeat: (seat: SelectedSeat, maxSeats: number) => void;
@@ -65,7 +66,7 @@ const INITIAL_STATE = {
   slug: null,
   waitRoomToken: null as string | null,
   reservationId: null as string | null,
-  zones: [] as Zone[],
+  ticketTypes: [] as TicketType[],
   mapType: "zone" as MapType,
   selectedZoneId: null,
   tickets: [] as SelectedTicket[],
@@ -83,12 +84,12 @@ export const useBookingStore = create<BookingState>()(
       ...INITIAL_STATE,
 
       // Session
-      initStep1: ({ slug, zones, mapType }) =>
+      initStep1: ({ slug, ticketTypes, mapType }) =>
         set((s) => {
           const slugChanged = s.slug !== slug;
           return {
             slug,
-            zones,
+            ticketTypes,
             mapType,
             selectedZoneId: slugChanged ? null : s.selectedZoneId,
             tickets: slugChanged ? [] : s.tickets,
@@ -101,44 +102,59 @@ export const useBookingStore = create<BookingState>()(
       setWaitRoomToken: (token) => set({ waitRoomToken: token }),
       setReservationId: (id) => set({ reservationId: id }),
 
-      // Zone mode
       setSelectedZoneId: (id) => set({ selectedZoneId: id }),
 
-      incrementTicket: (zoneId, maxPerZone) =>
+      incrementTicket: (ticketTypeId, maxPerOrder) =>
         set((s) => {
-          const zone = s.zones.find((z) => z.id === zoneId);
-          if (!zone) return s;
-          const existing = s.tickets.find((t) => t.zoneId === zoneId);
+          const tt = s.ticketTypes.find((t) => t.id === ticketTypeId);
+          if (!tt) return s;
+          const available =
+            tt.quantity != null && tt.soldCount != null
+              ? Math.max(0, tt.quantity - tt.soldCount)
+              : (tt.quantity ?? maxPerOrder);
+          const existing = s.tickets.find(
+            (t) => t.ticketTypeId === ticketTypeId,
+          );
           if (existing) {
             if (
-              existing.quantity >= maxPerZone ||
-              existing.quantity >= zone.available
+              existing.quantity >= maxPerOrder ||
+              existing.quantity >= available
             )
               return s;
             return {
               tickets: s.tickets.map((t) =>
-                t.zoneId === zoneId ? { ...t, quantity: t.quantity + 1 } : t,
+                t.ticketTypeId === ticketTypeId
+                  ? { ...t, quantity: t.quantity + 1 }
+                  : t,
               ),
             };
           }
-          return { tickets: [...s.tickets, { zoneId, quantity: 1 }] };
+          return { tickets: [...s.tickets, { ticketTypeId, quantity: 1 }] };
         }),
 
-      decrementTicket: (zoneId) =>
+      decrementTicket: (ticketTypeId) =>
         set((s) => {
-          const existing = s.tickets.find((t) => t.zoneId === zoneId);
+          const existing = s.tickets.find(
+            (t) => t.ticketTypeId === ticketTypeId,
+          );
           if (!existing || existing.quantity <= 0) return s;
           if (existing.quantity === 1)
-            return { tickets: s.tickets.filter((t) => t.zoneId !== zoneId) };
+            return {
+              tickets: s.tickets.filter((t) => t.ticketTypeId !== ticketTypeId),
+            };
           return {
             tickets: s.tickets.map((t) =>
-              t.zoneId === zoneId ? { ...t, quantity: t.quantity - 1 } : t,
+              t.ticketTypeId === ticketTypeId
+                ? { ...t, quantity: t.quantity - 1 }
+                : t,
             ),
           };
         }),
 
-      deleteTicket: (zoneId) =>
-        set((s) => ({ tickets: s.tickets.filter((t) => t.zoneId !== zoneId) })),
+      deleteTicket: (ticketTypeId) =>
+        set((s) => ({
+          tickets: s.tickets.filter((t) => t.ticketTypeId !== ticketTypeId),
+        })),
 
       clearTickets: () => set({ tickets: [] }),
 
@@ -188,7 +204,7 @@ export const useBookingStore = create<BookingState>()(
         slug,
         waitRoomToken,
         reservationId,
-        zones,
+        ticketTypes,
         mapType,
         selectedZoneId,
         tickets,
@@ -202,7 +218,7 @@ export const useBookingStore = create<BookingState>()(
         slug,
         waitRoomToken,
         reservationId,
-        zones,
+        ticketTypes,
         mapType,
         selectedZoneId,
         tickets,

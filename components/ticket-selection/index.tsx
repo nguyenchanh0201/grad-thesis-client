@@ -17,26 +17,10 @@ import { TimeoutModal } from "./timeout-modal";
 import { SeatMap } from "./seat-map";
 import { useTicketTimer } from "../../hooks/use-ticket-timer";
 import type { SelectedSeat } from "./seat-map";
-import type { Zone, ZoneColorKey } from "@/schemas/seat";
-import type { TicketType } from "@/schemas/ticket-type";
 import { fmtIsoDate } from "@/lib/date";
 import { getEventSeats } from "@/services/event.service";
 import { SectionAvailability } from "@/schemas/seat";
 import { SeatMapCanvasSchema } from "@/schemas/seat-map";
-
-const ZONE_COLORS: ZoneColorKey[] = ["a", "b", "c", "d"];
-
-function ticketTypeToZone(tt: TicketType, idx: number): Zone {
-  const quantity = tt.quantity ?? 100;
-  const soldCount = tt.soldCount ?? 0;
-  return {
-    id: tt.id,
-    label: tt.name,
-    price: tt.price, // raw VND — no division
-    colorKey: ZONE_COLORS[idx % ZONE_COLORS.length],
-    available: Math.max(0, quantity - soldCount),
-  };
-}
 
 const MAX_SEATS = 8;
 
@@ -90,11 +74,18 @@ export function TicketSelection({ slug }: Props) {
   const eventId = event?.id;
   const isSeated = event?.isSeated ?? false;
 
-  // Canvas is embedded in the event response — no separate network call needed
+  // Canvas is embedded in the event response — no separate network call needed.
+  // Only use canvas mode when the canvas has at least one committed section or zone
+  // (i.e. elements with ticketTypeId). A stage-only or label-only canvas means the
+  // organizer hasn't committed sections yet — fall back to image mode.
   const canvas = useMemo(() => {
     if (!isSeated || !event?.seatMap?.canvas) return undefined;
     const result = SeatMapCanvasSchema.safeParse(event.seatMap.canvas);
-    return result.success ? result.data : undefined;
+    if (!result.success) return undefined;
+    const hasSections = result.data.elements.some(
+      (el) => el.type === "section" || el.type === "zone",
+    );
+    return hasSections ? result.data : undefined;
   }, [isSeated, event?.seatMap?.canvas]);
 
   // Poll seat availability every 10s
@@ -109,24 +100,17 @@ export function TicketSelection({ slug }: Props) {
 
   const isWarning = timeRemaining <= 60;
   const maxPerZone = event?.maxTicketsPerOrder ?? MAX_SEATS;
-
-  const activeZones = useMemo<Zone[]>(() => {
-    if (event?.ticketTypes && event.ticketTypes.length > 0) {
-      return event.ticketTypes.map(ticketTypeToZone);
-    }
-    return [];
-  }, [event]);
+  const ticketTypes = event?.ticketTypes ?? [];
 
   useEffect(() => {
-    // Wait for event to load before initialising — sets mapType even for seated
-    // events that have no ticket types yet.
     if (!event) return;
     initStep1({
       slug,
-      zones: activeZones,
+      ticketTypes,
       mapType: isSeated ? "seated" : "zone",
     });
-  }, [slug, activeZones, isSeated, initStep1, event]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug, isSeated, initStep1, event]);
 
   const handleZoneClick = useCallback(
     (zoneId: string) => {
@@ -139,12 +123,12 @@ export function TicketSelection({ slug }: Props) {
   );
 
   const handleIncrement = useCallback(
-    (zoneId: string) => incrementTicket(zoneId, maxPerZone),
+    (ticketTypeId: string) => incrementTicket(ticketTypeId, maxPerZone),
     [incrementTicket, maxPerZone],
   );
 
   const handleDecrement = useCallback(
-    (zoneId: string) => decrementTicket(zoneId),
+    (ticketTypeId: string) => decrementTicket(ticketTypeId),
     [decrementTicket],
   );
 
@@ -168,7 +152,7 @@ export function TicketSelection({ slug }: Props) {
         result = await gaReservationMutation.mutateAsync({
           eventSlug: slug,
           items: tickets.map((t) => ({
-            ticketTypeId: t.zoneId,
+            ticketTypeId: t.ticketTypeId,
             quantity: t.quantity,
           })),
           waitRoomToken: waitRoomToken ?? undefined,
@@ -225,8 +209,7 @@ export function TicketSelection({ slug }: Props) {
       <div className="flex flex-1 flex-col md:flex-row">
         <div className="border-b border-border md:w-[55%] md:border-b-0 md:border-r">
           <SeatMap
-            zones={activeZones}
-            venueImageUrl={undefined}
+            ticketTypes={ticketTypes}
             fallbackImageUrl={eventImageUrl}
             selectedZoneId={selectedZoneId}
             onZoneClick={handleZoneClick}
@@ -243,7 +226,7 @@ export function TicketSelection({ slug }: Props) {
           style={{ maxHeight: "calc(100vh - var(--header-height) - 6rem)" }}
         >
           <TicketPanel
-            zones={activeZones}
+            ticketTypes={ticketTypes}
             eventDate={event ? fmtIsoDate(event.eventDate) : ""}
             onContinue={handleContinue}
             onChangeDate={() => {}}

@@ -11,9 +11,9 @@ import type {
 import type { SectionAvailability, SeatAvailability } from "@/schemas/seat";
 
 export type SelectedSeat = {
-  id: string; // seatLabel e.g. "A-1"
-  label: string; // display e.g. "VIP Front · A-1"
-  zoneId: string; // ticketTypeId
+  id: string;
+  label: string;
+  ticketTypeId: string;
   seatIndex: number;
 };
 
@@ -156,17 +156,18 @@ function CanvasOverview({
               const soldOut = total > 0 && available === 0;
               const hasData = total > 0;
               const fill = el.color ?? "#6366f1";
+              const isInteractive = !!el.ticketTypeId && !soldOut;
 
               return (
                 <g
                   key={el.id}
-                  role="button"
-                  tabIndex={soldOut ? -1 : 0}
-                  aria-label={`${el.name}${selectedInSection > 0 ? `, ${selectedInSection} selected` : ""}${soldOut ? ", sold out" : ""}`}
-                  style={{ cursor: soldOut ? "not-allowed" : "pointer" }}
-                  onClick={() => !soldOut && onSectionClick(el)}
+                  role={isInteractive ? "button" : undefined}
+                  tabIndex={isInteractive ? 0 : -1}
+                  aria-label={`${el.name}${selectedInSection > 0 ? `, ${selectedInSection} selected` : ""}${soldOut ? ", sold out" : !el.ticketTypeId ? ", not yet available" : ""}`}
+                  style={{ cursor: isInteractive ? "pointer" : "default" }}
+                  onClick={() => isInteractive && onSectionClick(el)}
                   onKeyDown={(e) => {
-                    if ((e.key === "Enter" || e.key === " ") && !soldOut)
+                    if ((e.key === "Enter" || e.key === " ") && isInteractive)
                       onSectionClick(el);
                   }}
                 >
@@ -177,8 +178,12 @@ function CanvasOverview({
                     height={el.height}
                     rx={3}
                     fill={fill}
-                    opacity={soldOut ? 0.3 : 0.85}
-                    className="transition-opacity hover:opacity-100"
+                    opacity={soldOut || !el.ticketTypeId ? 0.35 : 0.85}
+                    className={
+                      isInteractive
+                        ? "transition-opacity hover:opacity-100"
+                        : ""
+                    }
                   />
                   <text
                     x={el.x + el.width / 2}
@@ -194,7 +199,18 @@ function CanvasOverview({
                   >
                     {el.name}
                   </text>
-                  {hasData && (
+                  {!el.ticketTypeId ? (
+                    <text
+                      x={el.x + el.width / 2}
+                      y={el.y + el.height / 2 + 9}
+                      textAnchor="middle"
+                      fontSize={Math.min(9, el.height * 0.25)}
+                      fill="#ffffff"
+                      opacity={0.7}
+                    >
+                      Not available
+                    </text>
+                  ) : hasData ? (
                     <text
                       x={el.x + el.width / 2}
                       y={el.y + el.height / 2 + 9}
@@ -209,7 +225,7 @@ function CanvasOverview({
                           ? `${selectedInSection} selected`
                           : `${available}/${total}`}
                     </text>
-                  )}
+                  ) : null}
                 </g>
               );
             }
@@ -225,6 +241,7 @@ function CanvasOverview({
               const soldOut = seats.length > 0 && available === 0;
               const fill = el.color ?? "#10b981";
               const canSelect = !!el.ticketTypeId && !soldOut;
+              const isCommitted = !!el.ticketTypeId;
 
               return (
                 <g
@@ -246,7 +263,7 @@ function CanvasOverview({
                     height={el.height}
                     rx={3}
                     fill={fill}
-                    opacity={soldOut ? 0.3 : 0.8}
+                    opacity={soldOut || !isCommitted ? 0.35 : 0.8}
                     className={
                       canSelect ? "transition-opacity hover:opacity-100" : ""
                     }
@@ -269,7 +286,11 @@ function CanvasOverview({
                     fill="#ffffff"
                     opacity={0.85}
                   >
-                    {soldOut ? "Sold Out" : `${available} avail`}
+                    {!isCommitted
+                      ? "Not available"
+                      : soldOut
+                        ? "Sold Out"
+                        : `${available} avail`}
                   </text>
                 </g>
               );
@@ -411,7 +432,7 @@ function SectionDetail({
                         onSeatToggle({
                           id: seat.seatLabel,
                           label: `${section.name} · ${seat.seatLabel}`,
-                          zoneId: section.ticketTypeId ?? section.id,
+                          ticketTypeId: section.ticketTypeId ?? section.id,
                           seatIndex: seat.seatIndex,
                         });
                       }}

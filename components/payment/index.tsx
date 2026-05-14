@@ -41,7 +41,7 @@ export function Payment({ slug }: Props) {
   const {
     tickets,
     selectedSeats,
-    zones,
+    ticketTypes,
     mapType,
     recipient,
     discountCode,
@@ -53,11 +53,11 @@ export function Payment({ slug }: Props) {
   const [authorized] = useState(() => hasBuySession(slug));
 
   useEffect(() => {
-    if (!authorized) {
+    if (!hasBuySession(slug)) {
       storeReset();
       router.replace(`/events/${slug}`);
     }
-  }, [authorized, slug, router, storeReset]);
+  }, [slug, router, storeReset]);
 
   const isWarning = timeRemaining <= 60;
   const event = useMemo(() => getMockEvent(slug), [slug]);
@@ -76,15 +76,15 @@ export function Payment({ slug }: Props) {
   const subtotal = useMemo(() => {
     if (mapType === "zone") {
       return tickets.reduce((sum, t) => {
-        const zone = zones.find((z) => z.id === t.zoneId);
-        return sum + (zone?.price ?? 0) * t.quantity;
+        const tt = ticketTypes.find((x) => x.id === t.ticketTypeId);
+        return sum + (tt?.price ?? 0) * t.quantity;
       }, 0);
     }
     return selectedSeats.reduce((sum, s) => {
-      const zone = zones.find((z) => z.id === s.zoneId);
-      return sum + (zone?.price ?? 0);
+      const tt = ticketTypes.find((x) => x.id === s.ticketTypeId);
+      return sum + (tt?.price ?? 0);
     }, 0);
-  }, [tickets, selectedSeats, zones, mapType]);
+  }, [tickets, selectedSeats, ticketTypes, mapType]);
 
   const eventSummary = {
     title: event.title,
@@ -108,10 +108,6 @@ export function Payment({ slug }: Props) {
   const handleBack = () => {
     router.replace(`/buy/${slug}/info`);
   };
-
-  // const handleRestart = () => {
-  //   router.replace(`/buy/${slug}/tickets`);
-  // };
 
   const handleTimeoutOk = () => {
     clearBuySession(slug);
@@ -142,7 +138,7 @@ export function Payment({ slug }: Props) {
         >
           <OrderSummaryPanel
             event={eventSummary}
-            zones={zones}
+            ticketTypes={ticketTypes}
             tickets={tickets}
             selectedSeats={selectedSeats}
             mapType={mapType}

@@ -7,12 +7,13 @@ import { fmt } from "@/lib/strings/money";
 import type { SelectedTicket } from "@/schemas/seat/types";
 import type { SelectedSeat } from "@/components/ticket-selection/seat-map";
 import type { RecipientInfo, EventSummary } from "../../schemas/booking/types";
-import { MapType, Zone } from "@/schemas/seat";
+import { MapType } from "@/schemas/seat";
 import { OrderInfo } from "./order-info";
+import type { TicketType } from "@/schemas/ticket-type";
 
 type Props = {
   event: EventSummary;
-  zones: Zone[];
+  ticketTypes: TicketType[];
   tickets: SelectedTicket[];
   selectedSeats: SelectedSeat[];
   mapType: MapType;
@@ -20,34 +21,41 @@ type Props = {
   discount?: { code: string; amount: number } | null;
 };
 
-type SeatRow = { label: string; quantity: number; unitPrice: number };
+type SeatRow = {
+  label: string;
+  quantity: number;
+  unitPrice: number;
+  currency: string;
+};
 
 function buildSeatRows(
   tickets: SelectedTicket[],
   selectedSeats: SelectedSeat[],
-  zones: Zone[],
+  ticketTypes: TicketType[],
   mapType: MapType,
 ): SeatRow[] {
   if (mapType === "zone") {
     return tickets.map((t) => {
-      const zone = zones.find((z) => z.id === t.zoneId);
+      const tt = ticketTypes.find((x) => x.id === t.ticketTypeId);
       return {
-        label: zone?.label ?? t.zoneId,
+        label: tt?.name ?? t.ticketTypeId,
         quantity: t.quantity,
-        unitPrice: zone?.price ?? 0,
+        unitPrice: tt?.price ?? 0,
+        currency: tt?.currency ?? "VND",
       };
     });
   }
-  const byZone = new Map<string, number>();
+  const byType = new Map<string, number>();
   selectedSeats.forEach((s) =>
-    byZone.set(s.zoneId, (byZone.get(s.zoneId) ?? 0) + 1),
+    byType.set(s.ticketTypeId, (byType.get(s.ticketTypeId) ?? 0) + 1),
   );
-  return Array.from(byZone.entries()).map(([zoneId, count]) => {
-    const zone = zones.find((z) => z.id === zoneId);
+  return Array.from(byType.entries()).map(([ticketTypeId, count]) => {
+    const tt = ticketTypes.find((x) => x.id === ticketTypeId);
     return {
-      label: zone?.label ?? zoneId,
+      label: tt?.name ?? ticketTypeId,
       quantity: count,
-      unitPrice: zone?.price ?? 0,
+      unitPrice: tt?.price ?? 0,
+      currency: tt?.currency ?? "VND",
     };
   });
 }
@@ -58,14 +66,14 @@ function computeTotal(rows: SeatRow[]): number {
 
 export function OrderSummaryPanel({
   event,
-  zones,
+  ticketTypes,
   tickets,
   selectedSeats,
   mapType,
   recipient,
   discount,
 }: Props) {
-  const seatRows = buildSeatRows(tickets, selectedSeats, zones, mapType);
+  const seatRows = buildSeatRows(tickets, selectedSeats, ticketTypes, mapType);
   const subtotal = computeTotal(seatRows);
   const total = discount?.amount
     ? Math.max(0, subtotal - discount.amount)
@@ -165,7 +173,7 @@ export function OrderSummaryPanel({
                 <div className="flex items-center gap-4 text-right">
                   <span className="text-muted-foreground">×{row.quantity}</span>
                   <span className="font-medium text-primary">
-                    {fmt(row.unitPrice)} VND
+                    {fmt(row.unitPrice)} {row.currency}
                   </span>
                 </div>
               </div>

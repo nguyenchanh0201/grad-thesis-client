@@ -7,10 +7,11 @@ import { cn } from "@/lib/utils";
 import type { SelectedTicket } from "../../schemas/seat/types";
 import type { SelectedSeat } from "./seat-map";
 import { fmt } from "@/lib/strings/money";
-import { Zone, ZoneMode } from "@/schemas/seat";
+import { ZoneMode } from "@/schemas/seat";
+import type { TicketType } from "@/schemas/ticket-type";
 
 type Props = {
-  zones: Zone[];
+  ticketTypes: TicketType[];
   eventDate: string;
   onContinue: () => void;
   onChangeDate: () => void;
@@ -19,9 +20,9 @@ type Props = {
   mode?: ZoneMode;
   tickets?: SelectedTicket[];
   selectedZoneId?: string | null;
-  onIncrement?: (zoneId: string) => void;
-  onDecrement?: (zoneId: string) => void;
-  onDeleteTicket?: (zoneId: string) => void;
+  onIncrement?: (ticketTypeId: string) => void;
+  onDecrement?: (ticketTypeId: string) => void;
+  onDeleteTicket?: (ticketTypeId: string) => void;
   onDeleteAll?: () => void;
   onResetZone?: () => void;
   // Seat mode
@@ -31,7 +32,7 @@ type Props = {
 };
 
 export function TicketPanel({
-  zones,
+  ticketTypes,
   eventDate,
   onContinue,
   onChangeDate,
@@ -51,21 +52,21 @@ export function TicketPanel({
   const [summaryOpen, setSummaryOpen] = useState(true);
 
   const zoneTotal = tickets.reduce((s, t) => {
-    const zone = zones.find((z) => z.id === t.zoneId);
-    return s + (zone?.price ?? 0) * t.quantity;
+    const tt = ticketTypes.find((x) => x.id === t.ticketTypeId);
+    return s + (tt?.price ?? 0) * t.quantity;
   }, 0);
   const zoneTotalQty = tickets.reduce((s, t) => s + t.quantity, 0);
 
   const seatTotal = selectedSeats.reduce((s, seat) => {
-    const zone = zones.find((z) => z.id === seat.zoneId);
-    return s + (zone?.price ?? 0);
+    const tt = ticketTypes.find((x) => x.id === seat.ticketTypeId);
+    return s + (tt?.price ?? 0);
   }, 0);
 
   const totalQty = mode === "seat" ? selectedSeats.length : zoneTotalQty;
   const totalPrice = mode === "seat" ? seatTotal : zoneTotal;
 
-  const getQty = (zoneId: string) =>
-    tickets.find((t) => t.zoneId === zoneId)?.quantity ?? 0;
+  const getQty = (ticketTypeId: string) =>
+    tickets.find((t) => t.ticketTypeId === ticketTypeId)?.quantity ?? 0;
 
   return (
     <div className="flex h-full flex-col">
@@ -91,77 +92,81 @@ export function TicketPanel({
           )}
 
           <div className="flex-1 overflow-y-auto">
-            {zones
-              .filter((z) => z.colorKey !== "stage")
-              .map((zone) => {
-                const qty = getQty(zone.id);
-                const isHighlighted = zone.id === selectedZoneId;
-                const isSoldOut = zone.available === 0;
-                return (
-                  <div
-                    key={zone.id}
-                    id={`zone-row-${zone.id}`}
-                    className={cn(
-                      "flex items-center justify-between border-b border-border px-5 py-4 transition-colors",
-                      isHighlighted && "bg-primary/5",
-                    )}
-                  >
-                    <div className="flex-1 pr-4">
-                      <p
-                        className={cn(
-                          "text-sm font-semibold",
-                          isSoldOut && "text-muted-foreground",
-                        )}
-                      >
-                        {zone.label}
-                      </p>
-                      <p
-                        className={cn(
-                          "mt-0.5 text-xs",
-                          isSoldOut ? "text-muted-foreground" : "text-primary",
-                        )}
-                      >
-                        {isSoldOut ? "Sold out" : `${fmt(zone.price)} VND`}
-                      </p>
-                    </div>
-                    {isSoldOut ? (
-                      <span className="rounded bg-muted px-2 py-1 text-xs text-muted-foreground">
-                        Unavailable
-                      </span>
-                    ) : (
-                      <div
-                        className="flex items-center gap-2"
-                        role="group"
-                        aria-label={`Quantity for ${zone.label}`}
-                      >
-                        <button
-                          onClick={() => onDecrement?.(zone.id)}
-                          disabled={qty === 0}
-                          aria-label="Decrease quantity"
-                          className={cn(
-                            "flex size-7 items-center justify-center rounded border transition",
-                            qty === 0
-                              ? "cursor-not-allowed border-border text-muted-foreground opacity-40"
-                              : "border-border hover:bg-muted",
-                          )}
-                        >
-                          <Minus className="size-3" />
-                        </button>
-                        <span className="w-5 text-center text-sm font-semibold tabular-nums">
-                          {qty}
-                        </span>
-                        <button
-                          onClick={() => onIncrement?.(zone.id)}
-                          aria-label="Increase quantity"
-                          className="flex size-7 items-center justify-center rounded border border-border transition hover:bg-muted"
-                        >
-                          <Plus className="size-3" />
-                        </button>
-                      </div>
-                    )}
+            {ticketTypes.map((tt) => {
+              const qty = getQty(tt.id);
+              const isHighlighted = tt.id === selectedZoneId;
+              const available =
+                tt.quantity != null && tt.soldCount != null
+                  ? Math.max(0, tt.quantity - tt.soldCount)
+                  : null;
+              const isSoldOut = available !== null && available === 0;
+              return (
+                <div
+                  key={tt.id}
+                  id={`zone-row-${tt.id}`}
+                  className={cn(
+                    "flex items-center justify-between border-b border-border px-5 py-4 transition-colors",
+                    isHighlighted && "bg-primary/5",
+                  )}
+                >
+                  <div className="flex-1 pr-4">
+                    <p
+                      className={cn(
+                        "text-sm font-semibold",
+                        isSoldOut && "text-muted-foreground",
+                      )}
+                    >
+                      {tt.name}
+                    </p>
+                    <p
+                      className={cn(
+                        "mt-0.5 text-xs",
+                        isSoldOut ? "text-muted-foreground" : "text-primary",
+                      )}
+                    >
+                      {isSoldOut
+                        ? "Sold out"
+                        : `${fmt(tt.price)} ${tt.currency}`}
+                    </p>
                   </div>
-                );
-              })}
+                  {isSoldOut ? (
+                    <span className="rounded bg-muted px-2 py-1 text-xs text-muted-foreground">
+                      Unavailable
+                    </span>
+                  ) : (
+                    <div
+                      className="flex items-center gap-2"
+                      role="group"
+                      aria-label={`Quantity for ${tt.name}`}
+                    >
+                      <button
+                        onClick={() => onDecrement?.(tt.id)}
+                        disabled={qty === 0}
+                        aria-label="Decrease quantity"
+                        className={cn(
+                          "flex size-7 items-center justify-center rounded border transition",
+                          qty === 0
+                            ? "cursor-not-allowed border-border text-muted-foreground opacity-40"
+                            : "border-border hover:bg-muted",
+                        )}
+                      >
+                        <Minus className="size-3" />
+                      </button>
+                      <span className="w-5 text-center text-sm font-semibold tabular-nums">
+                        {qty}
+                      </span>
+                      <button
+                        onClick={() => onIncrement?.(tt.id)}
+                        aria-label="Increase quantity"
+                        className="flex size-7 items-center justify-center rounded border border-border transition hover:bg-muted"
+                      >
+                        <Plus className="size-3" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </>
       )}
@@ -180,7 +185,7 @@ export function TicketPanel({
           ) : (
             <div className="divide-y divide-border">
               {selectedSeats.map((seat) => {
-                const zone = zones.find((z) => z.id === seat.zoneId);
+                const tt = ticketTypes.find((x) => x.id === seat.ticketTypeId);
                 return (
                   <div
                     key={seat.id}
@@ -189,8 +194,8 @@ export function TicketPanel({
                     <div>
                       <p className="text-sm font-semibold">Seat {seat.label}</p>
                       <p className="mt-0.5 text-xs text-primary">
-                        {zone?.label ?? seat.zoneId} · {fmt(zone?.price ?? 0)}{" "}
-                        VND
+                        {tt?.name ?? seat.ticketTypeId} · {fmt(tt?.price ?? 0)}{" "}
+                        {tt?.currency ?? "VND"}
                       </p>
                     </div>
                     <Button
@@ -242,24 +247,24 @@ export function TicketPanel({
             <div className="space-y-1 px-5 pb-3">
               {mode === "zone" &&
                 tickets.map((t) => {
-                  const zone = zones.find((z) => z.id === t.zoneId);
-                  if (!zone) return null;
+                  const tt = ticketTypes.find((x) => x.id === t.ticketTypeId);
+                  if (!tt) return null;
                   return (
                     <div
-                      key={t.zoneId}
+                      key={t.ticketTypeId}
                       className="flex items-center justify-between text-sm"
                     >
                       <span className="truncate text-foreground">
-                        {zone.label} x {t.quantity}
+                        {tt.name} x {t.quantity}
                       </span>
                       <div className="flex shrink-0 items-center gap-3 pl-4">
                         <span className="text-muted-foreground">
-                          {fmt(zone.price * t.quantity)} VND
+                          {fmt(tt.price * t.quantity)} {tt.currency}
                         </span>
                         <Button
                           variant="ghost"
-                          onClick={() => onDeleteTicket?.(t.zoneId)}
-                          aria-label={`Remove ${zone.label}`}
+                          onClick={() => onDeleteTicket?.(t.ticketTypeId)}
+                          aria-label={`Remove ${tt.name}`}
                           className="text-muted-foreground transition hover:text-destructive"
                         >
                           <Trash2 className="size-3.5" />

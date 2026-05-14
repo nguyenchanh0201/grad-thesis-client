@@ -33,7 +33,7 @@ export function EnterInformation({ slug }: Props) {
     reservationId,
     tickets,
     selectedSeats,
-    zones,
+    ticketTypes,
     mapType,
     recipient,
     deliveryMethod,
@@ -167,7 +167,7 @@ export function EnterInformation({ slug }: Props) {
         >
           <OrderSummaryPanel
             event={eventSummary}
-            zones={zones}
+            ticketTypes={ticketTypes}
             tickets={tickets}
             selectedSeats={selectedSeats}
             mapType={mapType}

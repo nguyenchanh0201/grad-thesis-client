@@ -9,7 +9,7 @@ import type { GatewayLineItem } from "@/schemas/payment-gateway";
 
 type Props = {
   invoiceId: string;
-  deadline: Date;
+  deadline?: Date | null;
   lineItems: GatewayLineItem[];
   subtotal: number;
   discount: { code: string; amount: number } | null;

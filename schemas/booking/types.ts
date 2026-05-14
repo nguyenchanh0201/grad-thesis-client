@@ -1,6 +1,7 @@
 import type { SelectedTicket } from "@/schemas/seat/types";
 import type { SelectedSeat } from "@/components/ticket-selection/seat-map";
-import { MapType, Zone } from "../seat";
+import { MapType } from "../seat";
+import type { TicketType } from "@/schemas/ticket-type";
 
 export type RecipientInfo = {
   fullName: string;
@@ -15,7 +16,7 @@ export type DeliveryMethod = "email_and_physical";
 export type Step1Snapshot = {
   tickets: SelectedTicket[];
   selectedSeats: SelectedSeat[];
-  zones: Zone[];
+  ticketTypes: TicketType[];
   mapType: MapType;
 };
 

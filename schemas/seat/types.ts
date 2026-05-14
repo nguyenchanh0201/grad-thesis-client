@@ -1,5 +1,5 @@
 export type SelectedTicket = {
-  zoneId: string;
+  ticketTypeId: string;
   quantity: number;
 };
 

@@ -9,17 +9,14 @@ import {
 
 export type RequestAccessPayload = {
   slug: string;
-  userId: string;
 };
 
 export type QueueStatusParams = {
   slug: string;
-  userId: string;
 };
 
 export type HeartbeatPayload = {
   slug: string;
-  userId: string;
   token: string;
 };
 

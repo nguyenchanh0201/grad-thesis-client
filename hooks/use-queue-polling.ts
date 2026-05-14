@@ -61,7 +61,7 @@ export function useQueuePolling(
     queryFn: async () => {
       if (USE_MOCK) return mockQueueWaiting(42);
       try {
-        return await requestAccess({ slug: slug!, userId: userId! });
+        return await requestAccess({ slug: slug! });
       } catch (err) {
         if (err instanceof ApiError && err.status === 403) {
           return { status: "NOT_OPEN" } satisfies WaitRoomResponse;
@@ -88,7 +88,7 @@ export function useQueuePolling(
           : mockQueueWaiting(Math.max(1, 42 - (mockTickRef.current - 1) * 28));
       }
       try {
-        return await getQueueStatus({ slug: slug!, userId: userId! });
+        return await getQueueStatus({ slug: slug! });
       } catch (err) {
         if (err instanceof ApiError && err.status === 403) {
           return { status: "NOT_OPEN" } satisfies WaitRoomResponse;
@@ -127,7 +127,7 @@ export function useQueuePolling(
     const { status } = statusQuery.data;
     if (status !== "QUEUEING" && status !== "ADMITTED") return;
 
-    sendHeartbeat({ slug, userId, token: tokenRef.current }).catch(() => {});
+    sendHeartbeat({ slug, token: tokenRef.current }).catch(() => {});
   }, [statusQuery.data, slug, userId]);
 
   const isLoading = accessQuery.isPending;

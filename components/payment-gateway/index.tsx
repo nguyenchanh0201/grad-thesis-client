@@ -10,7 +10,8 @@ import {
 import type { GatewayLineItem } from "@/schemas/payment-gateway";
 import type { SelectedTicket } from "@/schemas/seat/types";
 import type { SelectedSeat } from "@/components/ticket-selection/seat-map";
-import type { MapType, Zone } from "@/schemas/seat";
+import type { MapType } from "@/schemas/seat";
+import type { TicketType } from "@/schemas/ticket-type";
 import { PaymentPanel } from "./payment-pannel";
 import { OrderSummarySidebar } from "./order-summary-sidebar";
 import { GatewayFooter } from "./gateway-footer";
@@ -18,31 +19,31 @@ import { GatewayFooter } from "./gateway-footer";
 function buildLineItems(
   tickets: SelectedTicket[],
   selectedSeats: SelectedSeat[],
-  zones: Zone[],
+  ticketTypes: TicketType[],
   mapType: MapType,
 ): GatewayLineItem[] {
   if (mapType === "zone") {
     return tickets.map((t) => {
-      const zone = zones.find((z) => z.id === t.zoneId);
-      const price = zone?.price ?? 0;
+      const tt = ticketTypes.find((x) => x.id === t.ticketTypeId);
+      const price = tt?.price ?? 0;
       return {
-        label: zone?.label ?? t.zoneId,
+        label: tt?.name ?? t.ticketTypeId,
         quantity: t.quantity,
         unitPrice: price,
         total: price * t.quantity,
       };
     });
   }
-  const byZone = new Map<string, number>();
+  const byType = new Map<string, number>();
   selectedSeats.forEach((s) =>
-    byZone.set(s.zoneId, (byZone.get(s.zoneId) ?? 0) + 1),
+    byType.set(s.ticketTypeId, (byType.get(s.ticketTypeId) ?? 0) + 1),
   );
 
-  return Array.from(byZone.entries()).map(([zoneId, count]) => {
-    const zone = zones.find((z) => z.id === zoneId);
-    const price = zone?.price ?? 0;
+  return Array.from(byType.entries()).map(([ticketTypeId, count]) => {
+    const tt = ticketTypes.find((x) => x.id === ticketTypeId);
+    const price = tt?.price ?? 0;
     return {
-      label: zone?.label ?? zoneId,
+      label: tt?.name ?? ticketTypeId,
       quantity: count,
       unitPrice: price,
       total: price * count,
@@ -59,27 +60,24 @@ type Props = { slug: string };
 
 export function PaymentGateway({ slug }: Props) {
   const router = useRouter();
-  const { tickets, selectedSeats, zones, mapType, discountCode } =
+  const { tickets, selectedSeats, ticketTypes, mapType, discountCode } =
     useBookingStore();
 
   const [authorized] = useState(() => hasBuySession(slug));
+  const [deadline] = useState<Date | null>(() => getBuySessionDeadline(slug));
 
   useEffect(() => {
-    if (!authorized) {
+    if (!hasBuySession(slug)) {
       router.replace(`/events/${slug}`);
     }
-  }, [authorized, slug, router]);
+  }, [slug, router]);
 
   const uid = useId();
   const invoiceId = `INV-${SESSION_TIMESTAMP}-${uid.replace(/:/g, "")}`;
 
-  const [deadline] = useState(
-    () => getBuySessionDeadline(slug) ?? new Date(Date.now() + 11 * 60 * 1000),
-  );
-
   const lineItems = useMemo(
-    () => buildLineItems(tickets, selectedSeats, zones, mapType),
-    [tickets, selectedSeats, zones, mapType],
+    () => buildLineItems(tickets, selectedSeats, ticketTypes, mapType),
+    [tickets, selectedSeats, ticketTypes, mapType],
   );
 
   const subtotal = lineItems.reduce((sum, item) => sum + item.total, 0);
@@ -103,7 +101,7 @@ export function PaymentGateway({ slug }: Props) {
     }
   };
 
-  if (!authorized) return null;
+  if (!authorized || !deadline) return null;
 
   return (
     <div className="flex min-h-[calc(100vh-var(--header-height))] flex-col">
