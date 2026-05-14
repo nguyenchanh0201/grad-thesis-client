@@ -18,7 +18,7 @@ import { fmtIsoDate, fmtIsoTime } from "@/lib/date";
 import { DEFAULT_CURRENCY } from "@/core/constants";
 import { EventStatus } from "@/schemas/event";
 import type { EventDetail } from "@/schemas/event";
-import { useUserProfile } from "@/hooks/user-profile";
+import { useAuthStore } from "@/lib/store/auth.store";
 
 function eventBgColor(title: string): string {
   let h = 0;
@@ -54,8 +54,9 @@ export function EventDetailHeader({
 }: EventDetailHeaderProps) {
   const mobileCTARef = useRef<HTMLButtonElement>(null);
   const [mobileCTAHeight, setMobileCTAHeight] = useState(0);
-  const { data: user } = useUserProfile();
-  const isLoggedIn = user !== null;
+  const user = useAuthStore((s) => s.user);
+  const isInitialized = useAuthStore((s) => s.isInitialized);
+  const isLoggedIn = !!user;
 
   useEffect(() => {
     const el = mobileCTARef.current;
@@ -70,9 +71,10 @@ export function EventDetailHeader({
   const badge = event.status ? STATUS_BADGE[event.status] : null;
   const firstDate = event.dates[0];
   const extraDates = event.dates.length - 1;
-  const buttonLabel = isLoggedIn
-    ? "Buy Tickets"
-    : (ctaLabel ?? "Login required to purchase tickets");
+  const buttonLabel =
+    isInitialized && !isLoggedIn
+      ? (ctaLabel ?? "Login required to buy tickets")
+      : "Buy Tickets";
   const hasSocialLinks =
     event.socialLinks?.facebook ||
     event.socialLinks?.website ||

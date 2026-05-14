@@ -4,9 +4,11 @@ export {
   type EventDetailResult,
   type EventPagedListResult,
   type EventDetailPageResult,
+  type EventSearchItem,
   EventDetailResultSchema,
   EventPagedListResultSchema,
   EventDetailPageResultSchema,
+  EventSearchItemSchema,
 } from "./event-response.schema";
 export { type UpdateEventDTO, UpdateEventSchema } from "./update-event.schema";
 export { EventOrganizerSchema, type EventOrganizer } from "./organizer.schema";

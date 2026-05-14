@@ -7,7 +7,6 @@ import {
 } from "@/core/error";
 import { useAuthStore } from "@/lib/store/auth.store";
 import { ApiErrorSchema } from "@/schemas/api";
-import { AuthUser } from "@/schemas/user";
 import axios, {
   type AxiosRequestConfig,
   AxiosError,
@@ -60,12 +59,12 @@ axiosRetry(apiClient, {
 // Queue of requests waiting for the in-flight refresh to complete
 let isRefreshing = false;
 let waitingQueue: Array<{
-  resolve: (token: string) => void;
+  resolve: () => void;
   reject: (error: unknown) => void;
 }> = [];
 
-function flushQueue(error: unknown, token: string | null) {
-  waitingQueue.forEach((cb) => (error ? cb.reject(error) : cb.resolve(token!)));
+function flushQueue(error: unknown) {
+  waitingQueue.forEach((cb) => (error ? cb.reject(error) : cb.resolve()));
   waitingQueue = [];
 }
 
@@ -73,8 +72,11 @@ function flushQueue(error: unknown, token: string | null) {
 const SKIP_REFRESH_PATHS = [
   "/auth/login",
   "/auth/register",
-  "/auth/refresh",
+  "/auth/signin",
+  "/auth/signup",
+  "/auth/session/refresh",
   "/auth/logout",
+  "/auth/signout",
   "/auth/google",
   "/tickets/heartbeat",
 ];
@@ -104,46 +106,31 @@ apiClient.interceptors.response.use(
     // Attempt silent token refresh on 401 for non-auth endpoints
     if (
       status === 401 &&
-      !config?._retry &&
+      config &&
+      !config._retry &&
       !SKIP_REFRESH_PATHS.some((p) => config?.url?.includes(p))
     ) {
-      if (config) config._retry = true;
+      config._retry = true;
 
       if (isRefreshing) {
         // Enqueue and wait for the ongoing refresh to finish
-        return new Promise<string>((resolve, reject) => {
+        return new Promise<void>((resolve, reject) => {
           waitingQueue.push({ resolve, reject });
-        }).then((newToken) => {
-          return apiClient({
-            ...config,
-            headers: {
-              ...config?.headers,
-              Authorization: `Bearer ${newToken}`,
-            },
-          });
-        });
+        }).then(() => apiClient(config));
       }
 
       isRefreshing = true;
 
       return refreshClient
-        .post<{ data: { accessToken: string; user: AuthUser } }>(
-          "/auth/refresh",
-        )
-        .then((res) => {
-          const { accessToken, user } = res.data.data;
-          useAuthStore.getState().setAuth(accessToken, user);
-          flushQueue(null, accessToken);
-          return apiClient({
-            ...config,
-            headers: {
-              ...config?.headers,
-              Authorization: `Bearer ${accessToken}`,
-            },
-          });
+        .post("/auth/session/refresh", undefined, {
+          headers: { rid: "session", "st-auth-mode": "cookie" },
+        })
+        .then(() => {
+          flushQueue(null);
+          return apiClient(config);
         })
         .catch((refreshError) => {
-          flushQueue(refreshError, null);
+          flushQueue(refreshError);
           useAuthStore.getState().clearAuth();
           return Promise.reject(
             new UnauthorizedError(

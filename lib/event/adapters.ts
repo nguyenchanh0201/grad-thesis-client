@@ -1,5 +1,6 @@
 import type { Event } from "@/schemas/event";
 import type { EventDetail } from "@/schemas/event";
+import type { EventSearchItem } from "@/schemas/event";
 import type { EventItem } from "@/components/event/event-card";
 import { fmtIsoDate } from "@/lib/date";
 
@@ -56,13 +57,17 @@ export function eventToEventDetail(event: Event): EventDetail {
   };
 }
 
-export function eventToEventItem(event: Event): EventItem {
-  const image = event.featuredImageUrl ?? event.eventImageUrls?.[0];
+export function eventToEventItem(event: Event | EventSearchItem): EventItem {
+  const image =
+    event.featuredImageUrl ??
+    ("eventImageUrls" in event ? event.eventImageUrls?.[0] : undefined);
 
   const lowestPrice =
-    event.ticketTypes && event.ticketTypes.length > 0
-      ? Math.min(...event.ticketTypes.map((t) => t.price))
-      : undefined;
+    "minPrice" in event
+      ? event.minPrice
+      : event.ticketTypes && event.ticketTypes.length > 0
+        ? Math.min(...event.ticketTypes.map((t) => t.price))
+        : undefined;
 
   return {
     id: event.id ?? event.slug,

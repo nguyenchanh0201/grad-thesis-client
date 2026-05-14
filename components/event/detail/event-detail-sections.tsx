@@ -9,7 +9,7 @@ import { ScheduleSection } from "./schedule-section";
 import { OrganizerSection } from "./organizer-section";
 import { PerformersSection } from "./performers-section";
 import { LocationSection } from "./location-section";
-import { useUserProfile } from "@/hooks/user-profile";
+import { useAuthStore } from "@/lib/store/auth.store";
 
 interface Props {
   event: EventDetail;
@@ -31,8 +31,9 @@ export function EventDetailSections({ event, onCTAClick }: Props) {
   }, [event.performers]);
 
   const [activeTab, setActiveTab] = useState(tabs[0].id);
-  const { data: user } = useUserProfile();
-  const isLoggedIn = user !== null;
+  const user = useAuthStore((s) => s.user);
+  const isInitialized = useAuthStore((s) => s.isInitialized);
+  const isLoggedIn = !!user;
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -69,7 +70,9 @@ export function EventDetailSections({ event, onCTAClick }: Props) {
             onClick={onCTAClick}
             className="px-10 py-5 hidden shrink-0 md:flex"
           >
-            {isLoggedIn ? "Buy Tickets" : "Log in to buy"}
+            {isInitialized && !isLoggedIn
+              ? "Login required to buy tickets"
+              : "Buy Tickets"}
           </Button>
         </div>
         <TabBar tabs={tabs} selected={activeTab} onChange={handleTabChange} />
