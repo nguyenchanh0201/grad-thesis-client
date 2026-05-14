@@ -1,57 +1,189 @@
 import {
   ConflictError,
+  ApiError,
   isAppError,
   NetworkError,
   UnauthorizedError,
 } from "@/core/error";
 import type { LoginInput, RegisterInput } from "@/schemas/auth";
 import { AuthUser } from "@/schemas/user";
+import { apiClient, refreshClient } from "@/lib/api/api-client";
+import { getIdentityMe } from "@/services/identity.service";
+import { isAxiosError } from "axios";
 
 export type AuthResult = {
   user: AuthUser;
-  accessToken: string;
+  accessToken: string | null;
 };
 
-const delay = (ms: number) => new Promise<void>((res) => setTimeout(res, ms));
+type SuperTokensFormField = {
+  id: "email" | "password";
+  value: string;
+};
+
+type SuperTokensUser = {
+  id: string;
+  email?: string;
+  emails?: string[];
+  loginMethods?: Array<{ email?: string }>;
+};
+
+type SuperTokensAuthResponse =
+  | {
+      status: "OK";
+      user: SuperTokensUser;
+    }
+  | { status: "WRONG_CREDENTIALS_ERROR" }
+  | { status: "EMAIL_ALREADY_EXISTS_ERROR" }
+  | { status: "FIELD_ERROR"; formFields?: Array<{ id: string; error: string }> }
+  | { status: "SIGN_IN_NOT_ALLOWED"; reason?: string }
+  | { status: "SIGN_UP_NOT_ALLOWED"; reason?: string }
+  | { status: "GENERAL_ERROR"; message?: string };
+
+function toFormFields(
+  data: Pick<LoginInput, "email" | "password">,
+): SuperTokensFormField[] {
+  return [
+    { id: "email", value: data.email },
+    { id: "password", value: data.password },
+  ];
+}
+
+function toAuthUser(user: SuperTokensUser): AuthUser {
+  const email =
+    user.email ??
+    user.emails?.[0] ??
+    user.loginMethods?.find((method) => method.email)?.email ??
+    `${user.id}@supertokens.local`;
+
+  return {
+    id: user.id,
+    email,
+    role: "USER",
+  };
+}
+
+async function getCurrentAuthUser(fallback: AuthUser): Promise<AuthUser> {
+  try {
+    const me = await getIdentityMe();
+    return {
+      id: me.data.user.id,
+      email: me.data.user.email,
+      role: me.data.user.role,
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+function normalizeAuthError(error: unknown): never {
+  if (isAxiosError(error)) {
+    if (!error.response) {
+      throw new NetworkError(undefined, error);
+    }
+
+    const message =
+      typeof error.response.data === "object" &&
+      error.response.data !== null &&
+      "message" in error.response.data
+        ? String(error.response.data.message)
+        : "Authentication request failed.";
+
+    if (error.response.status === 401) {
+      throw new UnauthorizedError(message, error);
+    }
+
+    if (error.response.status === 409) {
+      throw new ConflictError(message, error);
+    }
+
+    throw new ApiError(message, error.response.status, "AUTH_ERROR", error);
+  }
+
+  throw error;
+}
+
+async function authenticate(
+  path: "/auth/signin" | "/auth/signup",
+  data: Pick<LoginInput, "email" | "password">,
+): Promise<AuthResult> {
+  try {
+    const response = await refreshClient.post<SuperTokensAuthResponse>(
+      path,
+      { formFields: toFormFields(data) },
+      { headers: { rid: "emailpassword", "st-auth-mode": "cookie" } },
+    );
+    const result = response.data;
+
+    if (result.status === "OK") {
+      const fallback = toAuthUser(result.user);
+      return {
+        user: await getCurrentAuthUser(fallback),
+        accessToken: null,
+      };
+    }
+
+    if (result.status === "WRONG_CREDENTIALS_ERROR") {
+      throw new UnauthorizedError("Invalid credentials");
+    }
+
+    if (result.status === "EMAIL_ALREADY_EXISTS_ERROR") {
+      throw new ConflictError(
+        "An account with this email already exists.",
+        undefined,
+        "EMAIL_TAKEN",
+      );
+    }
+
+    if (result.status === "FIELD_ERROR") {
+      const message =
+        result.formFields?.map((field) => field.error).join(" ") ??
+        "Invalid authentication details.";
+      throw new ConflictError(message, undefined, "AUTH_FIELD_ERROR");
+    }
+
+    if (result.status === "SIGN_IN_NOT_ALLOWED") {
+      throw new UnauthorizedError(
+        result.reason ?? "This account is not allowed to sign in.",
+      );
+    }
+
+    if (result.status === "SIGN_UP_NOT_ALLOWED") {
+      throw new ConflictError(
+        result.reason ?? "Sign up is not allowed for this account.",
+        undefined,
+        "SIGN_UP_NOT_ALLOWED",
+      );
+    }
+
+    throw new ApiError(
+      result.message ?? "Authentication request failed.",
+      400,
+      "AUTH_ERROR",
+    );
+  } catch (error) {
+    normalizeAuthError(error);
+  }
+}
 
 export async function login(
   data: Pick<LoginInput, "email" | "password">,
 ): Promise<AuthResult> {
-  await delay(900);
-
-  if (data.email === "fail@test.com") {
-    throw new UnauthorizedError("Invalid credentials");
-  }
-  if (data.email === "network@test.com") {
-    throw new NetworkError();
-  }
-
-  return {
-    user: { id: "1", email: data.email, role: "USER" },
-    accessToken: "mock-access-token",
-  };
+  return authenticate("/auth/signin", data);
 }
 
 export async function register(
   data: Pick<RegisterInput, "email" | "password">,
 ): Promise<AuthResult> {
-  await delay(900);
+  return authenticate("/auth/signup", data);
+}
 
-  if (data.email === "exists@test.com") {
-    throw new ConflictError(
-      "Email already registered",
-      undefined,
-      "EMAIL_TAKEN",
-    );
-  }
-  if (data.email === "network@test.com") {
-    throw new NetworkError();
-  }
-
-  return {
-    user: { id: "mock-user-2", email: data.email, role: "USER" },
-    accessToken: "mock-access-token",
-  };
+export async function logout(): Promise<void> {
+  await apiClient
+    .post("/auth/signout", undefined, {
+      headers: { rid: "session", "st-auth-mode": "cookie" },
+    })
+    .catch(() => {});
 }
 
 export type ProfileInput = {
@@ -61,7 +193,7 @@ export type ProfileInput = {
 
 export function getAuthErrorMessage(error: unknown): string {
   if (error instanceof UnauthorizedError) {
-    return "Incorrect email or password. Please try again.";
+    return "Authentication failed. Please check your credentials and try again.";
   }
   if (error instanceof ConflictError) {
     if (isAppError(error) && error.code === "EMAIL_TAKEN") {

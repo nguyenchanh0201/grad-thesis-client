@@ -3,11 +3,16 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 
-import { login, register } from "@/services/auth.service";
+import { login, logout, register } from "@/services/auth.service";
 import { buildGoogleAuthUrl } from "@/lib/auth/google-oauth";
-import { apiClient } from "@/lib/api/api-client";
 import { useAuthStore } from "@/lib/store/auth.store";
 import type { LoginInput, RegisterInput } from "@/schemas/auth";
+
+function getRedirectTarget() {
+  if (typeof window === "undefined") return "/";
+  const redirect = new URLSearchParams(window.location.search).get("redirect");
+  return redirect?.startsWith("/") ? redirect : "/";
+}
 
 export function useLogin() {
   const { setAuth } = useAuthStore();
@@ -19,7 +24,7 @@ export function useLogin() {
     onSuccess: ({ user, accessToken }) => {
       setAuth(accessToken, user);
       queryClient.invalidateQueries({ queryKey: ["current-user"] });
-      router.push("/");
+      router.push(getRedirectTarget());
     },
   });
 }
@@ -35,7 +40,7 @@ export function useRegister() {
     onSuccess: ({ user, accessToken }) => {
       setAuth(accessToken, user);
       queryClient.invalidateQueries({ queryKey: ["current-user"] });
-      router.push("/");
+      router.push(getRedirectTarget());
     },
   });
 }
@@ -46,7 +51,7 @@ export function useLogout() {
   const router = useRouter();
 
   return useMutation({
-    mutationFn: () => apiClient.post("/auth/logout").catch(() => {}),
+    mutationFn: () => logout(),
     onSettled: () => {
       clearAuth();
       queryClient.removeQueries({ queryKey: ["current-user"] });

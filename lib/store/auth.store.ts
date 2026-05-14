@@ -27,7 +27,7 @@ interface AuthState {
   accessToken: string | null;
   user: AuthUser | null;
   isInitialized: boolean;
-  setAuth: (accessToken: string, user: AuthUser) => void;
+  setAuth: (accessToken: string | null, user: AuthUser) => void;
   clearAuth: () => void;
   setInitialized: () => void;
 }

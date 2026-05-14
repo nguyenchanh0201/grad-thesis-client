@@ -3,22 +3,27 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 import { AuthCard } from "@/components/auth/auth-card";
 import { InputField } from "@/components/auth/input-field";
-import { GoogleButton } from "@/components/auth/google-button";
 import { AuthFooterLink } from "@/components/auth/auth-footer-link";
 import { LoginSchema, type LoginInput } from "@/schemas/auth";
 import { getAuthErrorMessage } from "@/services/auth.service";
 import { useLogin } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 
 export default function LoginPage() {
   const { mutate: login, isPending, error } = useLogin();
-  const authError = error ? getAuthErrorMessage(error) : null;
+  const searchParams = useSearchParams();
+  const callbackError = searchParams.get("error");
+  const authError = error
+    ? getAuthErrorMessage(error)
+    : callbackError === "google_not_enabled"
+      ? "Google sign-in is not enabled on the backend. Please use email and password."
+      : null;
 
   const {
     register,
@@ -112,12 +117,6 @@ export default function LoginPage() {
             Login
           </Button>
         </form>
-
-        <Separator />
-        <p className="text-shadow-muted-foreground text-center">
-          Or login with
-        </p>
-        <GoogleButton disabled={isPending} />
 
         <AuthFooterLink
           text="Don't have an account?"

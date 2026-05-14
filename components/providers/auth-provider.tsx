@@ -2,17 +2,12 @@
 
 import { useEffect } from "react";
 
-import { refreshClient } from "@/lib/api/api-client";
 import { readPersistedUser, useAuthStore } from "@/lib/store/auth.store";
-import { AuthUser } from "@/schemas/user";
-
-interface RefreshResponseData {
-  data: { accessToken: string; user: AuthUser };
-}
+import { getIdentityMe } from "@/services/identity.service";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
-    const { setAuth, setInitialized } = useAuthStore.getState();
+    const { clearAuth, setAuth, setInitialized } = useAuthStore.getState();
 
     // Restore the persisted user immediately so guards and the nav bar
     // reflect the correct state before the refresh call completes.
@@ -21,17 +16,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       useAuthStore.setState({ user: stored });
     }
 
-    // Attempt to get a fresh access token from the httpOnly refresh cookie.
-    // On success: update store with the server-issued token + user.
-    // On failure: keep the persisted user for display — do NOT clear it.
-    //   Real auth enforcement happens at the API level via the refresh interceptor.
-    refreshClient
-      .post<RefreshResponseData>("/auth/refresh")
+    // Hydrate from the backend session. The API client refresh interceptor
+    // handles an expired SuperTokens access cookie before this resolves.
+    getIdentityMe()
       .then((res) => {
-        const { accessToken, user } = res.data.data;
-        setAuth(accessToken, user);
+        setAuth(null, {
+          id: res.data.user.id,
+          email: res.data.user.email,
+          role: res.data.user.role,
+        });
       })
-      .catch(() => {})
+      .catch(() => clearAuth())
       .finally(() => setInitialized());
   }, []);
 
