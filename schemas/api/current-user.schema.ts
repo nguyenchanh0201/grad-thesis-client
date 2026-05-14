@@ -11,6 +11,7 @@ export const UserRoleSchema = z.enum([
 
 export const CurrentUserSchema = z.object({
   id: z.string().min(1),
+  email: z.string().email(),
   role: UserRoleSchema,
 });
 
