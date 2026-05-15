@@ -1,4 +1,3 @@
-import { PAGINATION } from "@/core/constants";
 import { apiClient } from "@/lib/api/api-client";
 import { parseOrThrow } from "@/lib/api/api-utils";
 import {
@@ -97,9 +96,12 @@ export const createTicketType = async (
   eventId: string,
   payload: CreateTicketTypeDTO,
 ): Promise<EventDetailResult> => {
-  const response = await apiClient.post(
-    `/events/${eventId}/ticket-types`,
-    payload,
-  );
+  const response = await apiClient.post(`/events/${eventId}/ticket-types`, {
+    typeName: payload.name,
+    desc: payload.description,
+    price: payload.price,
+    currency: payload.currency,
+    totalQuantity: payload.quantity,
+  });
   return parseOrThrow(EventDetailResultSchema, response);
 };
