@@ -193,11 +193,18 @@ export type ProfileInput = {
 
 export function getAuthErrorMessage(error: unknown): string {
   if (error instanceof UnauthorizedError) {
-    return "Authentication failed. Please check your credentials and try again.";
+    return error.message || "Authentication failed. Please try again.";
   }
   if (error instanceof ConflictError) {
     if (isAppError(error) && error.code === "EMAIL_TAKEN") {
       return "An account with this email already exists.";
+    }
+    if (
+      isAppError(error) &&
+      (error.code === "AUTH_FIELD_ERROR" ||
+        error.code === "SIGN_UP_NOT_ALLOWED")
+    ) {
+      return error.message;
     }
     return "A conflict occurred. Please try again.";
   }
