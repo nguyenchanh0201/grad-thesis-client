@@ -1,6 +1,6 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 
@@ -20,6 +20,7 @@ export default function RegisterPage() {
 
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors },
   } = useForm<RegisterInput>({
@@ -98,22 +99,42 @@ export default function RegisterPage() {
             error={errors.confirmPassword?.message}
           />
 
-          <div className="flex gap-2 items-center">
-            <Checkbox
-              id="agreeToTerms"
-              {...register("agreeToTerms")}
-              aria-errormessage={errors.agreeToTerms?.message}
-            />
-            <Label htmlFor="agreeToTerms">
-              I agree to TicketGo&apos;s{" "}
-              <Link
-                href="/terms"
-                className="font-medium text-primary hover:underline underline-offset-4 leading-none"
-                onClick={(e) => e.stopPropagation()}
-              >
-                Terms and Conditions
-              </Link>
-            </Label>
+          <div className="space-y-1">
+            <div className="flex gap-2 items-center">
+              <Controller
+                name="agreeToTerms"
+                control={control}
+                render={({ field }) => (
+                  <Checkbox
+                    id="agreeToTerms"
+                    checked={field.value}
+                    onCheckedChange={(checked) =>
+                      field.onChange(Boolean(checked))
+                    }
+                    onBlur={field.onBlur}
+                    aria-invalid={!!errors.agreeToTerms}
+                    aria-describedby={
+                      errors.agreeToTerms ? "agree-to-terms-error" : undefined
+                    }
+                  />
+                )}
+              />
+              <Label htmlFor="agreeToTerms">
+                I agree to TicketGo&apos;s{" "}
+                <Link
+                  href="/terms"
+                  className="font-medium text-primary hover:underline underline-offset-4 leading-none"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Terms and Conditions
+                </Link>
+              </Label>
+            </div>
+            {errors.agreeToTerms?.message && (
+              <p id="agree-to-terms-error" className="text-sm text-destructive">
+                {errors.agreeToTerms.message}
+              </p>
+            )}
           </div>
 
           <Button
