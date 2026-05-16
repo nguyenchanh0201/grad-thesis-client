@@ -16,7 +16,7 @@ export function EventDetailView({ event, detail }: EventDetailViewProps) {
 
   const handleBuy = () => {
     setQueueIntent(event.slug);
-    router.push(`/buy/${event.slug}/queue`);
+    router.push(`/buy/${event.slug}/queue?intent=1`);
   };
 
   return <EventDetailHeader event={detail} onCTAClick={handleBuy} />;

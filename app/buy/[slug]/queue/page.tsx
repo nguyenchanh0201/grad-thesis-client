@@ -1,7 +1,7 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useRef } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 
 import { CountdownBar } from "@/components/queue/countdown-bar";
 import { EventBanner } from "@/components/queue/event-banner";
@@ -14,18 +14,24 @@ import { AuthGuard } from "@/components/auth/auth-guard";
 import { useQueuePolling } from "@/hooks/use-queue-polling";
 import { useAuthStore } from "@/lib/store/auth.store";
 import { useEventBySlug } from "@/hooks/use-events";
-import { setBuySession } from "@/lib/booking/buy-session";
-import { clearQueueIntent, hasQueueIntent } from "@/lib/booking/queue-intent";
-import { useBookingStore } from "@/lib/store/booking";
+import { hasBuySession, setBuySession } from "@/lib/booking/buy-session";
+import {
+  clearQueueIntent,
+  hasQueueIntent,
+  setQueueIntent,
+} from "@/lib/booking/queue-intent";
 import type { FrontendQueueStatus } from "@/schemas/queue";
 
 const REDIRECT_COUNTDOWN_SECONDS = 8;
 
 function QueuePageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { slug } = useParams<{ slug: string }>();
-  const storeReset = useBookingStore((s) => s.reset);
-  const isQueueIntentValid = useMemo(() => hasQueueIntent(slug), [slug]);
+  const hasEntryIntent = searchParams.get("intent") === "1";
+  const isBuySessionActive = hasBuySession(slug);
+  const isQueueIntentValid =
+    hasEntryIntent || hasQueueIntent(slug) || !isBuySessionActive;
 
   const user = useAuthStore((s) => s.user);
   const isAuthInitialized = useAuthStore((s) => s.isInitialized);
@@ -38,39 +44,47 @@ function QueuePageContent() {
     status: polledStatus,
     position,
     queueSize,
-    isError,
   } = useQueuePolling(isQueueIntentValid ? slug : null, userId);
 
   const hasRedirectedRef = useRef(false);
+  const [redirectCountdown, setRedirectCountdown] = useState<number | null>(
+    null,
+  );
 
   const displayStatus: FrontendQueueStatus =
     polledStatus === "ready" ? "redirecting" : polledStatus;
 
   useEffect(() => {
-    if (!slug || isQueueIntentValid) return;
+    if (!slug || !hasEntryIntent) return;
+    setQueueIntent(slug);
+    window.history.replaceState(null, "", `/buy/${slug}/queue`);
+  }, [hasEntryIntent, slug]);
 
-    storeReset();
-    router.replace(`/events/${slug}`);
-  }, [isQueueIntentValid, router, slug, storeReset]);
+  useEffect(() => {
+    if (!slug || hasEntryIntent || isQueueIntentValid) return;
+
+    router.replace(`/buy/${slug}/tickets`);
+  }, [hasEntryIntent, isQueueIntentValid, router, slug]);
 
   useEffect(() => {
     if (polledStatus !== "ready" || hasRedirectedRef.current) return;
-    hasRedirectedRef.current = true;
-    clearQueueIntent(slug);
-    setBuySession(slug);
-    router.replace(`/buy/${slug}/tickets`);
-  }, [polledStatus, router, slug]);
 
-  useEffect(() => {
-    if (
-      !slug ||
-      hasRedirectedRef.current ||
-      (!isError && polledStatus !== "expired")
-    ) {
-      return;
-    }
-    router.replace(`/events/${slug}`);
-  }, [isError, polledStatus, router, slug]);
+    let remaining = REDIRECT_COUNTDOWN_SECONDS;
+
+    const timer = setInterval(() => {
+      remaining -= 1;
+      if (remaining <= 0) {
+        hasRedirectedRef.current = true;
+        clearQueueIntent(slug);
+        setBuySession(slug);
+        router.replace(`/buy/${slug}/tickets`);
+        return;
+      }
+      setRedirectCountdown(remaining);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [polledStatus, router, slug]);
 
   const handleRedirect = () => {
     hasRedirectedRef.current = true;
@@ -97,7 +111,7 @@ function QueuePageContent() {
         <QueueInstructions status={displayStatus} />
         <CountdownBar
           status={displayStatus}
-          countdown={REDIRECT_COUNTDOWN_SECONDS}
+          countdown={redirectCountdown ?? REDIRECT_COUNTDOWN_SECONDS}
           position={position}
           queueSize={queueSize}
         />
