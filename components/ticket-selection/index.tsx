@@ -53,6 +53,7 @@ export function TicketSelection({ slug }: Props) {
     toggleSeat,
     removeSeat,
     clearSeats,
+    hydrateFromReservation,
     reset: storeReset,
   } = useBookingStore();
 
@@ -171,6 +172,7 @@ export function TicketSelection({ slug }: Props) {
           waitRoomToken: waitRoomToken ?? undefined,
         });
       }
+      hydrateFromReservation(result.data);
       const reservationId = result.data.id;
       setReservationId(reservationId);
       if (result.data.expiresAt) {

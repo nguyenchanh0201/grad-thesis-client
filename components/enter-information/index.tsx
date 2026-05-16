@@ -37,11 +37,10 @@ export function EnterInformation({ slug }: Props) {
     mapType,
     recipient,
     deliveryMethod,
+    hydrateFromReservation,
     reset: storeReset,
   } = useBookingStore();
 
-  // Initialize to true so server and client render the same initial tree.
-  // hasBuySession reads sessionStorage (client-only) — checked in useEffect.
   const [authorized, setAuthorized] = useState(true);
 
   useEffect(() => {
@@ -81,6 +80,7 @@ export function EnterInformation({ slug }: Props) {
   useEffect(() => {
     const expiresAt = reservationResult?.data?.expiresAt;
     if (expiresAt) syncToExpiry(expiresAt);
+    if (reservationResult?.data) hydrateFromReservation(reservationResult.data);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reservationResult?.data?.expiresAt]);
 

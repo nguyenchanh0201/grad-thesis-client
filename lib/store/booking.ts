@@ -6,6 +6,7 @@ import { MapType } from "@/schemas/seat";
 import { DeliveryMethod, RecipientInfo } from "@/schemas/booking";
 import type { DiscountCode, PaymentMethodId } from "@/schemas/payment";
 import type { TicketType } from "@/schemas/ticket-type";
+import type { Reservation } from "@/schemas/reservation";
 
 type InitStep1Payload = {
   slug: string;
@@ -35,6 +36,7 @@ type BookingState = {
   initStep1: (payload: InitStep1Payload) => void;
   setWaitRoomToken: (token: string | null, slug?: string | null) => void;
   setReservationId: (id: string | null) => void;
+  hydrateFromReservation: (reservation: Reservation) => void;
   reset: () => void;
 
   setSelectedZoneId: (id: string | null) => void;
@@ -118,6 +120,42 @@ export const useBookingStore = create<BookingState>()(
           waitRoomSlug: token ? (slug ?? null) : null,
         }),
       setReservationId: (id) => set({ reservationId: id }),
+      hydrateFromReservation: (reservation) =>
+        set((s) => {
+          const items = reservation.items ?? [];
+          const selectedSeats = items
+            .filter((item) => item.seatIndex != null)
+            .map((item) => ({
+              id: `seat-${item.seatIndex}`,
+              label:
+                item.seatLabel ??
+                item.row ??
+                (item.seatIndex != null ? `#${item.seatIndex}` : item.id),
+              ticketTypeId: item.ticketTypeId,
+              seatIndex: item.seatIndex!,
+            }));
+          const tickets = items
+            .filter((item) => item.seatIndex == null)
+            .map((item) => ({
+              ticketTypeId: item.ticketTypeId,
+              quantity: item.quantity,
+            }));
+
+          return {
+            reservationId: reservation.id,
+            tickets,
+            selectedSeats,
+            recipient: reservation.recipient
+              ? {
+                  ...reservation.recipient,
+                  idPassport: reservation.recipient.idPassport ?? "",
+                }
+              : s.recipient,
+            deliveryMethod:
+              (reservation.deliveryMethod as BookingState["deliveryMethod"]) ??
+              s.deliveryMethod,
+          };
+        }),
 
       setSelectedZoneId: (id) => set({ selectedZoneId: id }),
 

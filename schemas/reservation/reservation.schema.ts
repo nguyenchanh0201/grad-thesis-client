@@ -28,6 +28,7 @@ export const ReservationItemSchema = z.object({
   quantity: z.number().int().positive(),
   unitPrice: AmountSchema,
   seatIndex: z.number().int().nonnegative().nullable().optional(),
+  seatLabel: z.string().nullable().optional(),
   row: z.string().nullable().optional(),
   column: z.string().nullable().optional(),
 });
