@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useRef } from "react";
+import { Suspense, useEffect, useMemo, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 
 import { CountdownBar } from "@/components/queue/countdown-bar";
@@ -15,6 +15,8 @@ import { useQueuePolling } from "@/hooks/use-queue-polling";
 import { useAuthStore } from "@/lib/store/auth.store";
 import { useEventBySlug } from "@/hooks/use-events";
 import { setBuySession } from "@/lib/booking/buy-session";
+import { clearQueueIntent, hasQueueIntent } from "@/lib/booking/queue-intent";
+import { useBookingStore } from "@/lib/store/booking";
 import type { FrontendQueueStatus } from "@/schemas/queue";
 
 const REDIRECT_COUNTDOWN_SECONDS = 8;
@@ -22,6 +24,8 @@ const REDIRECT_COUNTDOWN_SECONDS = 8;
 function QueuePageContent() {
   const router = useRouter();
   const { slug } = useParams<{ slug: string }>();
+  const storeReset = useBookingStore((s) => s.reset);
+  const isQueueIntentValid = useMemo(() => hasQueueIntent(slug), [slug]);
 
   const user = useAuthStore((s) => s.user);
   const isAuthInitialized = useAuthStore((s) => s.isInitialized);
@@ -35,7 +39,7 @@ function QueuePageContent() {
     position,
     queueSize,
     isError,
-  } = useQueuePolling(slug, userId);
+  } = useQueuePolling(isQueueIntentValid ? slug : null, userId);
 
   const hasRedirectedRef = useRef(false);
 
@@ -43,8 +47,16 @@ function QueuePageContent() {
     polledStatus === "ready" ? "redirecting" : polledStatus;
 
   useEffect(() => {
+    if (!slug || isQueueIntentValid) return;
+
+    storeReset();
+    router.replace(`/events/${slug}`);
+  }, [isQueueIntentValid, router, slug, storeReset]);
+
+  useEffect(() => {
     if (polledStatus !== "ready" || hasRedirectedRef.current) return;
     hasRedirectedRef.current = true;
+    clearQueueIntent(slug);
     setBuySession(slug);
     router.replace(`/buy/${slug}/tickets`);
   }, [polledStatus, router, slug]);
@@ -62,6 +74,7 @@ function QueuePageContent() {
 
   const handleRedirect = () => {
     hasRedirectedRef.current = true;
+    clearQueueIntent(slug);
     setBuySession(slug);
     router.replace(`/buy/${slug}/tickets`);
   };
@@ -72,6 +85,8 @@ function QueuePageContent() {
 
   const eventTitle = event?.eventName ?? "Loading event...";
   const eventImageUrl = event?.featuredImageUrl ?? event?.eventImageUrls?.[0];
+
+  if (!isQueueIntentValid) return null;
 
   return (
     <QueueCard backgroundImageUrl={eventImageUrl}>

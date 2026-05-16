@@ -40,6 +40,7 @@ export function TicketSelection({ slug }: Props) {
     selectedSeats,
     selectedZoneId,
     waitRoomToken,
+    waitRoomSlug,
     initStep1,
     setSelectedZoneId,
     setReservationId,
@@ -62,12 +63,12 @@ export function TicketSelection({ slug }: Props) {
   const seatedReservationMutation = useCreateSeatedReservation();
 
   useEffect(() => {
-    if (!hasBuySession(slug)) {
+    if (!hasBuySession(slug) || waitRoomSlug !== slug) {
       setAuthorized(false);
       storeReset();
       router.replace(`/events/${slug}`);
     }
-  }, [slug, router, storeReset]);
+  }, [slug, router, storeReset, waitRoomSlug]);
 
   const { data: eventResult } = useEventBySlug(slug);
   const event = eventResult?.data;

@@ -108,10 +108,12 @@ export function useQueuePolling(
 
   // Sync session token into ref + booking store when ADMITTED
   useEffect(() => {
-    if (!currentData?.token || currentData.status !== "ADMITTED") return;
+    if (!slug || !currentData?.token || currentData.status !== "ADMITTED") {
+      return;
+    }
     tokenRef.current = currentData.token;
-    setWaitRoomToken(currentData.token);
-  }, [currentData, setWaitRoomToken]);
+    setWaitRoomToken(currentData.token, slug);
+  }, [currentData, setWaitRoomToken, slug]);
 
   // A user can be admitted by the initial requestAccess call. In that path the
   // polling query never runs, so send one heartbeat immediately for the token.

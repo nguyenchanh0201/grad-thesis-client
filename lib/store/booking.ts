@@ -16,6 +16,7 @@ type InitStep1Payload = {
 type BookingState = {
   slug: string | null;
   waitRoomToken: string | null;
+  waitRoomSlug: string | null;
   reservationId: string | null;
   ticketTypes: TicketType[];
   mapType: MapType;
@@ -32,7 +33,7 @@ type BookingState = {
   billingRequested: boolean;
 
   initStep1: (payload: InitStep1Payload) => void;
-  setWaitRoomToken: (token: string | null) => void;
+  setWaitRoomToken: (token: string | null, slug?: string | null) => void;
   setReservationId: (id: string | null) => void;
   reset: () => void;
 
@@ -65,6 +66,7 @@ const DEFAULT_RECIPIENT: RecipientInfo = {
 const INITIAL_STATE = {
   slug: null,
   waitRoomToken: null as string | null,
+  waitRoomSlug: null as string | null,
   reservationId: null as string | null,
   ticketTypes: [] as TicketType[],
   mapType: "zone" as MapType,
@@ -89,6 +91,17 @@ export const useBookingStore = create<BookingState>()(
           const slugChanged = s.slug !== slug;
           return {
             slug,
+            waitRoomToken: slugChanged
+              ? s.waitRoomSlug === slug
+                ? s.waitRoomToken
+                : null
+              : s.waitRoomToken,
+            waitRoomSlug: slugChanged
+              ? s.waitRoomSlug === slug
+                ? s.waitRoomSlug
+                : null
+              : s.waitRoomSlug,
+            reservationId: slugChanged ? null : s.reservationId,
             ticketTypes,
             mapType,
             selectedZoneId: slugChanged ? null : s.selectedZoneId,
@@ -99,7 +112,11 @@ export const useBookingStore = create<BookingState>()(
 
       reset: () => set(INITIAL_STATE),
 
-      setWaitRoomToken: (token) => set({ waitRoomToken: token }),
+      setWaitRoomToken: (token, slug) =>
+        set({
+          waitRoomToken: token,
+          waitRoomSlug: token ? (slug ?? null) : null,
+        }),
       setReservationId: (id) => set({ reservationId: id }),
 
       setSelectedZoneId: (id) => set({ selectedZoneId: id }),
@@ -203,6 +220,7 @@ export const useBookingStore = create<BookingState>()(
       partialize: ({
         slug,
         waitRoomToken,
+        waitRoomSlug,
         reservationId,
         ticketTypes,
         mapType,
@@ -217,6 +235,7 @@ export const useBookingStore = create<BookingState>()(
       }) => ({
         slug,
         waitRoomToken,
+        waitRoomSlug,
         reservationId,
         ticketTypes,
         mapType,
