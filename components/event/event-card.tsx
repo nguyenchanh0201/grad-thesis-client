@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { formatDisplayPrice } from "@/lib/strings/money";
 import { FilledImage } from "../shared/filled-image";
 
 export interface EventItem {
@@ -51,21 +52,26 @@ export function EventCard({ item, variant, className }: EventCardProps) {
     return (
       <CardWrapper
         slug={item.slug}
-        className={cn("w-80 shrink-0 cursor-pointer", className)}
+        className={cn(
+          "group w-80 shrink-0 cursor-pointer transition-all duration-300 hover:-translate-y-1",
+          className,
+        )}
       >
-        <div className="relative w-full aspect-3/2 overflow-hidden rounded-xl bg-muted">
-          {imgError ? (
-            <div className="h-full w-full bg-muted" />
-          ) : (
-            <FilledImage event={item} onError={() => setImgError(true)} />
-          )}
+        <div className="relative w-full aspect-3/2 overflow-hidden rounded-xl bg-muted shadow-sm transition-all duration-300 group-hover:shadow-xl group-hover:shadow-primary/5">
+          <div className="h-full w-full transition-transform duration-500 group-hover:scale-105">
+            {imgError ? (
+              <div className="h-full w-full bg-muted" />
+            ) : (
+              <FilledImage event={item} onError={() => setImgError(true)} />
+            )}
+          </div>
         </div>
         {item.genre && (
           <p className="mt-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
             {item.genre}
           </p>
         )}
-        <p className="mt-1 line-clamp-2 text-base font-bold leading-snug text-foreground">
+        <p className="mt-1 line-clamp-2 text-base font-bold leading-snug text-foreground transition-colors group-hover:text-primary">
           {item.title}
         </p>
       </CardWrapper>
@@ -76,19 +82,26 @@ export function EventCard({ item, variant, className }: EventCardProps) {
     return (
       <CardWrapper
         slug={item.slug}
-        className={cn("group cursor-pointer", className)}
+        className={cn(
+          "group cursor-pointer transition-all duration-300 hover:-translate-y-1",
+          className,
+        )}
       >
-        <div className="relative aspect-4/3 overflow-hidden rounded-lg bg-muted">
-          {imgError ? (
-            <div className="h-full w-full bg-muted" />
-          ) : (
-            <FilledImage event={item} onError={() => setImgError(true)} />
-          )}
+        <div className="relative aspect-4/3 overflow-hidden rounded-lg bg-muted shadow-sm transition-all duration-300 group-hover:shadow-xl group-hover:shadow-primary/5">
+          <div className="h-full w-full transition-transform duration-500 group-hover:scale-105">
+            {imgError ? (
+              <div className="h-full w-full bg-muted" />
+            ) : (
+              <FilledImage event={item} onError={() => setImgError(true)} />
+            )}
+          </div>
           {item.tag && (
-            <Badge className="absolute left-2 top-2 text-xs">{item.tag}</Badge>
+            <Badge className="absolute left-2 top-2 text-xs shadow-sm transition-transform duration-300 group-hover:scale-105">
+              {item.tag}
+            </Badge>
           )}
         </div>
-        <div className="mt-2 space-y-1">
+        <div className="mt-2 space-y-1 p-2">
           {(item.genre || item.date) && (
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               {item.genre && <span className="uppercase">{item.genre}</span>}
@@ -96,7 +109,7 @@ export function EventCard({ item, variant, className }: EventCardProps) {
               {item.date && <span>{item.date}</span>}
             </div>
           )}
-          <p className="line-clamp-2 text-base font-bold leading-snug text-foreground">
+          <p className="line-clamp-2 text-base font-bold leading-snug text-foreground transition-colors group-hover:text-primary">
             {item.title}
           </p>
           {(item.venue || item.price) && (
@@ -108,7 +121,7 @@ export function EventCard({ item, variant, className }: EventCardProps) {
               )}
               {item.price && (
                 <span className="ml-2 shrink-0 font-semibold text-foreground">
-                  {item.price}
+                  {formatDisplayPrice(item.price)}
                 </span>
               )}
             </div>
@@ -122,22 +135,30 @@ export function EventCard({ item, variant, className }: EventCardProps) {
   return (
     <CardWrapper
       slug={item.slug}
-      className={cn("flex cursor-pointer flex-row gap-3", className)}
+      className={cn(
+        "group flex cursor-pointer flex-row gap-3 transition-all duration-300 hover:-translate-y-1",
+        className,
+      )}
     >
-      <div className="w-1/3 shrink-0 aspect-3/2 overflow-hidden rounded-lg bg-muted">
-        {imgError ? (
-          <div className="h-full w-full bg-muted" />
-        ) : (
-          <FilledImage event={item} onError={() => setImgError(true)} />
-        )}
+      <div className="w-1/3 shrink-0 aspect-3/2 overflow-hidden rounded-lg bg-muted shadow-sm transition-all duration-300 group-hover:shadow-md group-hover:shadow-primary/5">
+        <div className="h-full w-full transition-transform duration-500 group-hover:scale-105">
+          {imgError ? (
+            <div className="h-full w-full bg-muted" />
+          ) : (
+            <FilledImage event={item} onError={() => setImgError(true)} />
+          )}
+        </div>
       </div>
-      <div className="flex min-w-0 flex-col gap-0.5">
+      <div className="flex min-w-0 flex-col gap-1">
         {(item.tag || item.genre) && (
-          <Badge variant="secondary" className="mb-0.5 w-fit text-xs">
+          <Badge
+            variant="secondary"
+            className="mb-0.5 w-fit text-xs shadow-sm transition-transform duration-300 group-hover:scale-105"
+          >
             {item.tag ?? item.genre}
           </Badge>
         )}
-        <p className="line-clamp-2 text-base font-bold leading-snug text-foreground">
+        <p className="line-clamp-2 text-base font-bold leading-snug text-foreground transition-colors group-hover:text-primary">
           {item.title}
         </p>
         {(item.date || item.venue) && (
@@ -146,7 +167,9 @@ export function EventCard({ item, variant, className }: EventCardProps) {
           </p>
         )}
         {item.price && (
-          <p className="text-sm font-semibold text-foreground">{item.price}</p>
+          <p className="text-sm font-semibold text-foreground">
+            {formatDisplayPrice(item.price)}
+          </p>
         )}
       </div>
     </CardWrapper>

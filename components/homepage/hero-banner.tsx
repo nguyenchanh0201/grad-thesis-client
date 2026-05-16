@@ -4,10 +4,10 @@ import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import Autoplay from "embla-carousel-autoplay";
-import { CalendarDays, MapPin } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, MapPin } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Carousel,
   CarouselContent,
@@ -71,11 +71,12 @@ export function HeroBanner({ items }: HeroBannerProps) {
         <div className="absolute bottom-5 left-1/2 flex -translate-x-1/2 gap-2">
           {items.map((_, i) => (
             <button
+              type="button"
               key={i}
               onClick={() => api?.scrollTo(i)}
               aria-label={`Go to slide ${i + 1}`}
               className={cn(
-                "h-1.5 rounded-full transition-all duration-300",
+                "h-1.5 rounded-full transition-all duration-300 focus-visible:outline-2 focus-visible:outline-white cursor-pointer",
                 i === current
                   ? "w-6 bg-white"
                   : "w-1.5 bg-white/50 hover:bg-white/75",
@@ -159,27 +160,19 @@ function NavButton({
   const isPrev = direction === "prev";
   return (
     <button
+      type="button"
       onClick={onClick}
       className={cn(
-        "absolute top-1/2 hidden -translate-y-1/2 items-center justify-center rounded-full bg-black/40 p-2.5 text-white backdrop-blur-sm transition hover:bg-black/60 focus-visible:outline-2 focus-visible:outline-white md:flex",
+        "absolute top-1/2 hidden -translate-y-1/2 items-center justify-center rounded-full cursor-pointer bg-black/40 p-2.5 text-white backdrop-blur-sm transition hover:bg-black/60 focus-visible:outline-2 focus-visible:outline-white md:flex",
         isPrev ? "left-4 lg:left-6" : "right-4 lg:right-6",
       )}
       {...props}
     >
-      <svg
-        className="h-5 w-5"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={2.5}
-        aria-hidden
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d={isPrev ? "M15 19l-7-7 7-7" : "M9 5l7 7-7 7"}
-        />
-      </svg>
+      {isPrev ? (
+        <ChevronLeft className="h-5 w-5" />
+      ) : (
+        <ChevronRight className="h-5 w-5" />
+      )}
     </button>
   );
 }
