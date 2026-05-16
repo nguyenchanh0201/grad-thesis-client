@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 
 import { CountdownBar } from "@/components/queue/countdown-bar";
@@ -34,33 +34,34 @@ function QueuePageContent() {
     status: polledStatus,
     position,
     queueSize,
+    isError,
   } = useQueuePolling(slug, userId);
 
-  const [countdown, setCountdown] = useState(REDIRECT_COUNTDOWN_SECONDS);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const hasRedirectedRef = useRef(false);
 
   const displayStatus: FrontendQueueStatus =
     polledStatus === "ready" ? "redirecting" : polledStatus;
 
   useEffect(() => {
-    if (polledStatus !== "ready") return;
-    intervalRef.current = setInterval(() => {
-      setCountdown((prev) => Math.max(0, prev - 1));
-    }, 1000);
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [polledStatus]);
-
-  useEffect(() => {
-    if (polledStatus !== "ready" || countdown !== 0) return;
-    if (intervalRef.current) clearInterval(intervalRef.current);
+    if (polledStatus !== "ready" || hasRedirectedRef.current) return;
+    hasRedirectedRef.current = true;
     setBuySession(slug);
     router.replace(`/buy/${slug}/tickets`);
-  }, [polledStatus, countdown, router, slug]);
+  }, [polledStatus, router, slug]);
+
+  useEffect(() => {
+    if (
+      !slug ||
+      hasRedirectedRef.current ||
+      (!isError && polledStatus !== "expired")
+    ) {
+      return;
+    }
+    router.replace(`/events/${slug}`);
+  }, [isError, polledStatus, router, slug]);
 
   const handleRedirect = () => {
-    if (intervalRef.current) clearInterval(intervalRef.current);
+    hasRedirectedRef.current = true;
     setBuySession(slug);
     router.replace(`/buy/${slug}/tickets`);
   };
@@ -81,7 +82,7 @@ function QueuePageContent() {
         <QueueInstructions status={displayStatus} />
         <CountdownBar
           status={displayStatus}
-          countdown={countdown}
+          countdown={REDIRECT_COUNTDOWN_SECONDS}
           position={position}
           queueSize={queueSize}
         />

@@ -54,6 +54,7 @@ export function useQueuePolling(
   const queryClient = useQueryClient();
   const mockTickRef = useRef(0);
   const tokenRef = useRef<string | null>(null);
+  const heartbeatTokenRef = useRef<string | null>(null);
 
   // Phase 1: Join queue — fires once on mount
   const accessQuery = useQuery<WaitRoomResponse>({
@@ -112,6 +113,23 @@ export function useQueuePolling(
     setWaitRoomToken(currentData.token);
   }, [currentData, setWaitRoomToken]);
 
+  // A user can be admitted by the initial requestAccess call. In that path the
+  // polling query never runs, so send one heartbeat immediately for the token.
+  useEffect(() => {
+    if (
+      !slug ||
+      !userId ||
+      currentData?.status !== "ADMITTED" ||
+      !currentData.token ||
+      heartbeatTokenRef.current === currentData.token
+    ) {
+      return;
+    }
+
+    heartbeatTokenRef.current = currentData.token;
+    sendHeartbeat({ slug, token: currentData.token }).catch(() => {});
+  }, [currentData?.status, currentData?.token, slug, userId]);
+
   // Auto-rejoin: when session expires, clear stale state and re-run requestAccess
   useEffect(() => {
     if (currentData?.status !== "LOST_SESSION") return;
@@ -132,10 +150,22 @@ export function useQueuePolling(
 
   const isLoading = accessQuery.isPending;
   const isError = accessQuery.isError || statusQuery.isError;
+  const isReadyToPoll = !!slug && !!userId;
+
+  // Waiting for auth/route context; don't mark as expired before polling starts.
+  if (!isReadyToPoll) {
+    return {
+      status: "waiting",
+      position: null,
+      queueSize: null,
+      isLoading: true,
+      isError: false,
+    };
+  }
 
   if (isError || !currentData) {
     return {
-      status: isLoading ? "waiting" : "expired",
+      status: "waiting",
       position: null,
       queueSize: null,
       isLoading,
