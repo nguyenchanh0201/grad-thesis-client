@@ -3,6 +3,7 @@
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 import { AuthCard } from "@/components/auth/auth-card";
 import { InputField } from "@/components/auth/input-field";
@@ -10,12 +11,15 @@ import { AuthFooterLink } from "@/components/auth/auth-footer-link";
 import { RegisterSchema, type RegisterInput } from "@/schemas/auth";
 import { getAuthErrorMessage } from "@/services/auth.service";
 import { useRegister } from "@/hooks/use-auth";
+import { withRedirectQuery } from "@/lib/auth/redirect";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 
 export default function RegisterPage() {
   const { mutate: registerUser, isPending, error } = useRegister();
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get("redirect");
   const authError = error ? getAuthErrorMessage(error) : null;
 
   const {
@@ -149,7 +153,7 @@ export default function RegisterPage() {
         <AuthFooterLink
           text="Already have an account?"
           linkLabel="Log in"
-          href="/auth/login"
+          href={withRedirectQuery("/auth/login", redirect)}
         />
       </div>
     </AuthCard>

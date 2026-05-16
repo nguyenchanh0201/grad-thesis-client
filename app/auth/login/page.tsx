@@ -11,6 +11,7 @@ import { AuthFooterLink } from "@/components/auth/auth-footer-link";
 import { LoginSchema, type LoginInput } from "@/schemas/auth";
 import { getAuthErrorMessage } from "@/services/auth.service";
 import { useLogin } from "@/hooks/use-auth";
+import { withRedirectQuery } from "@/lib/auth/redirect";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -18,6 +19,7 @@ import { Label } from "@/components/ui/label";
 export default function LoginPage() {
   const { mutate: login, isPending, error } = useLogin();
   const searchParams = useSearchParams();
+  const redirect = searchParams.get("redirect");
   const callbackError = searchParams.get("error");
   const authError = error
     ? getAuthErrorMessage(error)
@@ -121,7 +123,7 @@ export default function LoginPage() {
         <AuthFooterLink
           text="Don't have an account?"
           linkLabel="Register now"
-          href="/auth/register"
+          href={withRedirectQuery("/auth/register", redirect)}
         />
       </div>
     </AuthCard>

@@ -5,13 +5,14 @@ import { useRouter } from "next/navigation";
 
 import { login, logout, register } from "@/services/auth.service";
 import { buildGoogleAuthUrl } from "@/lib/auth/google-oauth";
+import { resolvePostAuthRedirect } from "@/lib/auth/redirect";
 import { useAuthStore } from "@/lib/store/auth.store";
 import type { LoginInput, RegisterInput } from "@/schemas/auth";
 
 function getRedirectTarget() {
   if (typeof window === "undefined") return "/";
   const redirect = new URLSearchParams(window.location.search).get("redirect");
-  return redirect?.startsWith("/") ? redirect : "/";
+  return resolvePostAuthRedirect(redirect);
 }
 
 export function useLogin() {
