@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 
+import { isAppError } from "@/core/error";
 import { readPersistedUser, useAuthStore } from "@/lib/store/auth.store";
 import { getIdentityMe } from "@/services/identity.service";
 
@@ -26,7 +27,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           role: res.data.user.role,
         });
       })
-      .catch(() => clearAuth())
+      .catch((error: unknown) => {
+        const unauthorized = isAppError(error) && error.status === 401;
+        if (unauthorized || !stored) {
+          clearAuth();
+        }
+      })
       .finally(() => setInitialized());
   }, []);
 
