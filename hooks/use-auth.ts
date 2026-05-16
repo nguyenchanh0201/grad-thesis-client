@@ -49,14 +49,12 @@ export function useRegister() {
 export function useLogout() {
   const { clearAuth } = useAuthStore();
   const queryClient = useQueryClient();
-  const router = useRouter();
 
   return useMutation({
     mutationFn: () => logout(),
     onSettled: () => {
       clearAuth();
       queryClient.removeQueries({ queryKey: ["current-user"] });
-      router.push("/");
     },
   });
 }

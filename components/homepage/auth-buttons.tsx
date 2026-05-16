@@ -2,10 +2,19 @@
 
 import { LogIn, UserPlus } from "lucide-react";
 import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import { withRedirectQuery } from "@/lib/auth/redirect";
 
 export function AuthButtons() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const query = searchParams.toString();
+  const currentUrl = query ? `${pathname}?${query}` : pathname;
+  const loginHref = withRedirectQuery("/auth/login", currentUrl);
+  const registerHref = withRedirectQuery("/auth/register", currentUrl);
+
   return (
     <div className="flex items-center gap-1">
       {/* Mobile: icon only */}
@@ -16,7 +25,7 @@ export function AuthButtons() {
         className="lg:hidden"
         asChild
       >
-        <Link href="/auth/login">
+        <Link href={loginHref}>
           <LogIn />
         </Link>
       </Button>
@@ -27,7 +36,7 @@ export function AuthButtons() {
         className="lg:hidden"
         asChild
       >
-        <Link href="/auth/register">
+        <Link href={registerHref}>
           <UserPlus />
         </Link>
       </Button>
@@ -39,7 +48,7 @@ export function AuthButtons() {
         className="hidden lg:inline-flex"
         asChild
       >
-        <Link href="/auth/login">Log in</Link>
+        <Link href={loginHref}>Log in</Link>
       </Button>
       <Button
         variant="ghost"
@@ -47,7 +56,7 @@ export function AuthButtons() {
         className="hidden lg:inline-flex"
         asChild
       >
-        <Link href="/auth/register">Register</Link>
+        <Link href={registerHref}>Register</Link>
       </Button>
     </div>
   );
