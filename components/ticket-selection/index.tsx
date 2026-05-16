@@ -15,6 +15,7 @@ import { ProgressSteps } from "./progress-steps";
 import { TicketPanel } from "./ticket-panel";
 import { TimeoutModal } from "./timeout-modal";
 import { SeatMap } from "./seat-map";
+import { AlertDialog } from "@/components/ui/alert-dialog";
 import { useTicketTimer } from "../../hooks/use-ticket-timer";
 import type { SelectedSeat } from "./seat-map";
 import { fmtIsoDate } from "@/lib/date";
@@ -63,6 +64,7 @@ export function TicketSelection({ slug }: Props) {
   );
   const [authorized, setAuthorized] = useState<boolean | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [isLeaveDialogOpen, setIsLeaveDialogOpen] = useState(false);
 
   const gaReservationMutation = useCreateGAReservation();
   const seatedReservationMutation = useCreateSeatedReservation();
@@ -195,6 +197,17 @@ export function TicketSelection({ slug }: Props) {
     router.replace(`/events/${slug}`);
   };
 
+  const handleBack = () => {
+    setIsLeaveDialogOpen(true);
+  };
+
+  const handleConfirmLeave = () => {
+    setIsLeaveDialogOpen(false);
+    clearBuySession(slug);
+    storeReset();
+    router.replace(`/events/${slug}`);
+  };
+
   if (!isStoreHydrated || authorized !== true) return null;
 
   const selectedSeatIds = selectedSeats.map((s) => s.id);
@@ -215,6 +228,7 @@ export function TicketSelection({ slug }: Props) {
         formatted={formatted}
         isWarning={isWarning}
         backHref="/events"
+        onBack={handleBack}
       />
       <EventBanner
         eventTitle={eventTitle}
@@ -262,6 +276,16 @@ export function TicketSelection({ slug }: Props) {
       </div>
 
       <TimeoutModal open={timedOut} onOk={handleTimeoutOk} />
+      <AlertDialog
+        open={isLeaveDialogOpen}
+        onOpenChange={setIsLeaveDialogOpen}
+        title="Leave ticket selection?"
+        description="If you leave now, your booking session will be cleared and you may need to rejoin the queue."
+        confirmLabel="Leave"
+        cancelLabel="Stay"
+        confirmVariant="destructive"
+        onConfirm={handleConfirmLeave}
+      />
     </div>
   );
 }

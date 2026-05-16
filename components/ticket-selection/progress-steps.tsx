@@ -14,6 +14,7 @@ type Props = {
   formatted: string;
   isWarning: boolean;
   backHref?: string;
+  onBack?: () => void;
 };
 
 export function ProgressSteps({
@@ -21,10 +22,11 @@ export function ProgressSteps({
   formatted,
   isWarning,
   backHref,
+  onBack,
 }: Props) {
   return (
     <div className="flex items-center justify-between border-b border-border bg-background px-4 py-3 sm:px-6">
-      <BackButton backHref={backHref} title="Go back" />
+      <BackButton backHref={backHref} title="Go back" onBack={onBack} />
 
       <ol className="flex items-center gap-2 sm:gap-4" role="list">
         {STEPS.map(({ label, num }, idx) => {
