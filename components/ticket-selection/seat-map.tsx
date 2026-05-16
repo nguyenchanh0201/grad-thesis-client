@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useState } from "react";
 import { CanvasSeatMap } from "./seat-map/canvas-seat-map";
 import type { SelectedSeat } from "./seat-map/canvas-seat-map";
+import { isSvgImageSource } from "@/lib/image/is-svg-image-source";
 
 export type { SelectedSeat } from "./seat-map/canvas-seat-map";
 import type { SeatMapCanvas } from "@/schemas/seat-map";
@@ -85,6 +86,7 @@ export function SeatMap({
                 fill
                 sizes="(max-width: 768px) 100vw, 55vw"
                 className="object-cover object-center"
+                unoptimized={isSvgImageSource(fallbackImageUrl)}
               />
             </div>
           </div>

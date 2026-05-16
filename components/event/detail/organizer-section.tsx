@@ -2,6 +2,7 @@ import Image from "next/image";
 import { Mail, Phone, Globe, Facebook, Instagram } from "lucide-react";
 import type { EventOrganizer } from "@/schemas/event";
 import { EventSection } from "./event-section";
+import { isSvgImageSource } from "@/lib/image/is-svg-image-source";
 
 interface Props {
   organizer: EventOrganizer;
@@ -57,6 +58,7 @@ export function OrganizerSection({ organizer }: Props) {
               alt={organizer.displayName ?? ""}
               fill
               className="object-cover"
+              unoptimized={isSvgImageSource(organizer.avatarUrl)}
             />
           </div>
           <div className="min-w-0 flex-1 pt-1">

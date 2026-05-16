@@ -1,6 +1,7 @@
 import Image from "next/image";
 import type { Performer } from "@/schemas/event";
 import { EventSection } from "./event-section";
+import { isSvgImageSource } from "@/lib/image/is-svg-image-source";
 
 const PLACEHOLDER_IMG =
   "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=800&q=80";
@@ -26,6 +27,7 @@ export function PerformersSection({ performers }: Props) {
                 alt={performer.name}
                 fill
                 className="object-cover"
+                unoptimized={isSvgImageSource(performer.avatarUrl)}
               />
             </div>
             <div>

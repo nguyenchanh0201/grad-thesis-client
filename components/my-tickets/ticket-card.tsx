@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/strings/money";
 import { BackendTicket, BackendTicketStatus } from "@/schemas/ticket";
 import { TicketQRModal } from "./ticket-qr-modal";
+import { isSvgImageSource } from "@/lib/image/is-svg-image-source";
 
 const STATUS_CONFIG: Record<
   BackendTicketStatus,
@@ -63,6 +64,7 @@ export function TicketCard({ ticket }: Props) {
               fill
               sizes="(max-width: 640px) 100vw, 176px"
               className="object-cover"
+              unoptimized={isSvgImageSource(event.featuredImageUrl)}
             />
           ) : (
             <div className="h-full w-full bg-muted" />

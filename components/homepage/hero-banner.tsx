@@ -14,6 +14,7 @@ import {
   CarouselItem,
   type CarouselApi,
 } from "@/components/ui/carousel";
+import { isSvgImageSource } from "@/lib/image/is-svg-image-source";
 import { cn } from "@/lib/utils";
 import type { EventItem } from "@/components/event/event-card";
 
@@ -101,6 +102,7 @@ function Slide({ item }: { item: EventItem }) {
           sizes="100vw"
           className="object-cover"
           priority
+          unoptimized={isSvgImageSource(item.image)}
         />
       )}
       {/* Gradient overlay */}

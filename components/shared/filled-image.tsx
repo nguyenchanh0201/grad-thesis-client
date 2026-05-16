@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { EventItem } from "../event/event-card";
+import { isSvgImageSource } from "@/lib/image/is-svg-image-source";
 
 function eventColor(title: string): string {
   let h = 0;
@@ -32,6 +33,7 @@ export function FilledImage({
         aria-label={event.title}
         className="h-full w-full object-cover"
         onError={onError}
+        unoptimized={isSvgImageSource(event.image)}
       />
     </div>
   );

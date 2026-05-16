@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { isSvgImageSource } from "@/lib/image/is-svg-image-source";
 
 type Props = {
   imageUrl: string | null | undefined;
@@ -18,6 +19,7 @@ export function EventBanner({ imageUrl, eventTitle }: Props) {
         fill
         className="object-cover object-center"
         priority
+        unoptimized={isSvgImageSource(imageUrl)}
       />
     </div>
   );

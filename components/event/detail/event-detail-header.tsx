@@ -19,6 +19,7 @@ import { DEFAULT_CURRENCY } from "@/core/constants";
 import { EventStatus } from "@/schemas/event";
 import type { EventDetail } from "@/schemas/event";
 import { useAuthStore } from "@/lib/store/auth.store";
+import { isSvgImageSource } from "@/lib/image/is-svg-image-source";
 
 function eventBgColor(title: string): string {
   let h = 0;
@@ -123,6 +124,7 @@ export function EventDetailHeader({
                   sizes="(max-width: 768px) 100vw, 40vw"
                   className="object-cover"
                   priority
+                  unoptimized={isSvgImageSource(event.images[0])}
                 />
               )}
             </div>

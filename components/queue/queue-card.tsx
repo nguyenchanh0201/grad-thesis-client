@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { isSvgImageSource } from "@/lib/image/is-svg-image-source";
 
 type Props = {
   children: React.ReactNode;
@@ -16,6 +17,7 @@ export function QueueCard({ children, backgroundImageUrl }: Props) {
             fill
             className="object-cover object-center"
             aria-hidden="true"
+            unoptimized={isSvgImageSource(backgroundImageUrl)}
           />
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
         </>

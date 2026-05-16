@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { isSvgImageSource } from "@/lib/image/is-svg-image-source";
 
 function getInitials(text: string): string {
   if (!text || text === "") return "U";
@@ -32,6 +33,7 @@ export function UserProfilePicture({
           fill
           sizes={`${size}px`}
           className="object-cover"
+          unoptimized={isSvgImageSource(imageUrl)}
         />
       ) : (
         <span
