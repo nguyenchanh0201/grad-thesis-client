@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { clearBuySession, hasBuySession } from "@/lib/booking/buy-session";
 import { isValidEmail } from "@/lib/form/email";
@@ -14,6 +14,7 @@ import { EventBanner } from "@/components/ticket-selection/event-banner";
 import { ProgressSteps } from "@/components/ticket-selection/progress-steps";
 import { TimeoutModal } from "@/components/ticket-selection/timeout-modal";
 import { useTicketTimer } from "@/hooks/use-ticket-timer";
+import { useBuySessionSync } from "@/hooks/use-buy-session-sync";
 import { OrderSummaryPanel } from "./order-summary-pannel";
 import {
   RecipientInfoForm,
@@ -27,7 +28,7 @@ type Props = { slug: string };
 export function EnterInformation({ slug }: Props) {
   const router = useRouter();
   const { formatted, timeRemaining, timedOut, reset, syncToExpiry } =
-    useTicketTimer();
+    useTicketTimer(slug);
 
   const {
     reservationId,
@@ -42,6 +43,14 @@ export function EnterInformation({ slug }: Props) {
   } = useBookingStore();
 
   const [authorized, setAuthorized] = useState(true);
+
+  const handleSessionCleared = useCallback(() => {
+    reset();
+    storeReset();
+    router.replace(`/events/${slug}`);
+  }, [reset, router, slug, storeReset]);
+
+  useBuySessionSync(slug, handleSessionCleared);
 
   useEffect(() => {
     if (!hasBuySession(slug)) {
@@ -127,6 +136,7 @@ export function EnterInformation({ slug }: Props) {
   const handleTimeoutOk = () => {
     clearBuySession(slug);
     reset();
+    storeReset();
     router.replace(`/events/${slug}`);
   };
 

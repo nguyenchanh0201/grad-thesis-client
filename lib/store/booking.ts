@@ -253,7 +253,7 @@ export const useBookingStore = create<BookingState>()(
             removeItem: () => {},
           };
         }
-        return sessionStorage;
+        return localStorage;
       }),
       partialize: ({
         slug,
@@ -289,3 +289,11 @@ export const useBookingStore = create<BookingState>()(
     },
   ),
 );
+
+if (typeof window !== "undefined") {
+  window.addEventListener("storage", (event) => {
+    if (event.key === "booking") {
+      useBookingStore.persist.rehydrate();
+    }
+  });
+}

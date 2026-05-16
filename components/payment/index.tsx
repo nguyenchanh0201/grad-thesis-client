@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { clearBuySession, hasBuySession } from "@/lib/booking/buy-session";
+import { isAppError } from "@/core/error";
 import { useBookingStore } from "@/lib/store/booking";
+import { useReservation } from "@/hooks/use-booking";
 import {
   mockEventDetail,
   mockEventDetailTheater,
@@ -13,6 +15,7 @@ import { EventBanner } from "@/components/ticket-selection/event-banner";
 import { ProgressSteps } from "@/components/ticket-selection/progress-steps";
 import { TimeoutModal } from "@/components/ticket-selection/timeout-modal";
 import { useTicketTimer } from "@/hooks/use-ticket-timer";
+import { useBuySessionSync } from "@/hooks/use-buy-session-sync";
 import { OrderSummaryPanel } from "@/components/enter-information/order-summary-pannel";
 import {
   getAvailablePaymentMethods,
@@ -36,9 +39,11 @@ type Props = { slug: string };
 
 export function Payment({ slug }: Props) {
   const router = useRouter();
-  const { formatted, timeRemaining, timedOut, reset } = useTicketTimer();
+  const { formatted, timeRemaining, timedOut, reset, syncToExpiry } =
+    useTicketTimer(slug);
 
   const {
+    reservationId,
     tickets,
     selectedSeats,
     ticketTypes,
@@ -52,12 +57,46 @@ export function Payment({ slug }: Props) {
 
   const [authorized] = useState(() => hasBuySession(slug));
 
+  const handleSessionCleared = useCallback(() => {
+    reset();
+    storeReset();
+    router.replace(`/events/${slug}`);
+  }, [reset, router, slug, storeReset]);
+
+  useBuySessionSync(slug, handleSessionCleared);
+
   useEffect(() => {
     if (!hasBuySession(slug)) {
       storeReset();
       router.replace(`/events/${slug}`);
     }
   }, [slug, router, storeReset]);
+
+  useEffect(() => {
+    if (authorized && reservationId === null) {
+      router.replace(`/events/${slug}`);
+    }
+  }, [authorized, reservationId, router, slug]);
+
+  const { data: reservationResult, error: reservationError } = useReservation(
+    reservationId ?? undefined,
+  );
+
+  useEffect(() => {
+    if (!reservationError) return;
+    if (isAppError(reservationError)) {
+      if (reservationError.code === "RESERVATION_NOT_PENDING") {
+        clearBuySession(slug);
+      }
+      router.replace(`/events/${slug}`);
+    }
+  }, [reservationError, router, slug]);
+
+  useEffect(() => {
+    const expiresAt = reservationResult?.data?.expiresAt;
+    if (expiresAt) syncToExpiry(expiresAt);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reservationResult?.data?.expiresAt]);
 
   const isWarning = timeRemaining <= 60;
   const event = useMemo(() => getMockEvent(slug), [slug]);

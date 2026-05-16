@@ -1,27 +1,50 @@
 const COOKIE_MAX_AGE = 660; // 11 min in seconds
+export const BUY_SESSION_CLEARED_EVENT = "buy-session-cleared";
 
 function cookieName(slug: string) {
   return `buy_session_${slug.replace(/[^a-z0-9-]/gi, "_")}`;
 }
 
+function safeSlug(slug: string) {
+  return slug.replace(/[^a-z0-9-]/gi, "_");
+}
+
+function timerStorageKey(slug: string) {
+  return `buy_timer_expiry_${safeSlug(slug)}`;
+}
+
+export function buySessionStorageKey(slug: string) {
+  return cookieName(slug);
+}
+
 /** Called by the queue page when the user is admitted. */
 export function setBuySession(slug: string) {
   const name = cookieName(slug);
+  const startedAt = Date.now();
   document.cookie = `${name}=1; path=/; max-age=${COOKIE_MAX_AGE}; SameSite=Strict`;
-  sessionStorage.setItem(name, String(Date.now()));
+  localStorage.setItem(name, String(startedAt));
+  localStorage.setItem(
+    timerStorageKey(slug),
+    String(startedAt + COOKIE_MAX_AGE * 1000),
+  );
 }
 
 /** Called on timeout or explicit cancellation. */
 export function clearBuySession(slug: string) {
   const name = cookieName(slug);
   document.cookie = `${name}=; path=/; max-age=0; SameSite=Strict`;
-  sessionStorage.removeItem(name);
+  localStorage.removeItem(name);
+  localStorage.removeItem(timerStorageKey(slug));
+  localStorage.removeItem("buy_timer_expiry");
+  window.dispatchEvent(
+    new CustomEvent(BUY_SESSION_CLEARED_EVENT, { detail: { slug } }),
+  );
 }
 
 export function getBuySessionDeadline(slug: string): Date | null {
   try {
     const name = cookieName(slug);
-    const raw = sessionStorage.getItem(name);
+    const raw = localStorage.getItem(name);
     if (!raw) return null;
     return new Date(parseInt(raw, 10) + COOKIE_MAX_AGE * 1000);
   } catch {
@@ -36,11 +59,11 @@ export function getBuySessionDeadline(slug: string): Date | null {
 export function hasBuySession(slug: string): boolean {
   try {
     const name = cookieName(slug);
-    const raw = sessionStorage.getItem(name);
+    const raw = localStorage.getItem(name);
     if (!raw) return false;
     const elapsedSeconds = (Date.now() - parseInt(raw, 10)) / 1000;
     if (elapsedSeconds > COOKIE_MAX_AGE) {
-      sessionStorage.removeItem(name); // expired — purge preemptively
+      localStorage.removeItem(name);
       return false;
     }
     return true;

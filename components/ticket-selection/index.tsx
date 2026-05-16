@@ -17,6 +17,7 @@ import { TimeoutModal } from "./timeout-modal";
 import { SeatMap } from "./seat-map";
 import { AlertDialog } from "@/components/ui/alert-dialog";
 import { useTicketTimer } from "../../hooks/use-ticket-timer";
+import { useBuySessionSync } from "@/hooks/use-buy-session-sync";
 import type { SelectedSeat } from "./seat-map";
 import { fmtIsoDate } from "@/lib/date";
 import { getEventSeatsByEventCode } from "@/services/event.service";
@@ -37,7 +38,7 @@ export function TicketSelection({ slug }: Props) {
     timedOut,
     reset: timerReset,
     syncToExpiry,
-  } = useTicketTimer();
+  } = useTicketTimer(slug);
   const {
     tickets,
     selectedSeats,
@@ -69,6 +70,14 @@ export function TicketSelection({ slug }: Props) {
   const gaReservationMutation = useCreateGAReservation();
   const seatedReservationMutation = useCreateSeatedReservation();
 
+  const handleSessionCleared = useCallback(() => {
+    timerReset();
+    storeReset();
+    router.replace(`/events/${slug}`);
+  }, [router, slug, storeReset, timerReset]);
+
+  useBuySessionSync(slug, handleSessionCleared);
+
   useEffect(() => {
     const unsubscribe = useBookingStore.persist.onFinishHydration(() => {
       setIsStoreHydrated(true);
@@ -79,14 +88,20 @@ export function TicketSelection({ slug }: Props) {
   useEffect(() => {
     if (!isStoreHydrated) return;
 
-    if (!hasBuySession(slug) || waitRoomSlug !== slug) {
+    if (!hasBuySession(slug)) {
       setAuthorized(false);
-      storeReset();
       router.replace(`/events/${slug}`);
       return;
     }
+
+    if (waitRoomSlug && waitRoomSlug !== slug) {
+      setAuthorized(false);
+      router.replace(`/events/${slug}`);
+      return;
+    }
+
     setAuthorized(true);
-  }, [isStoreHydrated, slug, router, storeReset, waitRoomSlug]);
+  }, [isStoreHydrated, slug, router, waitRoomSlug]);
 
   const { data: eventResult } = useEventBySlug(slug);
   const event = eventResult?.data;
