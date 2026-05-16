@@ -5,8 +5,8 @@ import {
   searchEvents,
   getEventBySlug,
   getEventDetail,
-  getEventSeats,
-  getEventStats,
+  getEventSeatsByEventCode,
+  getEventStatsByEventCode,
 } from "@/services/event.service";
 import type { SearchEventsParams } from "@/schemas/event";
 
@@ -17,8 +17,8 @@ export const eventKeys = {
     [...eventKeys.lists(), params] as const,
   detail: (id: string) => [...eventKeys.all, "detail", id] as const,
   slug: (slug: string) => [...eventKeys.all, "slug", slug] as const,
-  seats: (eventId: string) => [...eventKeys.all, "seats", eventId] as const,
-  stats: (id: string) => [...eventKeys.all, "stats", id] as const,
+  seats: (eventCode: string) => [...eventKeys.all, "seats", eventCode] as const,
+  stats: (eventCode: string) => [...eventKeys.all, "stats", eventCode] as const,
 };
 
 export function useEvents(
@@ -48,19 +48,19 @@ export function useEventDetail(id: string | undefined) {
   });
 }
 
-export function useEventSeats(eventId: string | undefined) {
+export function useEventSeats(eventCode: string | undefined) {
   return useQuery({
-    queryKey: eventKeys.seats(eventId ?? ""),
-    queryFn: () => getEventSeats(eventId!),
-    enabled: !!eventId,
+    queryKey: eventKeys.seats(eventCode ?? ""),
+    queryFn: () => getEventSeatsByEventCode(eventCode!),
+    enabled: !!eventCode,
     staleTime: 30_000,
   });
 }
 
-export function useEventStats(id: string | undefined) {
+export function useEventStats(eventCode: string | undefined) {
   return useQuery({
-    queryKey: eventKeys.stats(id ?? ""),
-    queryFn: () => getEventStats(id!),
-    enabled: !!id,
+    queryKey: eventKeys.stats(eventCode ?? ""),
+    queryFn: () => getEventStatsByEventCode(eventCode!),
+    enabled: !!eventCode,
   });
 }

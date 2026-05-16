@@ -18,7 +18,7 @@ import { SeatMap } from "./seat-map";
 import { useTicketTimer } from "../../hooks/use-ticket-timer";
 import type { SelectedSeat } from "./seat-map";
 import { fmtIsoDate } from "@/lib/date";
-import { getEventSeats } from "@/services/event.service";
+import { getEventSeatsByEventCode } from "@/services/event.service";
 import { SectionAvailability } from "@/schemas/seat";
 import { SeatMapCanvasSchema } from "@/schemas/seat-map";
 import type { TicketType } from "@/schemas/ticket-type";
@@ -87,7 +87,7 @@ export function TicketSelection({ slug }: Props) {
 
   const { data: eventResult } = useEventBySlug(slug);
   const event = eventResult?.data;
-  const eventId = event?.id;
+  const eventCode = event?.eventCode;
   const isSeated = event?.isSeated ?? false;
   const ticketTypes = event?.ticketTypes ?? EMPTY_TICKET_TYPES;
 
@@ -104,9 +104,9 @@ export function TicketSelection({ slug }: Props) {
 
   // Poll seat availability every 10s
   const { data: seatsResult } = useQuery({
-    queryKey: ["seatMap", "availability", eventId],
-    queryFn: () => getEventSeats(eventId!),
-    enabled: !!eventId && isSeated,
+    queryKey: ["seatMap", "availability", eventCode],
+    queryFn: () => getEventSeatsByEventCode(eventCode!),
+    enabled: !!eventCode && isSeated,
     refetchInterval: 10_000,
     staleTime: 5_000,
   });

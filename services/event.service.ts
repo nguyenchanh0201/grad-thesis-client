@@ -40,10 +40,24 @@ export const getEventStats = async (id: string): Promise<EventStatsResult> => {
   return parseOrThrow(EventStatsResultSchema, response);
 };
 
+export const getEventStatsByEventCode = async (
+  eventCode: string,
+): Promise<EventStatsResult> => {
+  const response = await apiClient.get(`/events/code/${eventCode}/stats`);
+  return parseOrThrow(EventStatsResultSchema, response);
+};
+
 export const getEventSeats = async (
   eventId: string,
 ): Promise<EventSeatsResult> => {
   const response = await apiClient.get(`/events/${eventId}/seats`);
+  return parseOrThrow(EventSeatsResultSchema, response);
+};
+
+export const getEventSeatsByEventCode = async (
+  eventCode: string,
+): Promise<EventSeatsResult> => {
+  const response = await apiClient.get(`/events/code/${eventCode}/seats`);
   return parseOrThrow(EventSeatsResultSchema, response);
 };
 
