@@ -62,9 +62,10 @@ function groupRawSeats(
   }));
 }
 
-export const EventSeatsDataSchema = z
-  .array(EventSeatRawSchema)
-  .transform(groupRawSeats);
+export const EventSeatsDataSchema = z.union([
+  z.array(SectionAvailabilitySchema),
+  z.array(EventSeatRawSchema).transform(groupRawSeats),
+]);
 export type EventSeatsData = z.infer<typeof EventSeatsDataSchema>;
 
 export const EventSeatsResultSchema = BaseResponseSchema(EventSeatsDataSchema);

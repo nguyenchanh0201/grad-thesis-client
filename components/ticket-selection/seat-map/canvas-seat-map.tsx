@@ -4,17 +4,23 @@ import { useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import type {
   SeatMapCanvas,
+  SeatMapElement,
   SectionElement,
   ZoneElement,
   RowConfig,
 } from "@/schemas/seat-map";
 import type { SectionAvailability, SeatAvailability } from "@/schemas/seat";
+import { Button } from "@/components/ui/button";
 
 export type SelectedSeat = {
   id: string;
   label: string;
   ticketTypeId: string;
   seatIndex: number;
+};
+
+type SeatWithTicketType = SeatAvailability & {
+  ticketTypeId?: string;
 };
 
 type Props = {
@@ -40,14 +46,11 @@ export function CanvasSeatMap({
   const selectedSet = new Set(selectedSeats);
 
   if (activeSection) {
-    // Prefer real seat data; fall back to seats derived from rowConfigs.
-    const fromApi =
-      availability.find((a) => a.ticketTypeId === activeSection.ticketTypeId)
-        ?.seats ?? [];
-    const sectionSeats =
-      fromApi.length > 0
-        ? fromApi
-        : generateSeatsFromRowConfigs(activeSection.rowConfigs ?? []);
+    const sectionSeats = getSeatsForSection(
+      activeSection,
+      canvas,
+      availability,
+    );
     return (
       <SectionDetail
         section={activeSection}
@@ -143,9 +146,7 @@ function CanvasOverview({
             }
 
             if (el.type === "section") {
-              const seats = el.ticketTypeId
-                ? (availMap.get(el.ticketTypeId) ?? [])
-                : [];
+              const seats = getSeatsForSection(el, canvas, availability);
               const available = seats.filter(
                 (s) => s.status === "available",
               ).length;
@@ -156,14 +157,14 @@ function CanvasOverview({
               const soldOut = total > 0 && available === 0;
               const hasData = total > 0;
               const fill = el.color ?? "#6366f1";
-              const isInteractive = !!el.ticketTypeId && !soldOut;
+              const isInteractive = hasData && !soldOut;
 
               return (
                 <g
                   key={el.id}
                   role={isInteractive ? "button" : undefined}
                   tabIndex={isInteractive ? 0 : -1}
-                  aria-label={`${el.name}${selectedInSection > 0 ? `, ${selectedInSection} selected` : ""}${soldOut ? ", sold out" : !el.ticketTypeId ? ", not yet available" : ""}`}
+                  aria-label={`${el.name}${selectedInSection > 0 ? `, ${selectedInSection} selected` : ""}${soldOut ? ", sold out" : !hasData ? ", not yet available" : ""}`}
                   style={{ cursor: isInteractive ? "pointer" : "default" }}
                   onClick={() => isInteractive && onSectionClick(el)}
                   onKeyDown={(e) => {
@@ -178,7 +179,7 @@ function CanvasOverview({
                     height={el.height}
                     rx={3}
                     fill={fill}
-                    opacity={soldOut || !el.ticketTypeId ? 0.35 : 0.85}
+                    opacity={soldOut || !hasData ? 0.35 : 0.85}
                     className={
                       isInteractive
                         ? "transition-opacity hover:opacity-100"
@@ -199,7 +200,7 @@ function CanvasOverview({
                   >
                     {el.name}
                   </text>
-                  {!el.ticketTypeId ? (
+                  {!hasData ? (
                     <text
                       x={el.x + el.width / 2}
                       y={el.y + el.height / 2 + 9}
@@ -346,7 +347,7 @@ function SectionLegend({ canvas }: { canvas: SeatMapCanvas }) {
 type DetailProps = {
   section: SectionElement;
   canvas: SeatMapCanvas;
-  seats: SeatAvailability[];
+  seats: SeatWithTicketType[];
   selectedSet: Set<string>;
   maxSeats: number;
   totalSelected: number;
@@ -371,14 +372,15 @@ function SectionDetail({
     <div className="flex flex-col gap-3">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <button
+        <Button
+          variant="link"
           onClick={onBack}
-          className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+          className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
           aria-label="Back to overview"
         >
           <ArrowLeft className="size-3.5" />
           Overview
-        </button>
+        </Button>
         <div className="flex items-center gap-2">
           <span
             className="size-3 rounded-sm"
@@ -423,7 +425,7 @@ function SectionDetail({
                       key={seat.seatLabel}
                       role="gridcell"
                       aria-label={`Seat ${seat.seatLabel}`}
-                      aria-pressed={isSelected}
+                      aria-selected={isSelected}
                       aria-disabled={!isAvailable && !isSelected}
                       disabled={!isAvailable && !isSelected}
                       onClick={() => {
@@ -432,7 +434,10 @@ function SectionDetail({
                         onSeatToggle({
                           id: seat.seatLabel,
                           label: `${section.name} · ${seat.seatLabel}`,
-                          ticketTypeId: section.ticketTypeId ?? section.id,
+                          ticketTypeId:
+                            seat.ticketTypeId ??
+                            section.ticketTypeId ??
+                            section.id,
                           seatIndex: seat.seatIndex,
                         });
                       }}
@@ -567,11 +572,73 @@ function MiniMap({
 
 // Generate seats from section rowConfigs when the backend provides no seat data.
 // Status defaults to "available"; actual availability supersedes this when present.
+function getSeatsForSection(
+  section: SectionElement,
+  canvas: SeatMapCanvas,
+  availability: SectionAvailability[],
+): SeatWithTicketType[] {
+  if (section.ticketTypeId) {
+    return (
+      availability
+        .find((a) => a.ticketTypeId === section.ticketTypeId)
+        ?.seats.map((seat) => ({
+          ...seat,
+          ticketTypeId: section.ticketTypeId,
+        })) ?? []
+    );
+  }
+
+  const { start, end } = getSectionSeatIndexRange(section, canvas);
+  const seats = availability.flatMap((group) =>
+    group.seats
+      .filter((seat) => seat.seatIndex >= start && seat.seatIndex < end)
+      .map((seat) => ({ ...seat, ticketTypeId: group.ticketTypeId })),
+  );
+
+  return seats.length > 0
+    ? seats
+    : generateSeatsFromRowConfigs(section.rowConfigs ?? [], start);
+}
+
+function getSectionSeatIndexRange(
+  section: SectionElement,
+  canvas: SeatMapCanvas,
+) {
+  let start = 0;
+
+  for (const element of canvas.elements) {
+    if (element.id === section.id) {
+      break;
+    }
+    if (isSectionElement(element)) {
+      start += getSectionSeatCount(element);
+    }
+  }
+
+  return {
+    start,
+    end: start + getSectionSeatCount(section),
+  };
+}
+
+function getSectionSeatCount(section: SectionElement) {
+  if (section.rowConfigs && section.rowConfigs.length > 0) {
+    return section.rowConfigs.reduce((sum, row) => sum + row.seatCount, 0);
+  }
+
+  return (section.rows ?? 0) * (section.seatsPerRow ?? 0);
+}
+
+function isSectionElement(element: SeatMapElement): element is SectionElement {
+  return element.type === "section";
+}
+
 function generateSeatsFromRowConfigs(
   rowConfigs: RowConfig[],
-): SeatAvailability[] {
-  const seats: SeatAvailability[] = [];
-  let seatIndex = 0;
+  seatIndexOffset = 0,
+): SeatWithTicketType[] {
+  const seats: SeatWithTicketType[] = [];
+  let seatIndex = seatIndexOffset;
   for (const row of rowConfigs) {
     for (let i = 1; i <= row.seatCount; i++) {
       seats.push({
@@ -588,9 +655,9 @@ function generateSeatsFromRowConfigs(
 
 // Helpers
 function buildRows(
-  seats: SeatAvailability[],
-): { label: string; seats: SeatAvailability[] }[] {
-  const map = new Map<string, SeatAvailability[]>();
+  seats: SeatWithTicketType[],
+): { label: string; seats: SeatWithTicketType[] }[] {
+  const map = new Map<string, SeatWithTicketType[]>();
   for (const seat of seats) {
     const existing = map.get(seat.seatRow);
     if (existing) {
