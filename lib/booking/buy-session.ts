@@ -13,6 +13,14 @@ function timerStorageKey(slug: string) {
   return `buy_timer_expiry_${safeSlug(slug)}`;
 }
 
+function clearBuySessionStorage(slug: string) {
+  const name = cookieName(slug);
+  document.cookie = `${name}=; path=/; max-age=0; SameSite=Strict`;
+  localStorage.removeItem(name);
+  localStorage.removeItem(timerStorageKey(slug));
+  localStorage.removeItem("buy_timer_expiry");
+}
+
 export function buySessionStorageKey(slug: string) {
   return cookieName(slug);
 }
@@ -21,6 +29,8 @@ export function buySessionStorageKey(slug: string) {
 export function setBuySession(slug: string) {
   const name = cookieName(slug);
   const startedAt = Date.now();
+  localStorage.removeItem(timerStorageKey(slug));
+  localStorage.removeItem("buy_timer_expiry");
   document.cookie = `${name}=1; path=/; max-age=${COOKIE_MAX_AGE}; SameSite=Strict`;
   localStorage.setItem(name, String(startedAt));
   localStorage.setItem(
@@ -31,11 +41,7 @@ export function setBuySession(slug: string) {
 
 /** Called on timeout or explicit cancellation. */
 export function clearBuySession(slug: string) {
-  const name = cookieName(slug);
-  document.cookie = `${name}=; path=/; max-age=0; SameSite=Strict`;
-  localStorage.removeItem(name);
-  localStorage.removeItem(timerStorageKey(slug));
-  localStorage.removeItem("buy_timer_expiry");
+  clearBuySessionStorage(slug);
   window.dispatchEvent(
     new CustomEvent(BUY_SESSION_CLEARED_EVENT, { detail: { slug } }),
   );
@@ -63,7 +69,7 @@ export function hasBuySession(slug: string): boolean {
     if (!raw) return false;
     const elapsedSeconds = (Date.now() - parseInt(raw, 10)) / 1000;
     if (elapsedSeconds > COOKIE_MAX_AGE) {
-      localStorage.removeItem(name);
+      clearBuySessionStorage(slug);
       return false;
     }
     return true;

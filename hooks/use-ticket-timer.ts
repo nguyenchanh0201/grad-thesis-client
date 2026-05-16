@@ -13,11 +13,12 @@ function timerKey(slug?: string): string {
 function readRemaining(key: string, slug?: string): number {
   try {
     const raw = localStorage.getItem(key);
-    const expiryMs = raw
-      ? parseInt(raw, 10)
-      : slug
-        ? getBuySessionDeadline(slug)?.getTime()
-        : undefined;
+    const storedExpiryMs = raw ? parseInt(raw, 10) : undefined;
+    const sessionExpiryMs = slug ? getBuySessionDeadline(slug)?.getTime() : 0;
+    const expiryMs =
+      storedExpiryMs && sessionExpiryMs
+        ? Math.max(storedExpiryMs, sessionExpiryMs)
+        : (storedExpiryMs ?? sessionExpiryMs);
     if (!expiryMs) return FALLBACK_SECS;
     return Math.max(0, Math.floor((expiryMs - Date.now()) / 1000));
   } catch {
