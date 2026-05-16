@@ -54,21 +54,34 @@ export function TicketSelection({ slug }: Props) {
     reset: storeReset,
   } = useBookingStore();
 
-  // Initialize to true so server and client render the same initial tree.
-  // hasBuySession reads sessionStorage (client-only) — checked in useEffect.
-  const [authorized, setAuthorized] = useState(true);
+  // Hard gate: never render ticket UI until booking store hydration + auth check complete.
+  const [isStoreHydrated, setIsStoreHydrated] = useState(() =>
+    useBookingStore.persist.hasHydrated(),
+  );
+  const [authorized, setAuthorized] = useState<boolean | null>(null);
   const [isCreating, setIsCreating] = useState(false);
 
   const gaReservationMutation = useCreateGAReservation();
   const seatedReservationMutation = useCreateSeatedReservation();
 
   useEffect(() => {
+    const unsubscribe = useBookingStore.persist.onFinishHydration(() => {
+      setIsStoreHydrated(true);
+    });
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    if (!isStoreHydrated) return;
+
     if (!hasBuySession(slug) || waitRoomSlug !== slug) {
       setAuthorized(false);
       storeReset();
       router.replace(`/events/${slug}`);
+      return;
     }
-  }, [slug, router, storeReset, waitRoomSlug]);
+    setAuthorized(true);
+  }, [isStoreHydrated, slug, router, storeReset, waitRoomSlug]);
 
   const { data: eventResult } = useEventBySlug(slug);
   const event = eventResult?.data;
@@ -181,7 +194,7 @@ export function TicketSelection({ slug }: Props) {
     router.replace(`/events/${slug}`);
   };
 
-  if (!authorized) return null;
+  if (!isStoreHydrated || authorized !== true) return null;
 
   const selectedSeatIds = selectedSeats.map((s) => s.id);
 
