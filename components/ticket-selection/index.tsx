@@ -20,11 +20,68 @@ import type { SelectedSeat } from "./seat-map";
 import { fmtIsoDate } from "@/lib/date";
 import { getEventSeats } from "@/services/event.service";
 import { SectionAvailability } from "@/schemas/seat";
-import { SeatMapCanvasSchema } from "@/schemas/seat-map";
+import {
+  SeatMapCanvasSchema,
+  type SeatMapCanvas,
+  type SeatMapElement,
+} from "@/schemas/seat-map";
+import type { TicketType } from "@/schemas/ticket-type";
 
 const MAX_SEATS = 8;
+const EMPTY_TICKET_TYPES: TicketType[] = [];
 
 type Props = { slug: string };
+
+function isInteractiveElement(
+  element: SeatMapElement,
+): element is Extract<SeatMapElement, { type: "section" | "zone" }> {
+  return element.type === "section" || element.type === "zone";
+}
+
+function resolveCanvasTicketTypes(
+  canvas: SeatMapCanvas | undefined,
+  ticketTypes: TicketType[],
+): SeatMapCanvas | undefined {
+  if (!canvas) return undefined;
+
+  const interactiveElements = canvas.elements.filter(isInteractiveElement);
+  if (interactiveElements.length === 0) return canvas;
+
+  const hasLinkedElements = interactiveElements.some(
+    (element) => element.ticketTypeId,
+  );
+  if (hasLinkedElements) return canvas;
+
+  const usedTicketTypeIds = new Set<string>();
+  let nextTicketTypeIndex = 0;
+
+  const elements = canvas.elements.map((element) => {
+    if (!isInteractiveElement(element)) {
+      return element;
+    }
+
+    if (element.ticketTypeId) {
+      usedTicketTypeIds.add(element.ticketTypeId);
+      return element;
+    }
+
+    while (
+      nextTicketTypeIndex < ticketTypes.length &&
+      usedTicketTypeIds.has(ticketTypes[nextTicketTypeIndex].id)
+    ) {
+      nextTicketTypeIndex += 1;
+    }
+
+    const ticketType = ticketTypes[nextTicketTypeIndex];
+    if (!ticketType) return element;
+
+    usedTicketTypeIds.add(ticketType.id);
+    nextTicketTypeIndex += 1;
+    return { ...element, ticketTypeId: ticketType.id };
+  });
+
+  return { ...canvas, elements };
+}
 
 export function TicketSelection({ slug }: Props) {
   const router = useRouter();
@@ -87,11 +144,12 @@ export function TicketSelection({ slug }: Props) {
   const event = eventResult?.data;
   const eventId = event?.id;
   const isSeated = event?.isSeated ?? false;
+  const ticketTypes = event?.ticketTypes ?? EMPTY_TICKET_TYPES;
 
   // Canvas is embedded in the event response — no separate network call needed.
-  // Only use canvas mode when the canvas has at least one committed section or zone
-  // (i.e. elements with ticketTypeId). A stage-only or label-only canvas means the
-  // organizer hasn't committed sections yet — fall back to image mode.
+  // Some committed demo events were saved before section/zone ticketTypeId links
+  // were persisted. If the canvas is present but unlinked, derive the mapping from
+  // the event's ticket type list so the seat map remains usable.
   const canvas = useMemo(() => {
     if (!isSeated || !event?.seatMap?.canvas) return undefined;
     const result = SeatMapCanvasSchema.safeParse(event.seatMap.canvas);
@@ -101,6 +159,7 @@ export function TicketSelection({ slug }: Props) {
     );
     return hasSections ? result.data : undefined;
   }, [isSeated, event?.seatMap?.canvas]);
+  const resolvedCanvas = resolveCanvasTicketTypes(canvas, ticketTypes);
 
   // Poll seat availability every 10s
   const { data: seatsResult } = useQuery({
@@ -114,7 +173,6 @@ export function TicketSelection({ slug }: Props) {
 
   const isWarning = timeRemaining <= 60;
   const maxPerZone = event?.maxTicketsPerOrder ?? MAX_SEATS;
-  const ticketTypes = event?.ticketTypes ?? [];
 
   useEffect(() => {
     if (!event) return;
@@ -156,7 +214,7 @@ export function TicketSelection({ slug }: Props) {
     setIsCreating(true);
     try {
       let result;
-      if (isSeated && canvas) {
+      if (isSeated && resolvedCanvas) {
         result = await seatedReservationMutation.mutateAsync({
           eventSlug: slug,
           seatIndices: selectedSeats.map((s) => s.seatIndex),
@@ -227,7 +285,7 @@ export function TicketSelection({ slug }: Props) {
             fallbackImageUrl={eventImageUrl}
             selectedZoneId={selectedZoneId}
             onZoneClick={handleZoneClick}
-            canvas={canvas}
+            canvas={resolvedCanvas}
             availability={availability}
             selectedSeats={selectedSeatIds}
             onSeatToggle={handleSeatToggle}
@@ -244,7 +302,7 @@ export function TicketSelection({ slug }: Props) {
             eventDate={event ? fmtIsoDate(event.eventDate) : ""}
             onContinue={handleContinue}
             onChangeDate={() => {}}
-            mode={isSeated && canvas ? "seat" : "zone"}
+            mode={isSeated && resolvedCanvas ? "seat" : "zone"}
             tickets={tickets}
             selectedZoneId={selectedZoneId}
             onIncrement={handleIncrement}
