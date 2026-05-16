@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { stripHtml } from "@/lib/html";
+import { isAppError } from "@/core/error";
 import { buildEventJsonLd, buildBreadcrumbJsonLd } from "@/lib/seo";
 import { getEventBySlug } from "@/services/event.service";
 import { eventToEventDetail } from "@/lib/event/adapters";
@@ -55,7 +56,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function EventDetailPage({ params }: Props) {
   const { slug } = await params;
 
-  const result = await getEventBySlug(slug).catch(() => notFound());
+  let result;
+  try {
+    result = await getEventBySlug(slug);
+  } catch (error) {
+    if (isAppError(error) && error.status === 404) {
+      notFound();
+    }
+
+    throw error;
+  }
+
   const event = result.data;
   const detail = eventToEventDetail(event);
 

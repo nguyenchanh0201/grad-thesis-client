@@ -1,7 +1,16 @@
 import { z } from "zod";
 import { BigIntIdSchema, BaseResponseSchema } from "../api";
 
-export const TagStatusSchema = z.enum(["PENDING", "APPROVED", "REJECTED"]);
+const TagStatusLabelSchema = z.enum(["PENDING", "APPROVED", "REJECTED"]);
+
+export const TagStatusSchema = z
+  .union([z.literal(0), z.literal(1), z.literal(2), TagStatusLabelSchema])
+  .transform((status) => {
+    if (status === 0) return "PENDING";
+    if (status === 1) return "APPROVED";
+    if (status === 2) return "REJECTED";
+    return status;
+  });
 export type TagStatus = z.infer<typeof TagStatusSchema>;
 
 export const TagSchema = z.object({
