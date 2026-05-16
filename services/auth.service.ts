@@ -70,6 +70,8 @@ async function getCurrentAuthUser(fallback: AuthUser): Promise<AuthUser> {
       id: me.data.user.id,
       email: me.data.user.email,
       role: me.data.user.role,
+      name: me.data.user.fullName ?? fallback.name,
+      phone: me.data.user.phone ?? fallback.phone,
     };
   } catch {
     return fallback;
