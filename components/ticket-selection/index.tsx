@@ -27,6 +27,7 @@ import type { TicketType } from "@/schemas/ticket-type";
 
 const MAX_SEATS = 8;
 const EMPTY_TICKET_TYPES: TicketType[] = [];
+const EMPTY_AVAILABILITY: SectionAvailability[] = [];
 
 type Props = { slug: string };
 
@@ -128,7 +129,8 @@ export function TicketSelection({ slug }: Props) {
     refetchInterval: 10_000,
     staleTime: 5_000,
   });
-  const availability: SectionAvailability[] = seatsResult?.data ?? [];
+  const availability: SectionAvailability[] =
+    seatsResult?.data ?? EMPTY_AVAILABILITY;
 
   const isWarning = timeRemaining <= 60;
   const maxPerZone = event?.maxTicketsPerOrder ?? MAX_SEATS;
@@ -146,21 +148,74 @@ export function TicketSelection({ slug }: Props) {
   const handleZoneClick = useCallback(
     (zoneId: string) => {
       setSelectedZoneId(zoneId);
+      if (isSeated && canvas) {
+        const seat = findNextAvailableSeatForTicketType(
+          zoneId,
+          availability,
+          selectedSeats.map((s) => s.id),
+          ticketTypes,
+        );
+        if (seat) {
+          toggleSeat(seat, maxPerZone);
+        }
+      } else {
+        incrementTicket(zoneId, maxPerZone);
+      }
       document
         .getElementById(`zone-row-${zoneId}`)
         ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     },
-    [setSelectedZoneId],
+    [
+      availability,
+      canvas,
+      incrementTicket,
+      isSeated,
+      maxPerZone,
+      selectedSeats,
+      setSelectedZoneId,
+      ticketTypes,
+      toggleSeat,
+    ],
   );
 
   const handleIncrement = useCallback(
-    (ticketTypeId: string) => incrementTicket(ticketTypeId, maxPerZone),
-    [incrementTicket, maxPerZone],
+    (ticketTypeId: string) => {
+      if (isSeated && canvas) {
+        const seat = findNextAvailableSeatForTicketType(
+          ticketTypeId,
+          availability,
+          selectedSeats.map((s) => s.id),
+          ticketTypes,
+        );
+        if (seat) toggleSeat(seat, maxPerZone);
+        return;
+      }
+      incrementTicket(ticketTypeId, maxPerZone);
+    },
+    [
+      availability,
+      canvas,
+      incrementTicket,
+      isSeated,
+      maxPerZone,
+      selectedSeats,
+      ticketTypes,
+      toggleSeat,
+    ],
   );
 
   const handleDecrement = useCallback(
-    (ticketTypeId: string) => decrementTicket(ticketTypeId),
-    [decrementTicket],
+    (ticketTypeId: string) => {
+      if (isSeated && canvas) {
+        const seat = [...selectedSeats]
+          .reverse()
+          .find((s) => s.ticketTypeId === ticketTypeId);
+        if (seat) removeSeat(seat.id);
+        return;
+      }
+      decrementTicket(ticketTypeId);
+    },
+    [canvas, decrementTicket, isSeated, removeSeat, selectedSeats],
   );
 
   const handleSeatToggle = useCallback(
@@ -234,7 +289,10 @@ export function TicketSelection({ slug }: Props) {
   const eventLocation = event?.venue
     ? `${event.venue.venueName}, ${event.venue.city}`
     : "";
-  const eventImageUrl = event?.featuredImageUrl ?? event?.eventImageUrls?.[0];
+  const eventImageUrl =
+    event?.seatMap?.previewImageUrl ??
+    event?.featuredImageUrl ??
+    event?.eventImageUrls?.[0];
 
   return (
     <div className="flex min-h-[calc(100vh-var(--header-height))] flex-col">
@@ -303,4 +361,29 @@ export function TicketSelection({ slug }: Props) {
       />
     </div>
   );
+}
+
+function findNextAvailableSeatForTicketType(
+  ticketTypeId: string,
+  availability: SectionAvailability[],
+  selectedSeatIds: string[],
+  ticketTypes: TicketType[],
+): SelectedSeat | null {
+  const selected = new Set(selectedSeatIds);
+  const seat = availability
+    .find((group) => group.ticketTypeId === ticketTypeId)
+    ?.seats.find(
+      (candidate) =>
+        candidate.status === "available" && !selected.has(candidate.seatLabel),
+    );
+
+  if (!seat) return null;
+
+  const ticketType = ticketTypes.find((tt) => tt.id === ticketTypeId);
+  return {
+    id: seat.seatLabel,
+    label: `${ticketType?.name ?? "Seat"} - ${seat.seatLabel}`,
+    ticketTypeId,
+    seatIndex: seat.seatIndex,
+  };
 }

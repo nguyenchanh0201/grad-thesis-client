@@ -66,7 +66,10 @@ export function TicketPanel({
   const totalPrice = mode === "seat" ? seatTotal : zoneTotal;
 
   const getQty = (ticketTypeId: string) =>
-    tickets.find((t) => t.ticketTypeId === ticketTypeId)?.quantity ?? 0;
+    mode === "seat"
+      ? selectedSeats.filter((seat) => seat.ticketTypeId === ticketTypeId)
+          .length
+      : (tickets.find((t) => t.ticketTypeId === ticketTypeId)?.quantity ?? 0);
 
   return (
     <div className="flex h-full flex-col">
@@ -78,7 +81,7 @@ export function TicketPanel({
         </Button>
       </div>
 
-      {mode === "zone" && (
+      {
         <>
           {selectedZoneId && (
             <div className="border-b border-border px-5 py-2">
@@ -169,9 +172,9 @@ export function TicketPanel({
             })}
           </div>
         </>
-      )}
+      }
 
-      {mode === "seat" && (
+      {false && mode === "seat" && (
         <div className="flex-1 overflow-y-auto">
           {selectedSeats.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
@@ -270,6 +273,27 @@ export function TicketPanel({
                           <Trash2 className="size-3.5" />
                         </Button>
                       </div>
+                    </div>
+                  );
+                })}
+
+              {mode === "seat" &&
+                ticketTypes.map((tt) => {
+                  const quantity = selectedSeats.filter(
+                    (seat) => seat.ticketTypeId === tt.id,
+                  ).length;
+                  if (quantity === 0) return null;
+                  return (
+                    <div
+                      key={tt.id}
+                      className="flex items-center justify-between text-sm"
+                    >
+                      <span className="truncate text-foreground">
+                        {tt.name} x {quantity}
+                      </span>
+                      <span className="shrink-0 pl-4 text-muted-foreground">
+                        {fmt(tt.price * quantity)} {tt.currency}
+                      </span>
                     </div>
                   );
                 })}

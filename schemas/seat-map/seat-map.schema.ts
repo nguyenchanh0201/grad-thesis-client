@@ -31,7 +31,7 @@ const ZoneElementSchema = z.object({
   id: z.string(),
   type: z.literal("zone"),
   name: z.string(),
-  capacity: z.number().int().positive(),
+  capacity: z.number().int().nonnegative(),
   x: z.number(),
   y: z.number(),
   width: z.number(),
@@ -69,13 +69,42 @@ export const SeatMapElementSchema = z.discriminatedUnion("type", [
   LabelElementSchema,
 ]);
 
-export const SeatMapCanvasSchema = z.object({
-  width: z.number(),
-  height: z.number(),
-  gridSize: z.number().optional(),
-  backgroundColor: z.string().optional(),
-  elements: z.array(SeatMapElementSchema),
-});
+export const SeatMapCanvasSchema = z
+  .object({
+    width: z.number().optional(),
+    height: z.number().optional(),
+    viewport: z
+      .object({
+        width: z.number(),
+        height: z.number(),
+      })
+      .optional(),
+    gridSize: z.number().optional(),
+    backgroundColor: z.string().optional(),
+    elements: z.array(SeatMapElementSchema),
+  })
+  .transform((canvas, ctx) => {
+    const width = canvas.width ?? canvas.viewport?.width;
+    const height = canvas.height ?? canvas.viewport?.height;
+
+    if (width == null || height == null) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Seat map canvas requires width/height or viewport dimensions",
+      });
+      return z.NEVER;
+    }
+
+    return {
+      width,
+      height,
+      elements: canvas.elements,
+      ...(canvas.gridSize !== undefined ? { gridSize: canvas.gridSize } : {}),
+      ...(canvas.backgroundColor !== undefined
+        ? { backgroundColor: canvas.backgroundColor }
+        : {}),
+    };
+  });
 
 export const SeatMapSchema = z.object({
   id: BigIntIdSchema,

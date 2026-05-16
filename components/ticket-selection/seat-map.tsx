@@ -44,15 +44,11 @@ export function SeatMap({
     <div className="flex h-full flex-col">
       {/* Mobile collapse toggle */}
       <button
-        className="flex items-center justify-between border-b border-border px-4 py-3 md:hidden"
+        className="ml-auto border-b border-border px-4 py-3 md:hidden"
         onClick={() => setMapOpen((v) => !v)}
         aria-expanded={mapOpen}
         aria-controls="venue-map-body"
       >
-        <span className="flex items-center gap-2 text-sm font-semibold">
-          <MapPin className="size-4 text-muted-foreground" />
-          Seat map
-        </span>
         {mapOpen ? (
           <ChevronUp className="size-4 text-muted-foreground" />
         ) : (

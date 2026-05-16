@@ -166,10 +166,16 @@ function CanvasOverview({
                   tabIndex={isInteractive ? 0 : -1}
                   aria-label={`${el.name}${selectedInSection > 0 ? `, ${selectedInSection} selected` : ""}${soldOut ? ", sold out" : !hasData ? ", not yet available" : ""}`}
                   style={{ cursor: isInteractive ? "pointer" : "default" }}
-                  onClick={() => isInteractive && onSectionClick(el)}
+                  onClick={() => {
+                    if (!isInteractive) return;
+                    if (el.ticketTypeId) onZoneSelect?.(el.ticketTypeId);
+                    onSectionClick(el);
+                  }}
                   onKeyDown={(e) => {
-                    if ((e.key === "Enter" || e.key === " ") && isInteractive)
+                    if ((e.key === "Enter" || e.key === " ") && isInteractive) {
+                      if (el.ticketTypeId) onZoneSelect?.(el.ticketTypeId);
                       onSectionClick(el);
+                    }
                   }}
                 >
                   <rect
