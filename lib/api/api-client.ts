@@ -36,12 +36,21 @@ apiClient.interceptors.request.use((config) => {
   config.headers = config.headers ?? {};
   config.headers[API_CONFIG.HEADERS.CORRELATION_ID] = correlationId;
   config.headers[API_CONFIG.HEADERS.REQUEST_ID] = correlationId;
-  const { accessToken, user } = useAuthStore.getState();
+
+  config.headers["st-auth-mode"] = "cookie";
+  config.headers["rid"] = "session";
+
+  if (typeof document !== "undefined") {
+    const match = document.cookie.match(/(^|;)\s*sFrontToken\s*=\s*([^;]+)/);
+    if (match) {
+      config.headers["anti-csrf"] = decodeURIComponent(match[2]);
+    }
+  }
+
+  const { accessToken } = useAuthStore.getState();
   if (accessToken) {
     config.headers.Authorization = `Bearer ${accessToken}`;
   }
-  const userId = user?.id ?? process.env.NEXT_PUBLIC_DEFAULT_USER_ID ?? "1";
-  config.headers["x-mock-user-id"] = userId;
   return config;
 });
 

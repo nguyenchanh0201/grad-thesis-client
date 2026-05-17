@@ -1,38 +1,43 @@
 import type { ProfileUser } from "@/schemas/user";
 import { AcCOUNT_TYPES } from "@/schemas/user/account-type";
 import { ROLES } from "@/schemas/user/role";
+import { getIdentityMe, updateIdentityMe } from "./identity.service";
 
-// TODO: Delete later
-const delay = (ms: number) => new Promise<void>((res) => setTimeout(res, ms));
+function mapRole(role: string): ProfileUser["role"] {
+  if (role === "ORGANIZER") return ROLES["ORGANIZER"];
+  if (role === "ADMIN") return ROLES["ADMIN"];
+  if (role === "SUPER_ADMIN") return ROLES["SUPER_ADMIN"];
+  return ROLES["USER"];
+}
 
-// In-memory mock state — replace with apiClient calls when backend is ready
-let _mock: ProfileUser = {
-  name: "",
-  email: "",
-  phone: undefined,
-  profilePic: undefined,
-  role: ROLES["USER"],
-  accountType: AcCOUNT_TYPES.MEMBER,
-};
+function mapIdentityToProfile(
+  identity: Awaited<ReturnType<typeof getIdentityMe>>,
+): ProfileUser {
+  const user = identity.data.user;
+  return {
+    name: user.fullName ?? "",
+    email: user.email,
+    phone: user.phone ?? undefined,
+    profilePic: user.organizerProfile?.avatarUrl ?? undefined,
+    role: mapRole(user.role),
+    accountType:
+      user.accountType === AcCOUNT_TYPES.VIP
+        ? AcCOUNT_TYPES.VIP
+        : AcCOUNT_TYPES.MEMBER,
+  };
+}
 
 export async function fetchUserProfile(): Promise<ProfileUser> {
-  await delay(400);
-  return { ..._mock };
+  const identity = await getIdentityMe();
+  return mapIdentityToProfile(identity);
 }
 
 export async function updateUserProfile(
   data: Pick<ProfileUser, "name" | "phone">,
 ): Promise<ProfileUser> {
-  await delay(600);
-  _mock = { ..._mock, ...data };
-  return { ..._mock };
-}
-
-export async function uploadProfilePicture(
-  file: File,
-): Promise<{ profilePic: string }> {
-  await delay(800);
-  const url = URL.createObjectURL(file);
-  _mock = { ..._mock, profilePic: url };
-  return { profilePic: url };
+  const identity = await updateIdentityMe({
+    fullName: data.name.trim(),
+    phone: data.phone?.trim() || null,
+  });
+  return mapIdentityToProfile(identity);
 }

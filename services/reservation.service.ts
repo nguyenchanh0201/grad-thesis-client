@@ -37,7 +37,7 @@ export type UpdateReservationRecipientPayload = {
   deliveryMethod: string;
 };
 
-// BE returns { status: boolean, reservationId: string } — follow up with GET for full detail
+// BE returns { status: boolean, reservationId: string }. Follow up with GET for full detail.
 async function fetchReservationDetail(id: string): Promise<ReservationResult> {
   const response = await apiClient.get(`/reservations/${id}`);
   return parseOrThrow(ReservationResultSchema, response);
@@ -96,7 +96,6 @@ export const updateReservationRecipient = async (
   return parseOrThrow(ReservationResultSchema, response);
 };
 
-// userId is taken from x-mock-user-id header — no query param needed
 export const cancelReservation = async (
   id: string,
 ): Promise<ReservationResult> => {

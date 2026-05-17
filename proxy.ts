@@ -22,18 +22,16 @@ export function proxy(req: NextRequest) {
     }
   }
 
-  if (process.env.NEXT_PUBLIC_USE_MOCK !== "true") {
-    const hasSession = req.cookies.has(SESSION_COOKIE);
+  const hasSession = req.cookies.has(SESSION_COOKIE);
 
-    if (!hasSession && matchesAny(pathname, PROTECTED_PATHS)) {
-      const loginUrl = new URL("/auth/login", req.url);
-      loginUrl.searchParams.set("redirect", pathname);
-      return NextResponse.redirect(loginUrl);
-    }
+  if (!hasSession && matchesAny(pathname, PROTECTED_PATHS)) {
+    const loginUrl = new URL("/auth/login", req.url);
+    loginUrl.searchParams.set("redirect", pathname);
+    return NextResponse.redirect(loginUrl);
+  }
 
-    if (hasSession && matchesAny(pathname, GUEST_ONLY_PATHS)) {
-      return NextResponse.redirect(new URL("/", req.url));
-    }
+  if (hasSession && matchesAny(pathname, GUEST_ONLY_PATHS)) {
+    return NextResponse.redirect(new URL("/", req.url));
   }
 
   return NextResponse.next();

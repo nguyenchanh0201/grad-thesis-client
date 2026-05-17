@@ -8,8 +8,11 @@ const VNPayUrlDataSchema = z.object({
   vnpParams: z.record(z.string(), z.string()).optional(),
 });
 
-const VNPayUrlResultSchema = BaseResponseSchema(VNPayUrlDataSchema);
-type VNPayUrlResult = z.infer<typeof VNPayUrlResultSchema>;
+const VNPayUrlResultSchema = z.union([
+  BaseResponseSchema(VNPayUrlDataSchema),
+  VNPayUrlDataSchema,
+]);
+type VNPayUrlResult = z.infer<typeof VNPayUrlDataSchema>;
 
 export type CreateVNPayUrlPayload = {
   reservationId: string;
@@ -21,5 +24,6 @@ export const createVNPayUrl = async (
   payload: CreateVNPayUrlPayload,
 ): Promise<VNPayUrlResult> => {
   const response = await apiClient.post("/payment/vnpay/create-url", payload);
-  return parseOrThrow(VNPayUrlResultSchema, response);
+  const parsed = parseOrThrow(VNPayUrlResultSchema, response);
+  return "data" in parsed ? parsed.data : parsed;
 };

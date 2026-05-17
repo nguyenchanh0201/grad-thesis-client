@@ -82,7 +82,6 @@ export function EventDetailHeader({
     event.socialLinks?.website ||
     event.socialLinks?.instagram ||
     event.socialLinks?.twitter;
-  console.log(event.images);
 
   return (
     <section

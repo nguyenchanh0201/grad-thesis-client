@@ -20,8 +20,4 @@ export type VNPayResultParams = {
   vnp_TransactionNo?: string;
   vnp_PayDate?: string;
   vnp_OrderInfo?: string;
-  // mock mode
-  mock?: string;
-  invoiceId?: string;
-  amount?: string;
 };

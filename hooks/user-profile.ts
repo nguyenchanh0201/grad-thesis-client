@@ -2,13 +2,8 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import {
-  fetchUserProfile,
-  updateUserProfile,
-  uploadProfilePicture,
-} from "@/services/user.service";
+import { fetchUserProfile, updateUserProfile } from "@/services/user.service";
 import { useProfileStore } from "@/lib/store/profile.store";
-import type { ProfileUser } from "@/schemas/user";
 
 const PROFILE_QUERY_KEY = ["user-profile"] as const;
 
@@ -36,20 +31,6 @@ export function useUpdateUserProfile() {
     onSuccess: (updated) => {
       useProfileStore.getState().patchProfile(updated);
       queryClient.setQueryData(PROFILE_QUERY_KEY, updated);
-    },
-  });
-}
-
-export function useUploadProfilePicture() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: uploadProfilePicture,
-    onSuccess: ({ profilePic }) => {
-      useProfileStore.getState().patchProfile({ profilePic });
-      queryClient.setQueryData<ProfileUser>(PROFILE_QUERY_KEY, (prev) =>
-        prev ? { ...prev, profilePic } : prev,
-      );
     },
   });
 }

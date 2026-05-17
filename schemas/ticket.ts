@@ -2,7 +2,7 @@ import { z } from "zod";
 import { BigIntIdSchema, BaseResponseSchema, PagedResponseSchema } from "./api";
 import { VenueSchema } from "./venue";
 
-// ── FE-side display types (used by mock data & UI components) ──────────────
+// FE-side display types for ticket UI components.
 
 export type TicketStatus = "confirmed" | "pending" | "used" | "cancelled";
 

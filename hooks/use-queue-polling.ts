@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { mockQueueAllowed, mockQueueWaiting } from "@/lib/mock/queue";
 import {
   getQueueStatus,
   requestAccess,
@@ -16,7 +15,6 @@ import type {
   WaitRoomResponse,
 } from "@/schemas/queue";
 
-const USE_MOCK = process.env.NEXT_PUBLIC_MOCK_QUEUE === "true";
 const POLL_INTERVAL_MS = 25_000;
 
 function toFrontendStatus(
@@ -40,8 +38,10 @@ function isTerminal(status: BackendQueueStatus | undefined): boolean {
 
 export type UseQueuePollingResult = {
   status: Exclude<FrontendQueueStatus, "redirecting">;
+  token: string | null;
   position: number | null;
   queueSize: number | null;
+  sessionExpiresAt: string | null;
   isLoading: boolean;
   isError: boolean;
 };
@@ -52,15 +52,16 @@ export function useQueuePolling(
 ): UseQueuePollingResult {
   const setWaitRoomToken = useBookingStore((s) => s.setWaitRoomToken);
   const queryClient = useQueryClient();
-  const mockTickRef = useRef(0);
   const tokenRef = useRef<string | null>(null);
   const heartbeatTokenRef = useRef<string | null>(null);
+  const [heartbeatSessionExpiresAt, setHeartbeatSessionExpiresAt] = useState<
+    string | null
+  >(null);
 
   // Phase 1: Join queue — fires once on mount
   const accessQuery = useQuery<WaitRoomResponse>({
     queryKey: ["queue", "access", slug, userId],
     queryFn: async () => {
-      if (USE_MOCK) return mockQueueWaiting(42);
       try {
         return await requestAccess({ slug: slug! });
       } catch (err) {
@@ -82,12 +83,6 @@ export function useQueuePolling(
   const statusQuery = useQuery<WaitRoomResponse>({
     queryKey: ["queue", "status", slug, userId],
     queryFn: async () => {
-      if (USE_MOCK) {
-        mockTickRef.current += 1;
-        return mockTickRef.current >= 3
-          ? mockQueueAllowed()
-          : mockQueueWaiting(Math.max(1, 42 - (mockTickRef.current - 1) * 28));
-      }
       try {
         return await getQueueStatus({ slug: slug! });
       } catch (err) {
@@ -129,7 +124,13 @@ export function useQueuePolling(
     }
 
     heartbeatTokenRef.current = currentData.token;
-    sendHeartbeat({ slug, token: currentData.token }).catch(() => {});
+    sendHeartbeat({ slug, token: currentData.token })
+      .then((heartbeat) => {
+        if (heartbeat.sessionExpiresAt) {
+          setHeartbeatSessionExpiresAt(heartbeat.sessionExpiresAt);
+        }
+      })
+      .catch(() => {});
   }, [currentData?.status, currentData?.token, slug, userId]);
 
   // Auto-rejoin: when session expires, clear stale state and re-run requestAccess
@@ -147,7 +148,13 @@ export function useQueuePolling(
     const { status } = statusQuery.data;
     if (status !== "QUEUEING" && status !== "ADMITTED") return;
 
-    sendHeartbeat({ slug, token: tokenRef.current }).catch(() => {});
+    sendHeartbeat({ slug, token: tokenRef.current })
+      .then((heartbeat) => {
+        if (heartbeat.sessionExpiresAt) {
+          setHeartbeatSessionExpiresAt(heartbeat.sessionExpiresAt);
+        }
+      })
+      .catch(() => {});
   }, [statusQuery.data, slug, userId]);
 
   const isLoading = accessQuery.isPending;
@@ -158,8 +165,10 @@ export function useQueuePolling(
   if (!isReadyToPoll) {
     return {
       status: "waiting",
+      token: null,
       position: null,
       queueSize: null,
+      sessionExpiresAt: null,
       isLoading: true,
       isError: false,
     };
@@ -168,8 +177,10 @@ export function useQueuePolling(
   if (isError || !currentData) {
     return {
       status: "waiting",
+      token: null,
       position: null,
       queueSize: null,
+      sessionExpiresAt: null,
       isLoading,
       isError,
     };
@@ -177,8 +188,10 @@ export function useQueuePolling(
 
   return {
     status: toFrontendStatus(currentData.status),
+    token: currentData.token ?? null,
     position: currentData.position?.position ?? null,
     queueSize: currentData.position?.size ?? null,
+    sessionExpiresAt: currentData.sessionExpiresAt ?? heartbeatSessionExpiresAt,
     isLoading: false,
     isError: false,
   };
