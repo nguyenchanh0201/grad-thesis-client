@@ -79,7 +79,7 @@ export function ImageCarousel({
 
       {/* Dot indicators */}
       {scrollSnaps.length > 0 && (
-        <div className="absolute bottom-5 left-1/2 flex -translate-x-1/2 gap-2">
+        <div className="absolute bottom-5 left-1/2 flex -translate-x-1/2 gap-2 opacity-40 blur-[1px] hover:opacity-100 hover:blur-none transition-all duration-300">
           {scrollSnaps.map((_, i) => (
             <button
               type="button"
@@ -114,7 +114,7 @@ function NavButton({
       type="button"
       onClick={onClick}
       className={cn(
-        "absolute top-1/2 hidden -translate-y-1/2 items-center justify-center rounded-full cursor-pointer bg-black/40 p-2.5 text-white backdrop-blur-sm transition hover:bg-black/60 focus-visible:outline-2 focus-visible:outline-white md:flex",
+        "absolute top-1/2 hidden -translate-y-1/2 items-center justify-center rounded-full cursor-pointer bg-black/40 p-2.5 text-white backdrop-blur-sm transition-all duration-300 opacity-40 blur-[1px] hover:opacity-100 hover:blur-none hover:bg-black/60 focus-visible:outline-2 focus-visible:outline-white md:flex",
         isPrev ? "left-4 lg:left-6" : "right-4 lg:right-6",
       )}
       {...props}
