@@ -1,6 +1,8 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { isAppError } from "@/core/error";
+import { RESERVATION_POLL_INTERVAL_MS } from "@/lib/booking/config";
 import {
   cancelReservation,
   createGAReservation,
@@ -9,6 +11,13 @@ import {
   type CreateGAReservationPayload,
   type CreateSeatedReservationPayload,
 } from "@/services/reservation.service";
+
+const UNAVAILABLE_RESERVATION_CODES = new Set([
+  "RESERVATION_EXPIRED",
+  "RESERVATION_NOT_PENDING",
+  "RESERVATION_NOT_FOUND",
+  "FORBIDDEN",
+]);
 
 export const reservationKeys = {
   all: ["reservations"] as const,
@@ -21,7 +30,12 @@ export function useReservation(id: string | undefined) {
     queryFn: () => getReservation(id!),
     enabled: !!id,
     retry: false,
+    refetchInterval: RESERVATION_POLL_INTERVAL_MS,
   });
+}
+
+export function isReservationUnavailableError(error: unknown): boolean {
+  return isAppError(error) && UNAVAILABLE_RESERVATION_CODES.has(error.code);
 }
 
 export function useCreateSeatedReservation() {
@@ -42,7 +56,6 @@ export function useCreateGAReservation() {
   });
 }
 
-// userId is sent via x-mock-user-id header — no param needed here
 export function useCancelReservation() {
   const qc = useQueryClient();
   return useMutation({

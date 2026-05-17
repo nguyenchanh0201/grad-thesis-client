@@ -1,21 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { clearBuySession, hasBuySession } from "@/lib/booking/buy-session";
-import { isAppError } from "@/core/error";
 import { useBookingStore } from "@/lib/store/booking";
-import { useReservation } from "@/hooks/use-booking";
-import {
-  mockEventDetail,
-  mockEventDetailTheater,
-  mockEventDetailZone,
-} from "@/lib/mock/events";
+import { useEventBySlug } from "@/hooks/use-events";
+import { fmtIsoDate, fmtIsoTime } from "@/lib/date/utils";
 import { EventBanner } from "@/components/ticket-selection/event-banner";
-import { ProgressSteps } from "@/components/ticket-selection/progress-steps";
-import { TimeoutModal } from "@/components/ticket-selection/timeout-modal";
-import { useTicketTimer } from "@/hooks/use-ticket-timer";
-import { useBuySessionSync } from "@/hooks/use-buy-session-sync";
+import { useBuyProcess } from "@/components/buy-process/buy-process-shell";
 import { OrderSummaryPanel } from "@/components/enter-information/order-summary-pannel";
 import {
   getAvailablePaymentMethods,
@@ -26,21 +17,11 @@ import { DiscountCodeInput } from "./discount-code-input";
 import { PaymentStickyBar } from "./payment-sticky-bar";
 import type { PaymentMethodId } from "@/schemas/payment";
 
-const MOCK_EVENTS = [
-  mockEventDetail,
-  mockEventDetailTheater,
-  mockEventDetailZone,
-];
-function getMockEvent(slug: string) {
-  return MOCK_EVENTS.find((e) => e.slug === slug) ?? mockEventDetail;
-}
-
 type Props = { slug: string };
 
 export function Payment({ slug }: Props) {
   const router = useRouter();
-  const { formatted, timeRemaining, timedOut, reset, syncToExpiry } =
-    useTicketTimer(slug);
+  const { exitPurchaseFlow } = useBuyProcess();
 
   const {
     reservationId,
@@ -52,54 +33,16 @@ export function Payment({ slug }: Props) {
     discountCode,
     paymentMethodId,
     setPaymentMethodId,
-    reset: storeReset,
   } = useBookingStore();
 
-  const [authorized] = useState(() => hasBuySession(slug));
-
-  const handleSessionCleared = useCallback(() => {
-    reset();
-    storeReset();
-    router.replace(`/events/${slug}`);
-  }, [reset, router, slug, storeReset]);
-
-  useBuySessionSync(slug, handleSessionCleared);
-
   useEffect(() => {
-    if (!hasBuySession(slug)) {
-      storeReset();
-      router.replace(`/events/${slug}`);
+    if (reservationId === null) {
+      exitPurchaseFlow();
     }
-  }, [slug, router, storeReset]);
+  }, [exitPurchaseFlow, reservationId]);
 
-  useEffect(() => {
-    if (authorized && reservationId === null) {
-      router.replace(`/events/${slug}`);
-    }
-  }, [authorized, reservationId, router, slug]);
-
-  const { data: reservationResult, error: reservationError } = useReservation(
-    reservationId ?? undefined,
-  );
-
-  useEffect(() => {
-    if (!reservationError) return;
-    if (isAppError(reservationError)) {
-      if (reservationError.code === "RESERVATION_NOT_PENDING") {
-        clearBuySession(slug);
-      }
-      router.replace(`/events/${slug}`);
-    }
-  }, [reservationError, router, slug]);
-
-  useEffect(() => {
-    const expiresAt = reservationResult?.data?.expiresAt;
-    if (expiresAt) syncToExpiry(expiresAt);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reservationResult?.data?.expiresAt]);
-
-  const isWarning = timeRemaining <= 60;
-  const event = useMemo(() => getMockEvent(slug), [slug]);
+  const { data: eventResult } = useEventBySlug(slug);
+  const event = eventResult?.data;
 
   const availableMethods = useMemo(
     () => getAvailablePaymentMethods(DEFAULT_EVENT_PAYMENT_CONFIG),
@@ -126,13 +69,15 @@ export function Payment({ slug }: Props) {
   }, [tickets, selectedSeats, ticketTypes, mapType]);
 
   const eventSummary = {
-    title: event.title,
-    image: event.images[0] ?? "",
-    dateLabel: event.dates[0]
-      ? `${event.dates[0].label} • ${event.dates[0].startTime.slice(11, 16)}`
+    title: event?.eventName ?? "",
+    image: event?.featuredImageUrl ?? event?.eventImageUrls?.[0] ?? "",
+    dateLabel: event?.eventDate
+      ? `${fmtIsoDate(event.eventDate)} - ${fmtIsoTime(event.eventDate)}`
       : "",
-    venueVi: `${event.venue.name}, ${event.venue.city}`,
-    venueAddress: event.venue.address,
+    venueVi: event?.venue
+      ? `${event.venue.venueName ?? ""}, ${event.venue.city ?? ""}`
+      : "",
+    venueAddress: event?.venue?.address ?? "",
   };
 
   const discountProp = discountCode?.valid
@@ -140,7 +85,6 @@ export function Payment({ slug }: Props) {
     : null;
 
   const handleContinue = () => {
-    // TODO: initiate VNPay payment flow
     router.replace(`/buy/${slug}/confirmation`);
   };
 
@@ -148,26 +92,12 @@ export function Payment({ slug }: Props) {
     router.replace(`/buy/${slug}/info`);
   };
 
-  const handleTimeoutOk = () => {
-    clearBuySession(slug);
-    reset();
-    router.replace(`/events/${slug}`);
-  };
-
-  if (!authorized) return null;
-
   return (
-    <div className="flex min-h-[calc(100vh-var(--header-height))] flex-col pb-16">
-      <ProgressSteps
-        currentStep={3}
-        formatted={formatted}
-        isWarning={isWarning}
-        backHref={`/buy/${slug}/info`}
-      />
+    <div className="flex flex-1 flex-col pb-16">
       <EventBanner
-        eventTitle={event.title}
+        eventTitle={eventSummary.title}
         eventDate={eventSummary.dateLabel}
-        eventLocation={`${event.venue.name}, ${event.venue.city}`}
+        eventLocation={eventSummary.venueVi}
       />
 
       <div className="flex flex-1 flex-col-reverse md:flex-row">
@@ -208,8 +138,6 @@ export function Payment({ slug }: Props) {
         onBack={handleBack}
         onContinue={handleContinue}
       />
-
-      <TimeoutModal open={timedOut} onOk={handleTimeoutOk} />
     </div>
   );
 }

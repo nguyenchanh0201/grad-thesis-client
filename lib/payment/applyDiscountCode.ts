@@ -1,6 +1,6 @@
 import type { DiscountCode } from "@/schemas/payment";
 
-const MOCK_CODES: Record<
+const LOCAL_DISCOUNT_CODES: Record<
   string,
   Omit<DiscountCode, "code" | "valid" | "errorMessage">
 > = {
@@ -14,9 +14,9 @@ export function applyDiscountCode(
   subtotal: number,
 ): DiscountCode {
   const upper = code.trim().toUpperCase();
-  const mock = MOCK_CODES[upper];
+  const selectedCode = LOCAL_DISCOUNT_CODES[upper];
 
-  if (!mock) {
+  if (!selectedCode) {
     return {
       code,
       valid: false,
@@ -27,9 +27,14 @@ export function applyDiscountCode(
   }
 
   const discountAmount =
-    mock.type === "percent"
-      ? Math.round((subtotal * mock.discountAmount) / 100)
-      : mock.discountAmount;
+    selectedCode.type === "percent"
+      ? Math.round((subtotal * selectedCode.discountAmount) / 100)
+      : selectedCode.discountAmount;
 
-  return { code: upper, valid: true, type: mock.type, discountAmount };
+  return {
+    code: upper,
+    valid: true,
+    type: selectedCode.type,
+    discountAmount,
+  };
 }

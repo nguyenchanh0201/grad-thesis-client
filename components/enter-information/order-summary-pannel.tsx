@@ -116,7 +116,9 @@ function DetailRow({
       <Icon className="mt-0.5 size-4 text-muted-foreground" />
       <span className="text-muted-foreground">{label}</span>
       {value ? (
-        <span className="break-words font-medium text-foreground">{value}</span>
+        <span className="wrap-break-word font-medium text-foreground">
+          {value}
+        </span>
       ) : (
         <span className="italic text-muted-foreground/70">Not filled</span>
       )}

@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { clearBuySession, hasBuySession } from "@/lib/booking/buy-session";
+import { clearBuySession } from "@/lib/booking/buy-session";
 import { isValidEmail } from "@/lib/form/email";
 import { isAppError } from "@/core/error";
 import { useBookingStore } from "@/lib/store/booking";
@@ -13,10 +13,7 @@ import { getIdentityMe } from "@/services/identity.service";
 import { updateReservationRecipient } from "@/services/reservation.service";
 import { fmtIsoDate, fmtIsoTime } from "@/lib/date/utils";
 import { EventBanner } from "@/components/ticket-selection/event-banner";
-import { ProgressSteps } from "@/components/ticket-selection/progress-steps";
-import { TimeoutModal } from "@/components/ticket-selection/timeout-modal";
-import { useTicketTimer } from "@/hooks/use-ticket-timer";
-import { useBuySessionSync } from "@/hooks/use-buy-session-sync";
+import { useBuyProcess } from "@/components/buy-process/buy-process-shell";
 import { OrderSummaryPanel } from "./order-summary-pannel";
 import {
   RecipientInfoForm,
@@ -29,8 +26,7 @@ type Props = { slug: string };
 
 export function EnterInformation({ slug }: Props) {
   const router = useRouter();
-  const { formatted, timeRemaining, timedOut, reset, syncToExpiry } =
-    useTicketTimer(slug);
+  const { exitPurchaseFlow } = useBuyProcess();
 
   const {
     reservationId,
@@ -42,66 +38,31 @@ export function EnterInformation({ slug }: Props) {
     deliveryMethod,
     hydrateFromReservation,
     updateRecipient,
-    reset: storeReset,
   } = useBookingStore();
 
-  const [authorized, setAuthorized] = useState(true);
-
-  const handleSessionCleared = useCallback(() => {
-    reset();
-    storeReset();
-    router.replace(`/events/${slug}`);
-  }, [reset, router, slug, storeReset]);
-
-  useBuySessionSync(slug, handleSessionCleared);
-
   useEffect(() => {
-    if (!hasBuySession(slug)) {
-      setAuthorized(false);
-      storeReset();
-      router.replace(`/events/${slug}`);
+    if (reservationId === null) {
+      exitPurchaseFlow();
     }
-  }, [slug, router, storeReset]);
-
-  // Redirect when reservationId is missing (shouldn't reach this page without one)
-  useEffect(() => {
-    if (authorized && reservationId === null) {
-      router.replace(`/events/${slug}`);
-    }
-  }, [authorized, reservationId, slug, router]);
+  }, [exitPurchaseFlow, reservationId]);
 
   const { data: eventResult } = useEventBySlug(slug);
   const event = eventResult?.data;
 
-  const { data: reservationResult, error: reservationError } = useReservation(
+  const { data: reservationResult } = useReservation(
     reservationId ?? undefined,
   );
 
   const { data: identityResult } = useQuery({
     queryKey: ["current-user"],
     queryFn: getIdentityMe,
-    enabled: authorized,
     retry: false,
   });
 
-  // Handle reservation errors: 404, 403 → redirect; 409 NOT_PENDING → clear + redirect
   useEffect(() => {
-    if (!reservationError) return;
-    if (isAppError(reservationError)) {
-      if (reservationError.code === "RESERVATION_NOT_PENDING") {
-        clearBuySession(slug);
-      }
-      router.replace(`/events/${slug}`);
-    }
-  }, [reservationError, slug, router]);
-
-  // Sync countdown to server expiry once the reservation loads
-  useEffect(() => {
-    const expiresAt = reservationResult?.data?.expiresAt;
-    if (expiresAt) syncToExpiry(expiresAt);
     if (reservationResult?.data) hydrateFromReservation(reservationResult.data);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reservationResult?.data?.expiresAt]);
+  }, [reservationResult?.data]);
 
   useEffect(() => {
     if (reservationResult?.data?.recipient) return;
@@ -136,7 +97,6 @@ export function EnterInformation({ slug }: Props) {
     updateRecipient,
   ]);
 
-  const isWarning = timeRemaining <= 60;
   const formRef = useRef<RecipientFormHandle>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -176,20 +136,11 @@ export function EnterInformation({ slug }: Props) {
     router.replace(`/buy/${slug}/tickets`);
   };
 
-  const handleTimeoutOk = () => {
-    clearBuySession(slug);
-    reset();
-    storeReset();
-    router.replace(`/events/${slug}`);
-  };
-
-  if (!authorized) return null;
-
   const eventSummary = {
     title: event?.eventName ?? "",
     image: event?.featuredImageUrl ?? event?.eventImageUrls?.[0] ?? "",
     dateLabel: event?.eventDate
-      ? `${fmtIsoDate(event.eventDate)} • ${fmtIsoTime(event.eventDate)}`
+      ? `${fmtIsoDate(event.eventDate)} - ${fmtIsoTime(event.eventDate)}`
       : "",
     venueVi: event?.venue
       ? `${event.venue.venueName ?? ""}, ${event.venue.city ?? ""}`
@@ -198,22 +149,14 @@ export function EnterInformation({ slug }: Props) {
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-var(--header-height))] flex-col pb-16">
-      <ProgressSteps
-        currentStep={2}
-        formatted={formatted}
-        isWarning={isWarning}
-        backHref={`/buy/${slug}/tickets`}
-      />
+    <div className="flex flex-1 flex-col pb-16">
       <EventBanner
         eventTitle={eventSummary.title}
         eventDate={eventSummary.dateLabel}
         eventLocation={eventSummary.venueVi}
       />
 
-      {/* Two-panel layout — mobile: form on top, summary below */}
       <div className="flex flex-1 flex-col-reverse md:flex-row">
-        {/* Left: order summary (40%) */}
         <div
           className="border-t border-border md:w-[40%] md:overflow-y-auto md:border-t-0 md:border-r"
           style={{ maxHeight: "calc(100vh - var(--header-height) - 6rem)" }}
@@ -231,7 +174,6 @@ export function EnterInformation({ slug }: Props) {
           />
         </div>
 
-        {/* Right: form (60%) */}
         <div
           className="flex flex-1 flex-col md:w-[60%] md:overflow-y-auto"
           style={{ maxHeight: "calc(100vh - var(--header-height) - 6rem)" }}
@@ -250,8 +192,6 @@ export function EnterInformation({ slug }: Props) {
         onBack={handleBack}
         onContinue={handleContinue}
       />
-
-      <TimeoutModal open={timedOut} onOk={handleTimeoutOk} />
     </div>
   );
 }

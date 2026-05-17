@@ -1,6 +1,6 @@
 "use client";
 
-import { forwardRef, useEffect, useImperativeHandle } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { useForm, Controller, useWatch } from "react-hook-form";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -48,11 +48,15 @@ export const RecipientInfoForm = forwardRef<RecipientFormHandle, object>(
   function RecipientInfoForm(_, ref) {
     const { recipient, updateRecipient } = useBookingStore();
     const { data: countryCodes = [] } = useCountryCodes();
+    const isApplyingStoreSnapshotRef = useRef(false);
+    const pendingStoreRecipientRef = useRef<RecipientInfo | null>(null);
+    const lastAppliedStoreRecipientRef = useRef<RecipientInfo>(
+      normalizeRecipient(recipient),
+    );
 
     const {
       register,
       control,
-      getValues,
       reset,
       trigger,
       formState: { errors },
@@ -63,16 +67,41 @@ export const RecipientInfoForm = forwardRef<RecipientFormHandle, object>(
 
     const formValues = useWatch({ control });
     useEffect(() => {
-      const currentValues = getValues();
-      if (!isSameRecipient(currentValues, recipient)) {
-        reset(recipient);
+      const normalizedRecipient = normalizeRecipient(recipient);
+      if (
+        isSameRecipient(
+          normalizedRecipient,
+          lastAppliedStoreRecipientRef.current,
+        )
+      ) {
+        return;
       }
-    }, [getValues, recipient, reset]);
+
+      isApplyingStoreSnapshotRef.current = true;
+      pendingStoreRecipientRef.current = normalizedRecipient;
+      lastAppliedStoreRecipientRef.current = normalizedRecipient;
+      reset(normalizedRecipient);
+    }, [recipient, reset]);
 
     useEffect(() => {
-      if (!formValues) return;
-      if (!isSameRecipient(formValues as Partial<RecipientInfo>, recipient)) {
-        updateRecipient(formValues as Partial<RecipientInfo>);
+      const normalizedFormValues = normalizeRecipient(
+        formValues as Partial<RecipientInfo>,
+      );
+
+      if (isApplyingStoreSnapshotRef.current) {
+        const pendingSnapshot = pendingStoreRecipientRef.current;
+        if (
+          pendingSnapshot &&
+          isSameRecipient(normalizedFormValues, pendingSnapshot)
+        ) {
+          isApplyingStoreSnapshotRef.current = false;
+          pendingStoreRecipientRef.current = null;
+        }
+        return;
+      }
+
+      if (!isSameRecipient(normalizedFormValues, recipient)) {
+        updateRecipient(normalizedFormValues);
       }
     }, [formValues, recipient, updateRecipient]);
 

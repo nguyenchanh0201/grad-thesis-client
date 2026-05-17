@@ -234,9 +234,22 @@ export const useBookingStore = create<BookingState>()(
 
       // Step 2
       updateRecipient: (fields) =>
-        set((s) => ({ recipient: { ...s.recipient, ...fields } })),
+        set((s) => {
+          const nextRecipient = { ...s.recipient, ...fields };
+          const unchanged =
+            nextRecipient.fullName === s.recipient.fullName &&
+            nextRecipient.email === s.recipient.email &&
+            nextRecipient.phoneCountryCode === s.recipient.phoneCountryCode &&
+            nextRecipient.phoneNumber === s.recipient.phoneNumber &&
+            nextRecipient.idPassport === s.recipient.idPassport;
 
-      setDeliveryMethod: (method) => set({ deliveryMethod: method }),
+          return unchanged ? s : { recipient: nextRecipient };
+        }),
+
+      setDeliveryMethod: (method) =>
+        set((s) =>
+          s.deliveryMethod === method ? s : { deliveryMethod: method },
+        ),
 
       // Step 3
       setPaymentMethodId: (id) => set({ paymentMethodId: id }),

@@ -1,14 +1,11 @@
 "use client";
 
+import { useEffect } from "react";
 import { CheckCircle2, Mail, Ticket } from "lucide-react";
 import { useBookingStore } from "@/lib/store/booking";
 
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { cn } from "@/lib/utils";
 import { DeliveryMethod } from "@/schemas/booking";
 
 const DELIVERY_OPTIONS: {
@@ -24,16 +21,19 @@ const DELIVERY_OPTIONS: {
   },
 ];
 
+const DEFAULT_DELIVERY_METHOD = DELIVERY_OPTIONS[0].id;
+
 export function TicketDeliveryMethod() {
   const { deliveryMethod, setDeliveryMethod } = useBookingStore();
-  const allowedMethods = new Set<DeliveryMethod>(
-    DELIVERY_OPTIONS.map((option) => option.id),
-  );
+  const selectedOption =
+    DELIVERY_OPTIONS.find((option) => option.id === deliveryMethod) ??
+    DELIVERY_OPTIONS[0];
 
-  const handleChange = (value: string) => {
-    if (!allowedMethods.has(value as DeliveryMethod)) return;
-    setDeliveryMethod(value as DeliveryMethod);
-  };
+  useEffect(() => {
+    if (deliveryMethod !== DEFAULT_DELIVERY_METHOD) {
+      setDeliveryMethod(DEFAULT_DELIVERY_METHOD);
+    }
+  }, [deliveryMethod, setDeliveryMethod]);
 
   return (
     <div className="space-y-3">
@@ -43,56 +43,35 @@ export function TicketDeliveryMethod() {
         </h3>
       </div>
 
-      <RadioGroup
-        value={deliveryMethod}
-        onValueChange={handleChange}
-        className="space-y-2"
+      <Card
+        aria-selected="true"
+        className="w-full border-primary bg-primary/5 ring-1 ring-primary/30"
       >
-        {DELIVERY_OPTIONS.map((option) => {
-          const selected = deliveryMethod === option.id;
-
-          return (
-            <Label key={option.id} className="cursor-pointer">
-              <Card
-                className={cn(
-                  "w-full transition-colors",
-                  selected
-                    ? "border-primary bg-primary/5 ring-1 ring-primary/30"
-                    : "hover:bg-muted/40",
-                )}
-              >
-                <CardHeader className="pb-2">
-                  <div className="flex items-start gap-3">
-                    <RadioGroupItem value={option.id} className="mt-0.5" />
-                    <div className="flex-1">
-                      <CardTitle className="text-sm font-semibold text-foreground">
-                        {option.title}
-                      </CardTitle>
-                    </div>
-                    {selected ? (
-                      <CheckCircle2 className="size-4 text-success" />
-                    ) : null}
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-2 pt-0">
-                  <div className="flex items-start gap-2 text-xs text-muted-foreground">
-                    <Mail className="mt-0.5 size-4" />
-                    <p>{option.description}</p>
-                  </div>
-                  <Separator />
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Ticket className="size-4" />
-                    <p>
-                      Current backend supports this delivery method for Step 2
-                      recipient update.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </Label>
-          );
-        })}
-      </RadioGroup>
+        <CardHeader className="pb-2">
+          <div className="flex items-start gap-3">
+            <CheckCircle2 className="mt-0.5 size-4 text-success" />
+            <div className="flex-1">
+              <CardTitle className="text-sm font-semibold text-foreground">
+                {selectedOption.title}
+              </CardTitle>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-2 pt-0">
+          <div className="flex items-start gap-2 text-xs text-muted-foreground">
+            <Mail className="mt-0.5 size-4" />
+            <p>{selectedOption.description}</p>
+          </div>
+          <Separator />
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Ticket className="size-4" />
+            <p>
+              Current backend supports this delivery method for Step 2 recipient
+              update.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

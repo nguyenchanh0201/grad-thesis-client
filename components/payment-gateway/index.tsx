@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState, useId } from "react";
-import { useRouter } from "next/navigation";
 import { useBookingStore } from "@/lib/store/booking";
+import { clearBuySession } from "@/lib/booking/buy-session";
+import { useBuyProcessSession } from "@/hooks/use-buy-process-session";
+import { createVNPayUrl } from "@/services/payment.service";
 import {
-  hasBuySession,
-  getBuySessionDeadline,
-} from "@/lib/booking/buy-session";
+  isReservationUnavailableError,
+  useReservation,
+} from "@/hooks/use-booking";
+import { TimeoutModal } from "@/components/ticket-selection/timeout-modal";
 import type { GatewayLineItem } from "@/schemas/payment-gateway";
 import type { SelectedTicket } from "@/schemas/seat/types";
 import type { SelectedSeat } from "@/components/ticket-selection/seat-map";
@@ -59,18 +62,22 @@ const SESSION_TIMESTAMP = new Date()
 type Props = { slug: string };
 
 export function PaymentGateway({ slug }: Props) {
-  const router = useRouter();
-  const { tickets, selectedSeats, ticketTypes, mapType, discountCode } =
-    useBookingStore();
-
-  const [authorized] = useState(() => hasBuySession(slug));
-  const [deadline] = useState<Date | null>(() => getBuySessionDeadline(slug));
-
-  useEffect(() => {
-    if (!hasBuySession(slug)) {
-      router.replace(`/events/${slug}`);
-    }
-  }, [slug, router]);
+  const {
+    reservationId,
+    waitRoomToken,
+    tickets,
+    selectedSeats,
+    ticketTypes,
+    mapType,
+    discountCode,
+  } = useBookingStore();
+  const { timedOut, syncToExpiry, exitPurchaseFlow } =
+    useBuyProcessSession(slug);
+  const {
+    data: reservationResult,
+    error: reservationError,
+    isLoading: isReservationLoading,
+  } = useReservation(reservationId ?? undefined);
 
   const uid = useId();
   const invoiceId = `INV-${SESSION_TIMESTAMP}-${uid.replace(/:/g, "")}`;
@@ -85,23 +92,59 @@ export function PaymentGateway({ slug }: Props) {
   const total = Math.max(0, subtotal - discountAmount);
 
   const [isPaying, setIsPaying] = useState(false);
+  const reservationExpiresAt = reservationResult?.data?.expiresAt;
+  const deadline = useMemo(
+    () => (reservationExpiresAt ? new Date(reservationExpiresAt) : null),
+    [reservationExpiresAt],
+  );
+
+  useEffect(() => {
+    if (reservationId) return;
+    clearBuySession(slug);
+    exitPurchaseFlow();
+  }, [exitPurchaseFlow, reservationId, slug]);
+
+  useEffect(() => {
+    if (!reservationError) return;
+    if (isReservationUnavailableError(reservationError)) {
+      syncToExpiry(new Date(0).toISOString());
+    }
+  }, [reservationError, syncToExpiry]);
+
+  useEffect(() => {
+    if (!reservationExpiresAt) return;
+    syncToExpiry(reservationExpiresAt);
+  }, [reservationExpiresAt, syncToExpiry]);
 
   const handlePay = async () => {
+    if (!reservationId) return;
+    const eventId = reservationResult?.data?.eventId;
+    if (!eventId) return;
+
     setIsPaying(true);
     try {
-      const res = await fetch("/api/payment/vnpay/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ invoiceId, amount: total, slug }),
+      const response = await createVNPayUrl({
+        reservationId,
+        eventId,
+        waitRoomToken: waitRoomToken ?? undefined,
       });
-      const { paymentUrl } = await res.json();
-      window.location.href = paymentUrl;
+      window.location.href = response.paymentUrl;
     } catch {
       setIsPaying(false);
     }
   };
 
-  if (!authorized || !deadline) return null;
+  if (!reservationId || !deadline || isReservationLoading) {
+    return (
+      <TimeoutModal
+        open={timedOut}
+        onOk={() => {
+          clearBuySession(slug);
+          exitPurchaseFlow();
+        }}
+      />
+    );
+  }
 
   return (
     <div className="flex min-h-[calc(100vh-var(--header-height))] flex-col">
@@ -133,6 +176,13 @@ export function PaymentGateway({ slug }: Props) {
         </div>
       </div>
       <GatewayFooter />
+      <TimeoutModal
+        open={timedOut}
+        onOk={() => {
+          clearBuySession(slug);
+          exitPurchaseFlow();
+        }}
+      />
     </div>
   );
 }

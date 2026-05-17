@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { clearBuySession, hasBuySession } from "@/lib/booking/buy-session";
+import { isAppError } from "@/core/error";
 import { useBookingStore } from "@/lib/store/booking";
 import { useEventBySlug } from "@/hooks/use-events";
 import {
@@ -11,19 +12,16 @@ import {
   useCreateSeatedReservation,
 } from "@/hooks/use-booking";
 import { EventBanner } from "./event-banner";
-import { ProgressSteps } from "./progress-steps";
 import { TicketPanel } from "./ticket-panel";
-import { TimeoutModal } from "./timeout-modal";
 import { SeatMap } from "./seat-map";
-import { AlertDialog } from "@/components/ui/alert-dialog";
-import { useTicketTimer } from "../../hooks/use-ticket-timer";
-import { useBuySessionSync } from "@/hooks/use-buy-session-sync";
+import { useBuyProcess } from "@/components/buy-process/buy-process-shell";
 import type { SelectedSeat } from "./seat-map";
 import { fmtIsoDate } from "@/lib/date";
 import { getEventSeatsByEventCode } from "@/services/event.service";
 import { SectionAvailability } from "@/schemas/seat";
 import { SeatMapCanvasSchema } from "@/schemas/seat-map";
 import type { TicketType } from "@/schemas/ticket-type";
+import { toast } from "sonner";
 
 const MAX_SEATS = 8;
 const EMPTY_TICKET_TYPES: TicketType[] = [];
@@ -33,13 +31,7 @@ type Props = { slug: string };
 
 export function TicketSelection({ slug }: Props) {
   const router = useRouter();
-  const {
-    formatted,
-    timeRemaining,
-    timedOut,
-    reset: timerReset,
-    syncToExpiry,
-  } = useTicketTimer(slug);
+  const { syncToExpiry, exitPurchaseFlow } = useBuyProcess();
   const {
     tickets,
     selectedSeats,
@@ -57,7 +49,6 @@ export function TicketSelection({ slug }: Props) {
     removeSeat,
     clearSeats,
     hydrateFromReservation,
-    reset: storeReset,
   } = useBookingStore();
 
   // Hard gate: never render ticket UI until booking store hydration + auth check complete.
@@ -66,18 +57,9 @@ export function TicketSelection({ slug }: Props) {
   );
   const [authorized, setAuthorized] = useState<boolean | null>(null);
   const [isCreating, setIsCreating] = useState(false);
-  const [isLeaveDialogOpen, setIsLeaveDialogOpen] = useState(false);
 
   const gaReservationMutation = useCreateGAReservation();
   const seatedReservationMutation = useCreateSeatedReservation();
-
-  const handleSessionCleared = useCallback(() => {
-    timerReset();
-    storeReset();
-    router.replace(`/events/${slug}`);
-  }, [router, slug, storeReset, timerReset]);
-
-  useBuySessionSync(slug, handleSessionCleared);
 
   useEffect(() => {
     const unsubscribe = useBookingStore.persist.onFinishHydration(() => {
@@ -91,18 +73,18 @@ export function TicketSelection({ slug }: Props) {
 
     if (!hasBuySession(slug)) {
       setAuthorized(false);
-      router.replace(`/events/${slug}`);
+      exitPurchaseFlow();
       return;
     }
 
     if (waitRoomSlug && waitRoomSlug !== slug) {
       setAuthorized(false);
-      router.replace(`/events/${slug}`);
+      exitPurchaseFlow();
       return;
     }
 
     setAuthorized(true);
-  }, [isStoreHydrated, slug, router, waitRoomSlug]);
+  }, [exitPurchaseFlow, isStoreHydrated, slug, waitRoomSlug]);
 
   const { data: eventResult } = useEventBySlug(slug);
   const event = eventResult?.data;
@@ -132,7 +114,6 @@ export function TicketSelection({ slug }: Props) {
   const availability: SectionAvailability[] =
     seatsResult?.data ?? EMPTY_AVAILABILITY;
 
-  const isWarning = timeRemaining <= 60;
   const maxPerZone = event?.maxTicketsPerOrder ?? MAX_SEATS;
 
   useEffect(() => {
@@ -229,9 +210,18 @@ export function TicketSelection({ slug }: Props) {
     try {
       let result;
       if (isSeated && canvas) {
+        const validSeatIndices = selectedSeats
+          .map((seat) => seat.seatIndex)
+          .filter((seatIndex) => Number.isInteger(seatIndex) && seatIndex >= 0);
+
+        if (validSeatIndices.length === 0) {
+          toast.error("Please select at least one valid seat.");
+          return;
+        }
+
         result = await seatedReservationMutation.mutateAsync({
           eventSlug: slug,
-          seatIndices: selectedSeats.map((s) => s.seatIndex),
+          seatIndices: validSeatIndices,
           waitRoomToken: waitRoomToken ?? undefined,
         });
       } else {
@@ -251,31 +241,24 @@ export function TicketSelection({ slug }: Props) {
         syncToExpiry(result.data.expiresAt);
       }
       router.replace(`/buy/${slug}/info`);
-    } catch {
-      clearBuySession(slug);
-      storeReset();
-      router.replace(`/events/${slug}`);
+    } catch (error) {
+      if (isAppError(error) && [401, 403].includes(error.status)) {
+        clearBuySession(slug);
+        exitPurchaseFlow();
+        return;
+      }
+
+      if (isAppError(error) && error.status === 409) {
+        toast.error(
+          "Selected tickets/seats are no longer available. Please try again.",
+        );
+        return;
+      }
+
+      toast.error("Could not continue to the next step. Please try again.");
     } finally {
       setIsCreating(false);
     }
-  };
-
-  const handleTimeoutOk = () => {
-    clearBuySession(slug);
-    timerReset();
-    storeReset();
-    router.replace(`/events/${slug}`);
-  };
-
-  const handleBack = () => {
-    setIsLeaveDialogOpen(true);
-  };
-
-  const handleConfirmLeave = () => {
-    setIsLeaveDialogOpen(false);
-    clearBuySession(slug);
-    storeReset();
-    router.replace(`/events/${slug}`);
   };
 
   if (!isStoreHydrated || authorized !== true) return null;
@@ -295,14 +278,7 @@ export function TicketSelection({ slug }: Props) {
     event?.eventImageUrls?.[0];
 
   return (
-    <div className="flex min-h-[calc(100vh-var(--header-height))] flex-col">
-      <ProgressSteps
-        currentStep={1}
-        formatted={formatted}
-        isWarning={isWarning}
-        backHref="/events"
-        onBack={handleBack}
-      />
+    <div className="flex flex-1 flex-col">
       <EventBanner
         eventTitle={eventTitle}
         eventDate={eventDateStr}
@@ -347,18 +323,6 @@ export function TicketSelection({ slug }: Props) {
           />
         </div>
       </div>
-
-      <TimeoutModal open={timedOut} onOk={handleTimeoutOk} />
-      <AlertDialog
-        open={isLeaveDialogOpen}
-        onOpenChange={setIsLeaveDialogOpen}
-        title="Leave ticket selection?"
-        description="If you leave now, your booking session will be cleared and you may need to rejoin the queue."
-        confirmLabel="Leave"
-        cancelLabel="Stay"
-        confirmVariant="destructive"
-        onConfirm={handleConfirmLeave}
-      />
     </div>
   );
 }
