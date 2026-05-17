@@ -1,5 +1,6 @@
 "use client";
 
+import { Clock3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BackButton } from "../shared/back-button";
 
@@ -12,7 +13,7 @@ const STEPS = [
 type Props = {
   currentStep?: number;
   formatted: string;
-  isWarning: boolean;
+  isWarning?: boolean;
   backHref?: string;
   onBack?: () => void;
 };
@@ -20,7 +21,7 @@ type Props = {
 export function ProgressSteps({
   currentStep = 1,
   formatted,
-  isWarning,
+  isWarning = false,
   backHref,
   onBack,
 }: Props) {
@@ -71,8 +72,10 @@ export function ProgressSteps({
 
       <div
         className={cn(
-          "font-mono text-base font-bold tabular-nums",
-          isWarning ? "text-destructive" : "text-foreground",
+          "flex items-center justify-end gap-1.5 rounded-full border px-2.5 py-1 text-md font-semibold tabular-nums transition-colors",
+          "border-border bg-card text-foreground",
+          isWarning &&
+            "border-destructive/40 bg-destructive/10 text-destructive",
         )}
         aria-label={`Time remaining: ${formatted}`}
         aria-live="polite"

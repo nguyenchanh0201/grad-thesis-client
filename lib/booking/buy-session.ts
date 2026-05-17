@@ -1,24 +1,16 @@
-const COOKIE_MAX_AGE = 660; // 11 min in seconds
+import { useBuySessionTimerStore } from "@/lib/store/buy-session-timer.store";
+
 export const BUY_SESSION_CLEARED_EVENT = "buy-session-cleared";
 
 function cookieName(slug: string) {
   return `buy_session_${slug.replace(/[^a-z0-9-]/gi, "_")}`;
 }
 
-function safeSlug(slug: string) {
-  return slug.replace(/[^a-z0-9-]/gi, "_");
-}
-
-function timerStorageKey(slug: string) {
-  return `buy_timer_expiry_${safeSlug(slug)}`;
-}
-
 function clearBuySessionStorage(slug: string) {
   const name = cookieName(slug);
   document.cookie = `${name}=; path=/; max-age=0; SameSite=Strict`;
   localStorage.removeItem(name);
-  localStorage.removeItem(timerStorageKey(slug));
-  localStorage.removeItem("buy_timer_expiry");
+  useBuySessionTimerStore.getState().clear(slug);
 }
 
 export function buySessionStorageKey(slug: string) {
@@ -26,17 +18,30 @@ export function buySessionStorageKey(slug: string) {
 }
 
 /** Called by the queue page when the user is admitted. */
-export function setBuySession(slug: string) {
+export function setBuySession(
+  slug: string,
+  sessionExpiresAt?: string,
+): boolean {
   const name = cookieName(slug);
-  const startedAt = Date.now();
-  localStorage.removeItem(timerStorageKey(slug));
-  localStorage.removeItem("buy_timer_expiry");
-  document.cookie = `${name}=1; path=/; max-age=${COOKIE_MAX_AGE}; SameSite=Strict`;
-  localStorage.setItem(name, String(startedAt));
-  localStorage.setItem(
-    timerStorageKey(slug),
-    String(startedAt + COOKIE_MAX_AGE * 1000),
-  );
+  const expiresAtMs = sessionExpiresAt
+    ? new Date(sessionExpiresAt).getTime()
+    : NaN;
+  const remainingSeconds = Number.isFinite(expiresAtMs)
+    ? Math.ceil((expiresAtMs - Date.now()) / 1000)
+    : 0;
+
+  useBuySessionTimerStore.getState().clear(slug);
+
+  if (remainingSeconds <= 0) {
+    clearBuySessionStorage(slug);
+    return false;
+  }
+
+  document.cookie = `${name}=1; path=/; max-age=${remainingSeconds}; SameSite=Strict`;
+  localStorage.setItem(name, String(expiresAtMs));
+  useBuySessionTimerStore.getState().setExpiryMs(slug, expiresAtMs);
+
+  return true;
 }
 
 /** Called on timeout or explicit cancellation. */
@@ -52,23 +57,25 @@ export function getBuySessionDeadline(slug: string): Date | null {
     const name = cookieName(slug);
     const raw = localStorage.getItem(name);
     if (!raw) return null;
-    return new Date(parseInt(raw, 10) + COOKIE_MAX_AGE * 1000);
+    const expiryMs = parseInt(raw, 10);
+    if (!Number.isFinite(expiryMs)) return null;
+    return new Date(expiryMs);
   } catch {
     return null;
   }
 }
 
 /**
- * Synchronous check — safe to call during render (useState lazy initializer).
- * Returns false and cleans up if the session is older than COOKIE_MAX_AGE.
+ * Synchronous check - safe to call during render (useState lazy initializer).
+ * Returns false and cleans up when session deadline is missing or expired.
  */
 export function hasBuySession(slug: string): boolean {
   try {
     const name = cookieName(slug);
     const raw = localStorage.getItem(name);
     if (!raw) return false;
-    const elapsedSeconds = (Date.now() - parseInt(raw, 10)) / 1000;
-    if (elapsedSeconds > COOKIE_MAX_AGE) {
+    const expiryMs = parseInt(raw, 10);
+    if (!Number.isFinite(expiryMs) || expiryMs <= Date.now()) {
       clearBuySessionStorage(slug);
       return false;
     }

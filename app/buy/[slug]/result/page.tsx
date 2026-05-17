@@ -9,17 +9,12 @@ export default async function ResultPage({ params, searchParams }: Props) {
   const { slug } = await params;
   const sp = await searchParams;
 
-  const isMock = "mock" in sp;
-  const isSuccess = isMock
-    ? sp.mock === "success"
-    : sp.vnp_ResponseCode === "00";
+  const isSuccess = sp.vnp_ResponseCode === "00";
 
-  const invoiceId = sp.vnp_TxnRef ?? sp.invoiceId ?? "";
+  const invoiceId = sp.vnp_TxnRef ?? "";
   const amount = sp.vnp_Amount
-    ? Math.round(parseInt(sp.vnp_Amount) / 100)
-    : sp.amount
-      ? parseInt(sp.amount)
-      : 0;
+    ? Math.round(parseInt(sp.vnp_Amount, 10) / 100)
+    : 0;
   const transactionNo = sp.vnp_TransactionNo;
 
   return (

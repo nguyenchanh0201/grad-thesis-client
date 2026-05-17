@@ -7,7 +7,6 @@ import type {
   SeatMapElement,
   SectionElement,
   ZoneElement,
-  RowConfig,
 } from "@/schemas/seat-map";
 import type { SectionAvailability, SeatAvailability } from "@/schemas/seat";
 import { Button } from "@/components/ui/button";
@@ -601,9 +600,7 @@ function getSeatsForSection(
       .map((seat) => ({ ...seat, ticketTypeId: group.ticketTypeId })),
   );
 
-  return seats.length > 0
-    ? seats
-    : generateSeatsFromRowConfigs(section.rowConfigs ?? [], start);
+  return seats;
 }
 
 function getSectionSeatIndexRange(
@@ -637,26 +634,6 @@ function getSectionSeatCount(section: SectionElement) {
 
 function isSectionElement(element: SeatMapElement): element is SectionElement {
   return element.type === "section";
-}
-
-function generateSeatsFromRowConfigs(
-  rowConfigs: RowConfig[],
-  seatIndexOffset = 0,
-): SeatWithTicketType[] {
-  const seats: SeatWithTicketType[] = [];
-  let seatIndex = seatIndexOffset;
-  for (const row of rowConfigs) {
-    for (let i = 1; i <= row.seatCount; i++) {
-      seats.push({
-        seatIndex: seatIndex++,
-        seatRow: row.label,
-        seatNumber: i,
-        seatLabel: `${row.label}-${i}`,
-        status: "available",
-      });
-    }
-  }
-  return seats;
 }
 
 // Helpers

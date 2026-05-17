@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 
 import { CountdownBar } from "@/components/queue/countdown-bar";
@@ -15,6 +15,7 @@ import { useQueuePolling } from "@/hooks/use-queue-polling";
 import { useAuthStore } from "@/lib/store/auth.store";
 import { useEventBySlug } from "@/hooks/use-events";
 import { hasBuySession, setBuySession } from "@/lib/booking/buy-session";
+import { sendHeartbeat } from "@/services/queue.service";
 import {
   clearQueueIntent,
   hasQueueIntent,
@@ -42,8 +43,10 @@ function QueuePageContent() {
 
   const {
     status: polledStatus,
+    token,
     position,
     queueSize,
+    sessionExpiresAt,
   } = useQueuePolling(isQueueIntentValid ? slug : null, userId);
 
   const hasRedirectedRef = useRef(false);
@@ -66,31 +69,45 @@ function QueuePageContent() {
     router.replace(`/buy/${slug}/tickets`);
   }, [hasEntryIntent, isQueueIntentValid, router, slug]);
 
+  const resolveSessionExpiry = useCallback(async (): Promise<string | null> => {
+    if (sessionExpiresAt) return sessionExpiresAt;
+    if (!slug || !token) return null;
+    try {
+      const heartbeat = await sendHeartbeat({ slug, token });
+      return heartbeat.sessionExpiresAt ?? null;
+    } catch {
+      return null;
+    }
+  }, [sessionExpiresAt, slug, token]);
+
   useEffect(() => {
     if (polledStatus !== "ready" || hasRedirectedRef.current) return;
 
     let remaining = REDIRECT_COUNTDOWN_SECONDS;
 
-    const timer = setInterval(() => {
+    const timer = setInterval(async () => {
+      if (hasRedirectedRef.current) return;
       remaining -= 1;
       if (remaining <= 0) {
         hasRedirectedRef.current = true;
         clearQueueIntent(slug);
-        setBuySession(slug);
-        router.replace(`/buy/${slug}/tickets`);
+        const resolvedExpiry = await resolveSessionExpiry();
+        const hasSession = setBuySession(slug, resolvedExpiry ?? undefined);
+        router.replace(hasSession ? `/buy/${slug}/tickets` : `/events/${slug}`);
         return;
       }
       setRedirectCountdown(remaining);
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [polledStatus, router, slug]);
+  }, [polledStatus, resolveSessionExpiry, router, slug]);
 
-  const handleRedirect = () => {
+  const handleRedirect = async () => {
     hasRedirectedRef.current = true;
     clearQueueIntent(slug);
-    setBuySession(slug);
-    router.replace(`/buy/${slug}/tickets`);
+    const resolvedExpiry = await resolveSessionExpiry();
+    const hasSession = setBuySession(slug, resolvedExpiry ?? undefined);
+    router.replace(hasSession ? `/buy/${slug}/tickets` : `/events/${slug}`);
   };
 
   const handleRejoin = () => {

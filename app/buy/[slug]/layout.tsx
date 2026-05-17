@@ -1,4 +1,5 @@
 import { Header } from "@/components/homepage/header";
+import { BuyProcessShell } from "@/components/buy-process/buy-process-shell";
 
 export default function BookingLayout({
   children,
@@ -8,7 +9,7 @@ export default function BookingLayout({
   return (
     <>
       <Header hideSearchBar />
-      {children}
+      <BuyProcessShell>{children}</BuyProcessShell>
     </>
   );
 }
