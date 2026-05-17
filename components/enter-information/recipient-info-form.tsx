@@ -15,6 +15,35 @@ export type RecipientFormHandle = {
   triggerValidation: () => Promise<boolean>;
 };
 
+const RECIPIENT_FIELD_KEYS: (keyof RecipientInfo)[] = [
+  "fullName",
+  "email",
+  "phoneCountryCode",
+  "phoneNumber",
+  "idPassport",
+];
+
+function normalizeRecipient(
+  input: Partial<RecipientInfo> | RecipientInfo,
+): RecipientInfo {
+  return {
+    fullName: input.fullName ?? "",
+    email: input.email ?? "",
+    phoneCountryCode: input.phoneCountryCode ?? "+84",
+    phoneNumber: input.phoneNumber ?? "",
+    idPassport: input.idPassport ?? "",
+  };
+}
+
+function isSameRecipient(
+  left: Partial<RecipientInfo> | RecipientInfo,
+  right: Partial<RecipientInfo> | RecipientInfo,
+) {
+  const a = normalizeRecipient(left);
+  const b = normalizeRecipient(right);
+  return RECIPIENT_FIELD_KEYS.every((field) => a[field] === b[field]);
+}
+
 export const RecipientInfoForm = forwardRef<RecipientFormHandle, object>(
   function RecipientInfoForm(_, ref) {
     const { recipient, updateRecipient } = useBookingStore();
@@ -23,6 +52,8 @@ export const RecipientInfoForm = forwardRef<RecipientFormHandle, object>(
     const {
       register,
       control,
+      getValues,
+      reset,
       trigger,
       formState: { errors },
     } = useForm<RecipientInfo>({
@@ -31,10 +62,19 @@ export const RecipientInfoForm = forwardRef<RecipientFormHandle, object>(
     });
 
     const formValues = useWatch({ control });
+    useEffect(() => {
+      const currentValues = getValues();
+      if (!isSameRecipient(currentValues, recipient)) {
+        reset(recipient);
+      }
+    }, [getValues, recipient, reset]);
 
     useEffect(() => {
-      updateRecipient(formValues as Partial<RecipientInfo>);
-    }, [formValues, updateRecipient]);
+      if (!formValues) return;
+      if (!isSameRecipient(formValues as Partial<RecipientInfo>, recipient)) {
+        updateRecipient(formValues as Partial<RecipientInfo>);
+      }
+    }, [formValues, recipient, updateRecipient]);
 
     useImperativeHandle(ref, () => ({
       triggerValidation: () => trigger(),
@@ -135,7 +175,7 @@ export const RecipientInfoForm = forwardRef<RecipientFormHandle, object>(
         </div>
 
         {/* Legal Notice */}
-        <div className="max-h-28 overflow-y-auto rounded-sm bg-muted/60 p-3 text-xs leading-relaxed text-muted-foreground">
+        <div className="rounded-sm bg-muted/60 p-3 text-xs leading-relaxed text-muted-foreground">
           <p className="mb-1 font-medium">Lưu ý pháp lý / Legal Notice</p>
           <p>
             Theo Nghị định số 137/2020/NĐ-CP và các quy định hiện hành về tổ

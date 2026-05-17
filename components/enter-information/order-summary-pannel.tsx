@@ -1,7 +1,15 @@
 "use client";
 
 import Image from "next/image";
-import { Calendar, MapPin } from "lucide-react";
+import {
+  Calendar,
+  IdCard,
+  Mail,
+  MapPin,
+  Phone,
+  TicketCheck,
+  User,
+} from "lucide-react";
 import { CollapsibleSection } from "./collapsible-section";
 import { fmt } from "@/lib/strings/money";
 import type { SelectedTicket } from "@/schemas/seat/types";
@@ -10,6 +18,10 @@ import type { RecipientInfo, EventSummary } from "../../schemas/booking/types";
 import { MapType } from "@/schemas/seat";
 import { OrderInfo } from "./order-info";
 import type { TicketType } from "@/schemas/ticket-type";
+import type { ReservationItem } from "@/schemas/reservation";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 
 type Props = {
   event: EventSummary;
@@ -18,6 +30,9 @@ type Props = {
   selectedSeats: SelectedSeat[];
   mapType: MapType;
   recipient: RecipientInfo;
+  reservationItems?: ReservationItem[];
+  reservationTotalAmount?: number;
+  reservationCurrency?: string;
   discount?: { code: string; amount: number } | null;
 };
 
@@ -64,6 +79,51 @@ function computeTotal(rows: SeatRow[]): number {
   return rows.reduce((sum, r) => sum + r.unitPrice * r.quantity, 0);
 }
 
+function buildReservationRows(items: ReservationItem[] = []): SeatRow[] {
+  const rowsByTicketType = new Map<string, SeatRow>();
+
+  items.forEach((item) => {
+    const key = `${item.ticketTypeId}:${item.unitPrice}`;
+    const existing = rowsByTicketType.get(key);
+
+    if (existing) {
+      existing.quantity += item.quantity;
+      return;
+    }
+
+    rowsByTicketType.set(key, {
+      label: item.ticketTypeName,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      currency: "VND",
+    });
+  });
+
+  return Array.from(rowsByTicketType.values());
+}
+
+function DetailRow({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof User;
+  label: string;
+  value?: string;
+}) {
+  return (
+    <div className="grid grid-cols-[1rem_5rem_1fr] items-start gap-2 text-sm">
+      <Icon className="mt-0.5 size-4 text-muted-foreground" />
+      <span className="text-muted-foreground">{label}</span>
+      {value ? (
+        <span className="break-words font-medium text-foreground">{value}</span>
+      ) : (
+        <span className="italic text-muted-foreground/70">Not filled</span>
+      )}
+    </div>
+  );
+}
+
 export function OrderSummaryPanel({
   event,
   ticketTypes,
@@ -71,10 +131,18 @@ export function OrderSummaryPanel({
   selectedSeats,
   mapType,
   recipient,
+  reservationItems,
+  reservationTotalAmount,
+  reservationCurrency,
   discount,
 }: Props) {
-  const seatRows = buildSeatRows(tickets, selectedSeats, ticketTypes, mapType);
-  const subtotal = computeTotal(seatRows);
+  const reservationRows = buildReservationRows(reservationItems);
+  const seatRows =
+    reservationRows.length > 0
+      ? reservationRows
+      : buildSeatRows(tickets, selectedSeats, ticketTypes, mapType);
+  const currency = reservationCurrency ?? seatRows[0]?.currency ?? "VND";
+  const subtotal = reservationTotalAmount ?? computeTotal(seatRows);
   const total = discount?.amount
     ? Math.max(0, subtotal - discount.amount)
     : subtotal;
@@ -107,54 +175,56 @@ export function OrderSummaryPanel({
       {/* Ticket Delivery Info */}
       <CollapsibleSection title="Ticket Delivery Info">
         <div className="space-y-3 text-sm">
-          <div className="space-y-1 rounded-sm bg-muted/50 p-3">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Customer Information
-            </p>
-            <p>
-              <span className="text-muted-foreground">Name: </span>
-              {recipient.fullName ? (
-                <span className="text-foreground">{recipient.fullName}</span>
-              ) : (
-                <span className="italic text-muted-foreground/60">
-                  Not filled
-                </span>
-              )}
-            </p>
-            <p>
-              <span className="text-muted-foreground">Email: </span>
-              {recipient.email ? (
-                <span className="text-foreground">{recipient.email}</span>
-              ) : (
-                <span className="italic text-muted-foreground/60">
-                  Not filled
-                </span>
-              )}
-            </p>
-            {recipient.phoneNumber && (
-              <p>
-                <span className="text-muted-foreground">Phone: </span>
-                <span className="text-foreground">
-                  {recipient.phoneCountryCode} {recipient.phoneNumber}
-                </span>
-              </p>
-            )}
-            {recipient.idPassport && (
-              <p>
-                <span className="text-muted-foreground">ID / Passport: </span>
-                <span className="text-foreground">{recipient.idPassport}</span>
-              </p>
-            )}
-          </div>
-          <div className="space-y-1">
-            <p className="font-medium text-foreground">
-              Receive online tickets via email and/or physical tickets at event
-            </p>
-            <p className="text-xs text-muted-foreground">
-              E-tickets will be sent to your email. Physical tickets (if
-              applicable) may be collected at the venue on event day.
-            </p>
-          </div>
+          <Card size="sm" className="gap-3 bg-muted/35">
+            <CardHeader className="grid-cols-[1fr_auto] items-center">
+              <CardTitle className="flex items-center gap-2">
+                <TicketCheck className="size-4 text-primary" />
+                Receipt information
+              </CardTitle>
+              <Badge
+                variant={
+                  recipient.fullName && recipient.email ? "success" : "outline"
+                }
+              >
+                {recipient.fullName && recipient.email ? "Ready" : "Missing"}
+              </Badge>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="space-y-2">
+                <DetailRow
+                  icon={User}
+                  label="Name"
+                  value={recipient.fullName}
+                />
+                <DetailRow icon={Mail} label="Email" value={recipient.email} />
+                <DetailRow
+                  icon={Phone}
+                  label="Phone"
+                  value={
+                    recipient.phoneNumber
+                      ? `${recipient.phoneCountryCode} ${recipient.phoneNumber}`
+                      : undefined
+                  }
+                />
+                <DetailRow
+                  icon={IdCard}
+                  label="ID"
+                  value={recipient.idPassport}
+                />
+              </div>
+              <Separator />
+              <div className="space-y-1">
+                <p className="font-medium text-foreground">
+                  Receive online tickets via email and/or physical tickets at
+                  event
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  E-tickets will be sent to your email. Physical tickets (if
+                  applicable) may be collected at the venue on event day.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </CollapsibleSection>
 
@@ -187,7 +257,7 @@ export function OrderSummaryPanel({
         title="Payment Information"
         rightSlot={
           <span className="text-sm font-bold text-primary">
-            {fmt(total)} VND
+            {fmt(total)} {currency}
           </span>
         }
       >
@@ -195,18 +265,22 @@ export function OrderSummaryPanel({
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">Subtotal</span>
             <span className="font-medium text-foreground">
-              {fmt(subtotal)} VND
+              {fmt(subtotal)} {currency}
             </span>
           </div>
           {discount?.amount ? (
             <div className="flex items-center justify-between text-green-600">
               <span>Discount ({discount.code})</span>
-              <span className="font-medium">−{fmt(discount.amount)} VND</span>
+              <span className="font-medium">
+                −{fmt(discount.amount)} {currency}
+              </span>
             </div>
           ) : null}
           <div className="flex items-center justify-between border-t border-border pt-2 font-semibold">
             <span>Total</span>
-            <span className="text-primary">{fmt(total)} VND</span>
+            <span className="text-primary">
+              {fmt(total)} {currency}
+            </span>
           </div>
         </div>
       </CollapsibleSection>

@@ -2,12 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { clearBuySession, hasBuySession } from "@/lib/booking/buy-session";
 import { isValidEmail } from "@/lib/form/email";
 import { isAppError } from "@/core/error";
 import { useBookingStore } from "@/lib/store/booking";
 import { useEventBySlug } from "@/hooks/use-events";
 import { useReservation } from "@/hooks/use-booking";
+import { getIdentityMe } from "@/services/identity.service";
 import { updateReservationRecipient } from "@/services/reservation.service";
 import { fmtIsoDate, fmtIsoTime } from "@/lib/date/utils";
 import { EventBanner } from "@/components/ticket-selection/event-banner";
@@ -39,6 +41,7 @@ export function EnterInformation({ slug }: Props) {
     recipient,
     deliveryMethod,
     hydrateFromReservation,
+    updateRecipient,
     reset: storeReset,
   } = useBookingStore();
 
@@ -74,6 +77,13 @@ export function EnterInformation({ slug }: Props) {
     reservationId ?? undefined,
   );
 
+  const { data: identityResult } = useQuery({
+    queryKey: ["current-user"],
+    queryFn: getIdentityMe,
+    enabled: authorized,
+    retry: false,
+  });
+
   // Handle reservation errors: 404, 403 → redirect; 409 NOT_PENDING → clear + redirect
   useEffect(() => {
     if (!reservationError) return;
@@ -92,6 +102,39 @@ export function EnterInformation({ slug }: Props) {
     if (reservationResult?.data) hydrateFromReservation(reservationResult.data);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reservationResult?.data?.expiresAt]);
+
+  useEffect(() => {
+    if (reservationResult?.data?.recipient) return;
+
+    const user = identityResult?.data?.user;
+    if (!user) return;
+
+    const hasTypedRecipient =
+      !!recipient.fullName.trim() ||
+      !!recipient.email.trim() ||
+      !!recipient.phoneNumber.trim() ||
+      !!recipient.idPassport.trim();
+    if (hasTypedRecipient) return;
+
+    const phone = user.phone?.trim();
+    const phoneMatch = phone?.match(/^(\+\d{1,3})\s*(.*)$/);
+
+    updateRecipient({
+      fullName: user.fullName?.trim() || "",
+      email: user.email,
+      phoneCountryCode: phoneMatch?.[1] ?? recipient.phoneCountryCode,
+      phoneNumber: phoneMatch?.[2]?.trim() || phone || "",
+    });
+  }, [
+    identityResult?.data?.user,
+    recipient.email,
+    recipient.fullName,
+    recipient.idPassport,
+    recipient.phoneCountryCode,
+    recipient.phoneNumber,
+    reservationResult?.data?.recipient,
+    updateRecipient,
+  ]);
 
   const isWarning = timeRemaining <= 60;
   const formRef = useRef<RecipientFormHandle>(null);
@@ -182,6 +225,9 @@ export function EnterInformation({ slug }: Props) {
             selectedSeats={selectedSeats}
             mapType={mapType}
             recipient={recipient}
+            reservationItems={reservationResult?.data?.items}
+            reservationTotalAmount={reservationResult?.data?.totalAmount}
+            reservationCurrency={reservationResult?.data?.currency}
           />
         </div>
 
