@@ -76,9 +76,10 @@ export function TicketPanel({
       {/* Date row */}
       <div className="flex items-center justify-between border-b border-border px-5 py-3">
         <span className="text-sm font-medium text-foreground">{eventDate}</span>
-        <Button variant="ghost" size="sm" onClick={onChangeDate}>
+        {/* TODO: This is for multi dates */}
+        {/* <Button variant="ghost" size="sm" onClick={onChangeDate}>
           Change
-        </Button>
+        </Button> */}
       </div>
 
       {
@@ -142,29 +143,31 @@ export function TicketPanel({
                       role="group"
                       aria-label={`Quantity for ${tt.name}`}
                     >
-                      <button
+                      <Button
+                        variant="outline"
                         onClick={() => onDecrement?.(tt.id)}
                         disabled={qty === 0}
                         aria-label="Decrease quantity"
                         className={cn(
-                          "flex size-7 items-center justify-center rounded border transition",
+                          "flex items-center justify-center rounded border transition",
                           qty === 0
                             ? "cursor-not-allowed border-border text-muted-foreground opacity-40"
                             : "border-border hover:bg-muted",
                         )}
                       >
-                        <Minus className="size-3" />
-                      </button>
+                        <Minus className="size-4" />
+                      </Button>
                       <span className="w-5 text-center text-sm font-semibold tabular-nums">
                         {qty}
                       </span>
-                      <button
+                      <Button
+                        variant="outline"
                         onClick={() => onIncrement?.(tt.id)}
                         aria-label="Increase quantity"
-                        className="flex size-7 items-center justify-center rounded border border-border transition hover:bg-muted"
+                        className="flex items-center justify-center rounded border border-border transition hover:bg-muted"
                       >
-                        <Plus className="size-3" />
-                      </button>
+                        <Plus className="size-4" />
+                      </Button>
                     </div>
                   )}
                 </div>
