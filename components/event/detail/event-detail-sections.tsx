@@ -10,13 +10,16 @@ import { OrganizerSection } from "./organizer-section";
 import { PerformersSection } from "./performers-section";
 import { LocationSection } from "./location-section";
 import { useAuthStore } from "@/lib/store/auth.store";
+import { useRouter } from "next/navigation";
+import { setQueueIntent } from "@/lib/booking/queue-intent";
 
 interface Props {
   event: EventDetail;
-  onCTAClick?: () => void;
 }
 
-export function EventDetailSections({ event, onCTAClick }: Props) {
+export function EventDetailSections({ event }: Props) {
+  const router = useRouter();
+
   const tabs = useMemo(() => {
     const items: TabItem[] = [
       { id: "about", label: "About" },
@@ -34,6 +37,11 @@ export function EventDetailSections({ event, onCTAClick }: Props) {
   const user = useAuthStore((s) => s.user);
   const isInitialized = useAuthStore((s) => s.isInitialized);
   const isLoggedIn = !!user;
+
+  const handleBuy = () => {
+    setQueueIntent(event.slug);
+    router.push(`/buy/${event.slug}/queue?intent=1`);
+  };
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -67,7 +75,7 @@ export function EventDetailSections({ event, onCTAClick }: Props) {
           <p className="truncate text-sm font-semibold">{event.title}</p>
           <Button
             variant="default"
-            onClick={onCTAClick}
+            onClick={handleBuy}
             className="px-10 py-5 hidden shrink-0 md:flex"
           >
             {isInitialized && !isLoggedIn
