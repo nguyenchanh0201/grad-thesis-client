@@ -54,7 +54,7 @@ export default async function RootLayout({
       className={cn("font-sans", geist.variable)}
     >
       <body className={`${geist.variable} ${fontMono.variable} antialiased`}>
-        <NextTopLoader color="#f97316" showSpinner={false} height={3} />
+        <NextTopLoader color="var(--primary)" showSpinner={false} height={3} />
         <QueryProvider>
           <AuthProvider>
             <LanguageProvider initialLanguage={initialLanguage}>
