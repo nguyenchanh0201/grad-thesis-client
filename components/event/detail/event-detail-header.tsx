@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatPrice } from "@/lib/strings/money";
+import { formatDisplayPrice } from "@/lib/strings/money";
 import { fmtIsoDate, fmtIsoTime } from "@/lib/date";
 import { DEFAULT_CURRENCY } from "@/core/constants";
 import { EventStatus } from "@/schemas/event";
@@ -120,7 +120,7 @@ export function EventDetailHeader({
             >
               {event.images && event.images.length > 0 && (
                 <ImageCarousel
-                  className="h-full [&_[data-slot=carousel-content]]:h-full [&_[data-slot=carousel-content]>div]:h-full"
+                  className="h-full **:data-[slot=carousel-content]:h-full [&_[data-slot=carousel-content]>div]:h-full"
                   itemClassName="pl-0 h-full"
                 >
                   {event.images.map((img, i) => (
@@ -224,7 +224,7 @@ export function EventDetailHeader({
                     aria-label="Ticket price"
                     className="mt-0.5 text-sm text-white/60"
                   >
-                    {formatPrice(event.lowestPrice, DEFAULT_CURRENCY)}
+                    {formatDisplayPrice(event.lowestPrice, DEFAULT_CURRENCY)}
                   </p>
                 </div>
               </div>
