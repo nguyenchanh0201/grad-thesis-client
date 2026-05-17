@@ -3,19 +3,12 @@
 import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import Autoplay from "embla-carousel-autoplay";
-import { CalendarDays, ChevronLeft, ChevronRight, MapPin } from "lucide-react";
+import { CalendarDays, MapPin } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  type CarouselApi,
-} from "@/components/ui/carousel";
+import { buttonVariants } from "@/components/ui/button";
+import { ImageCarousel } from "@/components/shared/image-carousel";
 import { isSvgImageSource } from "@/lib/image/is-svg-image-source";
-import { cn } from "@/lib/utils";
 import type { EventItem } from "@/components/event/event-card";
 
 const AUTOPLAY_DELAY = 5000;
@@ -25,66 +18,15 @@ interface HeroBannerProps {
 }
 
 export function HeroBanner({ items }: HeroBannerProps) {
-  const [api, setApi] = React.useState<CarouselApi>();
-  const [current, setCurrent] = React.useState(0);
-  const plugin = React.useRef(
-    Autoplay({ delay: AUTOPLAY_DELAY, stopOnInteraction: true }),
-  );
-
-  React.useEffect(() => {
-    if (!api) return;
-    setCurrent(api.selectedScrollSnap());
-    api.on("select", () => setCurrent(api.selectedScrollSnap()));
-  }, [api]);
-
   if (items.length === 0) return null;
 
   return (
     <section aria-label="Featured events" className="w-full">
-      <Carousel
-        setApi={setApi}
-        plugins={[plugin.current]}
-        opts={{ loop: true, align: "start" }}
-        className="w-full"
-      >
-        <CarouselContent className="ml-0">
-          {items.map((item) => (
-            <CarouselItem key={item.id} className="pl-0">
-              <Slide item={item} />
-            </CarouselItem>
-          ))}
-        </CarouselContent>
-
-        {/* Prev / Next */}
-        <NavButton
-          direction="prev"
-          onClick={() => api?.scrollPrev()}
-          aria-label="Previous slide"
-        />
-        <NavButton
-          direction="next"
-          onClick={() => api?.scrollNext()}
-          aria-label="Next slide"
-        />
-
-        {/* Dot indicators */}
-        <div className="absolute bottom-5 left-1/2 flex -translate-x-1/2 gap-2">
-          {items.map((_, i) => (
-            <button
-              type="button"
-              key={i}
-              onClick={() => api?.scrollTo(i)}
-              aria-label={`Go to slide ${i + 1}`}
-              className={cn(
-                "h-1.5 rounded-full transition-all duration-300 focus-visible:outline-2 focus-visible:outline-white cursor-pointer",
-                i === current
-                  ? "w-6 bg-white"
-                  : "w-1.5 bg-white/50 hover:bg-white/75",
-              )}
-            />
-          ))}
-        </div>
-      </Carousel>
+      <ImageCarousel autoplayDelay={AUTOPLAY_DELAY}>
+        {items.map((item) => (
+          <Slide key={item.id} item={item} />
+        ))}
+      </ImageCarousel>
     </section>
   );
 }
@@ -146,33 +88,5 @@ function Slide({ item }: { item: EventItem }) {
         </div>
       </div>
     </div>
-  );
-}
-
-function NavButton({
-  direction,
-  onClick,
-  ...props
-}: {
-  direction: "prev" | "next";
-  onClick: () => void;
-} & React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  const isPrev = direction === "prev";
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "absolute top-1/2 hidden -translate-y-1/2 items-center justify-center rounded-full cursor-pointer bg-black/40 p-2.5 text-white backdrop-blur-sm transition hover:bg-black/60 focus-visible:outline-2 focus-visible:outline-white md:flex",
-        isPrev ? "left-4 lg:left-6" : "right-4 lg:right-6",
-      )}
-      {...props}
-    >
-      {isPrev ? (
-        <ChevronLeft className="h-5 w-5" />
-      ) : (
-        <ChevronRight className="h-5 w-5" />
-      )}
-    </button>
   );
 }

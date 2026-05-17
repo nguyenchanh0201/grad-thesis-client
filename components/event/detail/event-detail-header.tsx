@@ -20,6 +20,7 @@ import { EventStatus } from "@/schemas/event";
 import type { EventDetail } from "@/schemas/event";
 import { useAuthStore } from "@/lib/store/auth.store";
 import { isSvgImageSource } from "@/lib/image/is-svg-image-source";
+import { ImageCarousel } from "@/components/shared/image-carousel";
 
 function eventBgColor(title: string): string {
   let h = 0;
@@ -81,7 +82,7 @@ export function EventDetailHeader({
     event.socialLinks?.website ||
     event.socialLinks?.instagram ||
     event.socialLinks?.twitter;
-  const image = event.featuredImage ?? event.images?.[0];
+  console.log(event.images);
 
   return (
     <section
@@ -112,21 +113,30 @@ export function EventDetailHeader({
             <div
               className="relative aspect-video overflow-hidden rounded-md md:aspect-auto md:flex-1 md:min-h-0"
               style={
-                !image
+                !event.images?.length
                   ? { backgroundColor: eventBgColor(event.title) }
                   : undefined
               }
             >
-              {image && (
-                <Image
-                  src={image}
-                  alt={`${event.title} - event poster`}
-                  fill
-                  sizes="(max-width: 768px) 100vw, 40vw"
-                  className="object-cover"
-                  priority
-                  unoptimized={isSvgImageSource(image)}
-                />
+              {event.images && event.images.length > 0 && (
+                <ImageCarousel
+                  className="h-full [&_[data-slot=carousel-content]]:h-full [&_[data-slot=carousel-content]>div]:h-full"
+                  itemClassName="pl-0 h-full"
+                >
+                  {event.images.map((img, i) => (
+                    <div key={i} className="relative h-full w-full">
+                      <Image
+                        src={img}
+                        alt={`${event.title} - poster ${i + 1}`}
+                        fill
+                        sizes="(max-width: 768px) 100vw, 40vw"
+                        className="object-cover"
+                        priority={i === 0}
+                        unoptimized={isSvgImageSource(img)}
+                      />
+                    </div>
+                  ))}
+                </ImageCarousel>
               )}
             </div>
             <Button
