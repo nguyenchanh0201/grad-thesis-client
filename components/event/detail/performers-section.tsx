@@ -1,3 +1,4 @@
+import Link from "next/link";
 import Image from "next/image";
 import type { Performer } from "@/schemas/event";
 import { EventSection } from "./event-section";
@@ -17,11 +18,12 @@ export function PerformersSection({ performers }: Props) {
     <EventSection id="performers" title="Guests & Performers">
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {performers.map((performer) => (
-          <div
+          <Link
+            href={`/performer/${performer.id}`}
             key={performer.id.toString()}
-            className="flex items-center gap-4"
+            className="group flex items-center gap-4 rounded-xl border border-transparent p-3 transition-colors hover:bg-muted/50 hover:border-border"
           >
-            <div className="relative size-16 shrink-0 overflow-hidden rounded-full bg-muted">
+            <div className="relative size-16 shrink-0 overflow-hidden rounded-full bg-muted ring-2 ring-transparent transition-all group-hover:ring-primary/20">
               <Image
                 src={performer.avatarUrl || PLACEHOLDER_IMG}
                 alt={performer.name}
@@ -30,9 +32,13 @@ export function PerformersSection({ performers }: Props) {
                 unoptimized={isSvgImageSource(performer.avatarUrl)}
               />
             </div>
-            <div>
-              <p className="font-semibold leading-tight">{performer.name}</p>
-              <p className="text-sm text-primary font-medium">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-2">
+                <p className="font-semibold leading-tight truncate transition-colors group-hover:text-primary">
+                  {performer.name}
+                </p>
+              </div>
+              <p className="text-sm text-primary font-medium truncate">
                 {performer.role}
               </p>
               {performer.bio && (
@@ -41,7 +47,7 @@ export function PerformersSection({ performers }: Props) {
                 </p>
               )}
             </div>
-          </div>
+          </Link>
         ))}
       </div>
     </EventSection>

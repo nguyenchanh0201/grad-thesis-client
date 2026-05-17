@@ -1,8 +1,10 @@
+import Link from "next/link";
 import Image from "next/image";
 import { Mail, Phone, Globe, Facebook, Instagram } from "lucide-react";
 import type { EventOrganizer } from "@/schemas/event";
 import { EventSection } from "./event-section";
 import { isSvgImageSource } from "@/lib/image/is-svg-image-source";
+import { formatPhoneNumber } from "@/lib/strings";
 
 interface Props {
   organizer: EventOrganizer;
@@ -51,8 +53,11 @@ export function OrganizerSection({ organizer }: Props) {
   return (
     <EventSection id="organizer" title="Organizer">
       <div className="rounded-xl border border-border p-5">
-        <div className="flex items-start gap-5">
-          <div className="relative size-20 shrink-0 overflow-hidden rounded-full ring-2 ring-primary/20">
+        <Link
+          href={`/organizer/${organizer.id}`}
+          className="group flex items-start gap-5 -m-2 p-2 rounded-lg transition-colors hover:bg-muted/50"
+        >
+          <div className="relative size-20 shrink-0 overflow-hidden rounded-full ring-2 ring-primary/20 transition-all group-hover:ring-primary/40">
             <Image
               src={organizer.avatarUrl ?? ""}
               alt={organizer.displayName ?? ""}
@@ -62,16 +67,18 @@ export function OrganizerSection({ organizer }: Props) {
             />
           </div>
           <div className="min-w-0 flex-1 pt-1">
-            <p className="text-lg font-bold leading-tight tracking-tight">
-              {organizer.displayName}
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-lg font-bold leading-tight tracking-tight transition-colors group-hover:text-primary">
+                {organizer.displayName}
+              </p>
+            </div>
             {organizer.bio && (
-              <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+              <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground line-clamp-2">
                 {organizer.bio}
               </p>
             )}
           </div>
-        </div>
+        </Link>
 
         {hasContact && (
           <div className="mt-4 border-t border-border pt-4">
@@ -87,7 +94,7 @@ export function OrganizerSection({ organizer }: Props) {
                 <ContactLink
                   href={`tel:${contactInfo.phone}`}
                   icon={Phone}
-                  label={contactInfo.phone}
+                  label={formatPhoneNumber(contactInfo.phone)}
                 />
               )}
               {contactInfo.website && (
