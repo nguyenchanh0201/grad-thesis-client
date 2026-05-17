@@ -161,18 +161,27 @@ export const useBookingStore = create<BookingState>()(
 
       incrementTicket: (ticketTypeId, maxPerOrder) =>
         set((s) => {
+          const cappedMaxPerOrder = Math.max(1, maxPerOrder);
+          const totalSelected = s.tickets.reduce(
+            (sum, ticket) => sum + ticket.quantity,
+            0,
+          );
+          if (totalSelected >= cappedMaxPerOrder) return s;
+
           const tt = s.ticketTypes.find((t) => t.id === ticketTypeId);
           if (!tt) return s;
           const available =
             tt.quantity != null && tt.soldCount != null
               ? Math.max(0, tt.quantity - tt.soldCount)
-              : (tt.quantity ?? maxPerOrder);
+              : (tt.quantity ?? cappedMaxPerOrder);
+          if (available <= 0) return s;
+
           const existing = s.tickets.find(
             (t) => t.ticketTypeId === ticketTypeId,
           );
           if (existing) {
             if (
-              existing.quantity >= maxPerOrder ||
+              existing.quantity >= cappedMaxPerOrder ||
               existing.quantity >= available
             )
               return s;

@@ -13,6 +13,7 @@ import type { TicketType } from "@/schemas/ticket-type";
 type Props = {
   ticketTypes: TicketType[];
   eventDate: string;
+  maxTicketsPerOrder: number;
   onContinue: () => void;
   onChangeDate: () => void;
   isLoading?: boolean;
@@ -34,8 +35,9 @@ type Props = {
 export function TicketPanel({
   ticketTypes,
   eventDate,
+  maxTicketsPerOrder,
   onContinue,
-  onChangeDate,
+  onChangeDate: _onChangeDate,
   isLoading = false,
   mode = "zone",
   tickets = [],
@@ -76,6 +78,9 @@ export function TicketPanel({
       {/* Date row */}
       <div className="flex items-center justify-between border-b border-border px-5 py-3">
         <span className="text-sm font-medium text-foreground">{eventDate}</span>
+        <span className="text-xs text-muted-foreground">
+          Max {maxTicketsPerOrder} per order
+        </span>
         {/* TODO: This is for multi dates */}
         {/* <Button variant="ghost" size="sm" onClick={onChangeDate}>
           Change
@@ -104,6 +109,11 @@ export function TicketPanel({
                   ? Math.max(0, tt.quantity - tt.soldCount)
                   : null;
               const isSoldOut = available !== null && available === 0;
+              const limitHit = totalQty >= maxTicketsPerOrder;
+              const canIncrease =
+                !isSoldOut &&
+                !limitHit &&
+                (available === null || qty < available);
               return (
                 <div
                   key={tt.id}
@@ -163,8 +173,14 @@ export function TicketPanel({
                       <Button
                         variant="outline"
                         onClick={() => onIncrement?.(tt.id)}
+                        disabled={!canIncrease}
                         aria-label="Increase quantity"
-                        className="flex items-center justify-center rounded border border-border transition hover:bg-muted"
+                        className={cn(
+                          "flex items-center justify-center rounded border transition",
+                          canIncrease
+                            ? "border-border hover:bg-muted"
+                            : "cursor-not-allowed border-border text-muted-foreground opacity-40",
+                        )}
                       >
                         <Plus className="size-4" />
                       </Button>

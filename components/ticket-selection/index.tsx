@@ -114,7 +114,7 @@ export function TicketSelection({ slug }: Props) {
   const availability: SectionAvailability[] =
     seatsResult?.data ?? EMPTY_AVAILABILITY;
 
-  const maxPerZone = event?.maxTicketsPerOrder ?? MAX_SEATS;
+  const maxTicketsPerOrder = event?.maxTicketsPerOrder ?? MAX_SEATS;
 
   useEffect(() => {
     if (!event) return;
@@ -137,10 +137,28 @@ export function TicketSelection({ slug }: Props) {
           ticketTypes,
         );
         if (seat) {
-          toggleSeat(seat, maxPerZone);
+          if (selectedSeats.length >= maxTicketsPerOrder) {
+            toast.error(
+              `You can select up to ${maxTicketsPerOrder} seats for this event.`,
+            );
+            return;
+          }
+          toggleSeat(seat, maxTicketsPerOrder);
+        } else {
+          toast.error("No more available seats in this section.");
         }
       } else {
-        incrementTicket(zoneId, maxPerZone);
+        const totalSelected = tickets.reduce(
+          (sum, ticket) => sum + ticket.quantity,
+          0,
+        );
+        if (totalSelected >= maxTicketsPerOrder) {
+          toast.error(
+            `You can select up to ${maxTicketsPerOrder} tickets for this event.`,
+          );
+          return;
+        }
+        incrementTicket(zoneId, maxTicketsPerOrder);
       }
       document
         .getElementById(`zone-row-${zoneId}`)
@@ -151,9 +169,10 @@ export function TicketSelection({ slug }: Props) {
       canvas,
       incrementTicket,
       isSeated,
-      maxPerZone,
+      maxTicketsPerOrder,
       selectedSeats,
       setSelectedZoneId,
+      tickets,
       ticketTypes,
       toggleSeat,
     ],
@@ -168,18 +187,39 @@ export function TicketSelection({ slug }: Props) {
           selectedSeats.map((s) => s.id),
           ticketTypes,
         );
-        if (seat) toggleSeat(seat, maxPerZone);
+        if (selectedSeats.length >= maxTicketsPerOrder) {
+          toast.error(
+            `You can select up to ${maxTicketsPerOrder} seats for this event.`,
+          );
+          return;
+        }
+        if (seat) {
+          toggleSeat(seat, maxTicketsPerOrder);
+        } else {
+          toast.error("No more available seats for this ticket type.");
+        }
         return;
       }
-      incrementTicket(ticketTypeId, maxPerZone);
+      const totalSelected = tickets.reduce(
+        (sum, ticket) => sum + ticket.quantity,
+        0,
+      );
+      if (totalSelected >= maxTicketsPerOrder) {
+        toast.error(
+          `You can select up to ${maxTicketsPerOrder} tickets for this event.`,
+        );
+        return;
+      }
+      incrementTicket(ticketTypeId, maxTicketsPerOrder);
     },
     [
       availability,
       canvas,
       incrementTicket,
       isSeated,
-      maxPerZone,
+      maxTicketsPerOrder,
       selectedSeats,
+      tickets,
       ticketTypes,
       toggleSeat,
     ],
@@ -200,8 +240,8 @@ export function TicketSelection({ slug }: Props) {
   );
 
   const handleSeatToggle = useCallback(
-    (seat: SelectedSeat) => toggleSeat(seat, MAX_SEATS),
-    [toggleSeat],
+    (seat: SelectedSeat) => toggleSeat(seat, maxTicketsPerOrder),
+    [maxTicketsPerOrder, toggleSeat],
   );
 
   const handleContinue = async () => {
@@ -295,7 +335,7 @@ export function TicketSelection({ slug }: Props) {
             availability={availability}
             selectedSeats={selectedSeatIds}
             onSeatToggle={handleSeatToggle}
-            maxSeats={maxPerZone}
+            maxSeats={maxTicketsPerOrder}
           />
         </div>
 
@@ -309,6 +349,7 @@ export function TicketSelection({ slug }: Props) {
             onContinue={handleContinue}
             onChangeDate={() => {}}
             mode={isSeated && canvas ? "seat" : "zone"}
+            maxTicketsPerOrder={maxTicketsPerOrder}
             tickets={tickets}
             selectedZoneId={selectedZoneId}
             onIncrement={handleIncrement}

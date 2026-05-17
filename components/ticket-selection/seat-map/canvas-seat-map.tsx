@@ -150,6 +150,7 @@ function CanvasOverview({
                 (s) => s.status === "available",
               ).length;
               const total = seats.length;
+              const sold = Math.max(0, total - available);
               const selectedInSection = seats.filter((s) =>
                 selectedSet.has(s.seatLabel),
               ).length;
@@ -229,7 +230,7 @@ function CanvasOverview({
                         ? "Sold Out"
                         : selectedInSection > 0
                           ? `${selectedInSection} selected`
-                          : `${available}/${total}`}
+                          : `${sold}/${total}`}
                     </text>
                   ) : null}
                 </g>
@@ -244,15 +245,17 @@ function CanvasOverview({
                 seats.length > 0
                   ? seats.filter((s) => s.status === "available").length
                   : el.capacity;
-              const soldOut = seats.length > 0 && available === 0;
+              const total = seats.length > 0 ? seats.length : el.capacity;
+              const sold = Math.max(0, total - available);
+              const soldOut = total > 0 && available === 0;
               const fill = el.color ?? "#10b981";
-              const canSelect = !!el.ticketTypeId && !soldOut;
+              const canSelect = !!el.ticketTypeId && available > 0;
               const isCommitted = !!el.ticketTypeId;
 
               return (
                 <g
                   key={el.id}
-                  role="button"
+                  role={canSelect ? "button" : undefined}
                   tabIndex={canSelect ? 0 : -1}
                   aria-label={`${el.name}${soldOut ? ", sold out" : ""}`}
                   style={{ cursor: canSelect ? "pointer" : "default" }}
@@ -296,7 +299,7 @@ function CanvasOverview({
                       ? "Not available"
                       : soldOut
                         ? "Sold Out"
-                        : `${available} avail`}
+                        : `${sold}/${total} sold/total`}
                   </text>
                 </g>
               );
