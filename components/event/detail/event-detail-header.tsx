@@ -81,6 +81,7 @@ export function EventDetailHeader({
     event.socialLinks?.website ||
     event.socialLinks?.instagram ||
     event.socialLinks?.twitter;
+  const image = event.featuredImage ?? event.images?.[0];
 
   return (
     <section
@@ -111,20 +112,20 @@ export function EventDetailHeader({
             <div
               className="relative aspect-video overflow-hidden rounded-md md:aspect-auto md:flex-1 md:min-h-0"
               style={
-                !event.images[0]
+                !image
                   ? { backgroundColor: eventBgColor(event.title) }
                   : undefined
               }
             >
-              {event.images[0] && (
+              {image && (
                 <Image
-                  src={event.images[0]}
+                  src={image}
                   alt={`${event.title} - event poster`}
                   fill
                   sizes="(max-width: 768px) 100vw, 40vw"
                   className="object-cover"
                   priority
-                  unoptimized={isSvgImageSource(event.images[0])}
+                  unoptimized={isSvgImageSource(image)}
                 />
               )}
             </div>

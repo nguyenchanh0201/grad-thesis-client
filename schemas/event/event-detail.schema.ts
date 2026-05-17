@@ -35,6 +35,7 @@ export const EventDetailSchema = z.object({
   id: BigIntIdSchema,
   slug: z.string(),
   title: z.string().max(255),
+  featuredImage: z.string().nullish(),
   images: z.array(z.string()),
   status: z.nativeEnum(EventStatus),
   dates: z.array(EventDateSchema).min(1),

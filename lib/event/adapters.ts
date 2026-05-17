@@ -5,10 +5,7 @@ import type { EventItem } from "@/components/event/event-card";
 import { fmtIsoDate } from "@/lib/date";
 
 export function eventToEventDetail(event: Event): EventDetail {
-  const images = [
-    event.featuredImageUrl,
-    ...(event.eventImageUrls ?? []),
-  ].filter((u): u is string => !!u);
+  const images = event.eventImageUrls?.filter((u): u is string => !!u) ?? [];
 
   const lowestPrice =
     event.ticketTypes && event.ticketTypes.length > 0
@@ -22,6 +19,7 @@ export function eventToEventDetail(event: Event): EventDetail {
     summary: event.summary ?? undefined,
     description: event.desc ?? "",
     descAttachmentUrl: event.descAttachmentUrl ?? undefined,
+    featuredImage: event.featuredImageUrl,
     images,
     status: event.status,
     dates: [
