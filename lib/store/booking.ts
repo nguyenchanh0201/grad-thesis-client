@@ -7,6 +7,11 @@ import { DeliveryMethod, RecipientInfo } from "@/schemas/booking";
 import type { DiscountCode, PaymentMethodId } from "@/schemas/payment";
 import type { TicketType } from "@/schemas/ticket-type";
 import type { Reservation } from "@/schemas/reservation";
+import {
+  decrementZoneTickets,
+  incrementZoneTickets,
+} from "@/lib/booking/ticket-quantity";
+import { toSeatSelectionId } from "@/lib/booking/seat-selection-id";
 
 type InitStep1Payload = {
   slug: string;
@@ -108,7 +113,12 @@ export const useBookingStore = create<BookingState>()(
             mapType,
             selectedZoneId: slugChanged ? null : s.selectedZoneId,
             tickets: slugChanged ? [] : s.tickets,
-            selectedSeats: slugChanged ? [] : s.selectedSeats,
+            selectedSeats: slugChanged
+              ? []
+              : s.selectedSeats.map((seat) => ({
+                  ...seat,
+                  id: toSeatSelectionId(seat.ticketTypeId, seat.seatIndex),
+                })),
           };
         }),
 
@@ -161,58 +171,24 @@ export const useBookingStore = create<BookingState>()(
 
       incrementTicket: (ticketTypeId, maxPerOrder) =>
         set((s) => {
-          const cappedMaxPerOrder = Math.max(1, maxPerOrder);
-          const totalSelected = s.tickets.reduce(
-            (sum, ticket) => sum + ticket.quantity,
-            0,
-          );
-          if (totalSelected >= cappedMaxPerOrder) return s;
-
-          const tt = s.ticketTypes.find((t) => t.id === ticketTypeId);
-          if (!tt) return s;
-          const available =
-            tt.quantity != null && tt.soldCount != null
-              ? Math.max(0, tt.quantity - tt.soldCount)
-              : (tt.quantity ?? cappedMaxPerOrder);
-          if (available <= 0) return s;
-
-          const existing = s.tickets.find(
-            (t) => t.ticketTypeId === ticketTypeId,
-          );
-          if (existing) {
-            if (
-              existing.quantity >= cappedMaxPerOrder ||
-              existing.quantity >= available
-            )
-              return s;
-            return {
-              tickets: s.tickets.map((t) =>
-                t.ticketTypeId === ticketTypeId
-                  ? { ...t, quantity: t.quantity + 1 }
-                  : t,
-              ),
-            };
-          }
-          return { tickets: [...s.tickets, { ticketTypeId, quantity: 1 }] };
+          const nextTickets = incrementZoneTickets({
+            tickets: s.tickets,
+            ticketTypes: s.ticketTypes,
+            ticketTypeId,
+            maxPerOrder,
+          });
+          if (nextTickets === s.tickets) return s;
+          return { tickets: nextTickets };
         }),
 
       decrementTicket: (ticketTypeId) =>
         set((s) => {
-          const existing = s.tickets.find(
-            (t) => t.ticketTypeId === ticketTypeId,
-          );
-          if (!existing || existing.quantity <= 0) return s;
-          if (existing.quantity === 1)
-            return {
-              tickets: s.tickets.filter((t) => t.ticketTypeId !== ticketTypeId),
-            };
-          return {
-            tickets: s.tickets.map((t) =>
-              t.ticketTypeId === ticketTypeId
-                ? { ...t, quantity: t.quantity - 1 }
-                : t,
-            ),
-          };
+          const nextTickets = decrementZoneTickets({
+            tickets: s.tickets,
+            ticketTypeId,
+          });
+          if (nextTickets === s.tickets) return s;
+          return { tickets: nextTickets };
         }),
 
       deleteTicket: (ticketTypeId) =>
