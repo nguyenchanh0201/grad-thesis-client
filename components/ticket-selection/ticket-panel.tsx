@@ -10,6 +10,7 @@ import { fmt } from "@/lib/strings/money";
 import { ZoneMode } from "@/schemas/seat";
 import type { SectionAvailability } from "@/schemas/seat";
 import type { TicketType } from "@/schemas/ticket-type";
+import { toSeatSelectionId } from "@/lib/booking/seat-selection-id";
 
 type Props = {
   ticketTypes: TicketType[];
@@ -75,7 +76,11 @@ export function TicketPanel({
       ? selectedSeats.filter((seat) => seat.ticketTypeId === ticketTypeId)
           .length
       : (tickets.find((t) => t.ticketTypeId === ticketTypeId)?.quantity ?? 0);
-  const selectedSeatIds = new Set(selectedSeats.map((seat) => seat.id));
+  const selectedSeatIds = new Set(
+    selectedSeats.map((seat) =>
+      toSeatSelectionId(seat.ticketTypeId, seat.seatIndex),
+    ),
+  );
 
   return (
     <div className="flex h-full flex-col">
@@ -93,7 +98,7 @@ export function TicketPanel({
 
       {
         <>
-          {selectedZoneId && (
+          {mode === "zone" && selectedZoneId && (
             <div className="border-b border-border px-5 py-2">
               <button
                 onClick={onResetZone}
@@ -107,7 +112,7 @@ export function TicketPanel({
           <div className="flex-1 overflow-y-auto">
             {ticketTypes.map((tt) => {
               const qty = getQty(tt.id);
-              const isHighlighted = tt.id === selectedZoneId;
+              const isHighlighted = mode === "zone" && tt.id === selectedZoneId;
               const limitHit = totalQty >= maxTicketsPerOrder;
               const availableSeatsForTicketType =
                 mode === "seat" && seatAvailability.length > 0
@@ -118,7 +123,9 @@ export function TicketPanel({
                     ).filter(
                       (seat) =>
                         seat.status === "available" &&
-                        !selectedSeatIds.has(seat.seatLabel),
+                        !selectedSeatIds.has(
+                          toSeatSelectionId(tt.id, seat.seatIndex),
+                        ),
                     ).length
                   : null;
               const availableForZoneMode =
@@ -172,6 +179,13 @@ export function TicketPanel({
                     <span className="rounded bg-muted px-2 py-1 text-xs text-muted-foreground">
                       Unavailable
                     </span>
+                  ) : mode === "seat" ? (
+                    <div className="flex items-center gap-3 text-sm">
+                      <span className="font-semibold tabular-nums">{qty}</span>
+                      <span className="text-xs text-muted-foreground">
+                        selected
+                      </span>
+                    </div>
                   ) : (
                     <div
                       className="flex items-center gap-2"
@@ -322,22 +336,37 @@ export function TicketPanel({
                 })}
 
               {mode === "seat" &&
-                ticketTypes.map((tt) => {
-                  const quantity = selectedSeats.filter(
-                    (seat) => seat.ticketTypeId === tt.id,
-                  ).length;
-                  if (quantity === 0) return null;
+                selectedSeats.map((seat) => {
+                  const tt = ticketTypes.find(
+                    (ticketType) => ticketType.id === seat.ticketTypeId,
+                  );
+                  if (!tt) return null;
                   return (
                     <div
-                      key={tt.id}
+                      key={seat.id}
                       className="flex items-center justify-between text-sm"
                     >
-                      <span className="truncate text-foreground">
-                        {tt.name} x {quantity}
-                      </span>
-                      <span className="shrink-0 pl-4 text-muted-foreground">
-                        {fmt(tt.price * quantity)} {tt.currency}
-                      </span>
+                      <div className="min-w-0">
+                        <span className="block truncate text-foreground">
+                          {seat.label}
+                        </span>
+                        <span className="block truncate text-xs text-muted-foreground">
+                          {tt.name}
+                        </span>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-3 pl-4">
+                        <span className="text-muted-foreground">
+                          {fmt(tt.price)} {tt.currency}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          onClick={() => onSeatRemove?.(seat.id)}
+                          aria-label={`Remove ${seat.label}`}
+                          className="text-muted-foreground transition hover:text-destructive"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      </div>
                     </div>
                   );
                 })}

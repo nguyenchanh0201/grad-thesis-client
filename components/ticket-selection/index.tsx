@@ -17,10 +17,11 @@ import { SeatMap } from "./seat-map";
 import { useBuyProcess } from "@/components/buy-process/buy-process-shell";
 import type { SelectedSeat } from "./seat-map";
 import { fmtIsoDate } from "@/lib/date";
-import { getEventSeatsByEventCode } from "@/services/event.service";
+import { getEventBySlug, getEventSeatsByEventCode } from "@/services/event.service";
 import { SectionAvailability } from "@/schemas/seat";
 import { SeatMapCanvasSchema } from "@/schemas/seat-map";
 import type { TicketType } from "@/schemas/ticket-type";
+import { toSeatSelectionId } from "@/lib/booking/seat-selection-id";
 import { toast } from "sonner";
 
 const MAX_SEATS = 8;
@@ -102,6 +103,8 @@ export function TicketSelection({ slug }: Props) {
     );
     return hasSections ? result.data : undefined;
   }, [isSeated, event?.seatMap?.canvas]);
+  const requiresSeatMap = isSeated;
+  const isSeatMapAvailable = !!canvas;
 
   // Poll seat availability every 10s
   const { data: seatsResult } = useQuery({
@@ -129,11 +132,18 @@ export function TicketSelection({ slug }: Props) {
   const handleZoneClick = useCallback(
     (zoneId: string) => {
       setSelectedZoneId(zoneId);
-      if (isSeated && canvas) {
+      if (isSeated) {
+        if (!canvas) {
+          toast.error("Seat map is unavailable. Please try again later.");
+          return;
+        }
         const seat = findNextAvailableSeatForTicketType(
           zoneId,
           availability,
-          selectedSeats.map((s) => s.id),
+          selectedSeats.map((s) =>
+            toSeatSelectionId(s.ticketTypeId, s.seatIndex),
+          ),
+          selectedSeats.map((s) => s.seatIndex),
           ticketTypes,
         );
         if (seat) {
@@ -180,11 +190,18 @@ export function TicketSelection({ slug }: Props) {
 
   const handleIncrement = useCallback(
     (ticketTypeId: string) => {
-      if (isSeated && canvas) {
+      if (isSeated) {
+        if (!canvas) {
+          toast.error("Seat map is unavailable. Please try again later.");
+          return;
+        }
         const seat = findNextAvailableSeatForTicketType(
           ticketTypeId,
           availability,
-          selectedSeats.map((s) => s.id),
+          selectedSeats.map((s) =>
+            toSeatSelectionId(s.ticketTypeId, s.seatIndex),
+          ),
+          selectedSeats.map((s) => s.seatIndex),
           ticketTypes,
         );
         if (selectedSeats.length >= maxTicketsPerOrder) {
@@ -227,7 +244,8 @@ export function TicketSelection({ slug }: Props) {
 
   const handleDecrement = useCallback(
     (ticketTypeId: string) => {
-      if (isSeated && canvas) {
+      if (isSeated) {
+        if (!canvas) return;
         const seat = [...selectedSeats]
           .reverse()
           .find((s) => s.ticketTypeId === ticketTypeId);
@@ -240,22 +258,112 @@ export function TicketSelection({ slug }: Props) {
   );
 
   const handleSeatToggle = useCallback(
-    (seat: SelectedSeat) => toggleSeat(seat, maxTicketsPerOrder),
-    [maxTicketsPerOrder, toggleSeat],
+    (seat: SelectedSeat) => {
+      const duplicateSeatIndex = selectedSeats.find(
+        (selectedSeat) =>
+          selectedSeat.seatIndex === seat.seatIndex &&
+          selectedSeat.id !== seat.id,
+      );
+      if (duplicateSeatIndex) {
+        toast.error("This seat is already selected in another section.");
+        return;
+      }
+      toggleSeat(seat, maxTicketsPerOrder);
+    },
+    [maxTicketsPerOrder, selectedSeats, toggleSeat],
   );
 
   const handleContinue = async () => {
     if (isCreating) return;
     setIsCreating(true);
     try {
+      if (requiresSeatMap && !isSeatMapAvailable) {
+        toast.error(
+          "Cannot continue because this seated event has no active seat map.",
+        );
+        return;
+      }
+
+      if (isSeated && canvas) {
+        if (!eventCode) {
+          toast.error("Could not verify seat availability. Please refresh and try again.");
+          return;
+        }
+
+        const freshSeatsResponse = await getEventSeatsByEventCode(eventCode);
+        const latestSeatStatusByKey =
+          freshSeatsResponse.data.reduce(
+            (map, section) => {
+              for (const seat of section.seats) {
+                map.set(
+                  toSeatSelectionId(section.ticketTypeId, seat.seatIndex),
+                  seat.status,
+                );
+              }
+              return map;
+            },
+            new Map<string, "available" | "locked" | "sold">(),
+          );
+
+        const staleSeats = selectedSeats.filter((seat) => {
+          const status = latestSeatStatusByKey.get(
+            toSeatSelectionId(seat.ticketTypeId, seat.seatIndex),
+          );
+          return status !== "available";
+        });
+
+        if (staleSeats.length > 0) {
+          for (const seat of staleSeats) {
+            removeSeat(seat.id);
+          }
+          toast.error(
+            "Some selected seats are no longer available. We removed them. Please review your selection.",
+          );
+          return;
+        }
+      } else {
+        const freshEventResponse = await getEventBySlug(slug);
+        const latestTicketTypes = freshEventResponse.data.ticketTypes ?? [];
+        const staleTickets = tickets.filter((ticket) => {
+          const latestTicketType = latestTicketTypes.find(
+            (ticketType) => ticketType.id === ticket.ticketTypeId,
+          );
+          if (!latestTicketType) return true;
+
+          const availableQuantity =
+            latestTicketType.quantity != null && latestTicketType.soldCount != null
+              ? Math.max(0, latestTicketType.quantity - latestTicketType.soldCount)
+              : (latestTicketType.quantity ?? 0);
+
+          return availableQuantity <= 0 || ticket.quantity > availableQuantity;
+        });
+
+        if (staleTickets.length > 0) {
+          for (const ticket of staleTickets) {
+            deleteTicket(ticket.ticketTypeId);
+          }
+          toast.error(
+            "Some selected ticket types are no longer available. We removed them. Please review your selection.",
+          );
+          return;
+        }
+      }
+
       let result;
       if (isSeated && canvas) {
         const validSeatIndices = selectedSeats
           .map((seat) => seat.seatIndex)
           .filter((seatIndex) => Number.isInteger(seatIndex) && seatIndex >= 0);
+        const uniqueSeatIndices = new Set(validSeatIndices);
 
         if (validSeatIndices.length === 0) {
           toast.error("Please select at least one valid seat.");
+          return;
+        }
+        if (uniqueSeatIndices.size !== validSeatIndices.length) {
+          toast.error(
+            "Two selected seats map to the same index. Please reselect seats.",
+          );
           return;
         }
 
@@ -289,9 +397,63 @@ export function TicketSelection({ slug }: Props) {
       }
 
       if (isAppError(error) && error.status === 409) {
-        toast.error(
-          "Selected tickets/seats are no longer available. Please try again.",
-        );
+        if (isSeated && canvas && eventCode) {
+          const freshSeatsResponse = await getEventSeatsByEventCode(eventCode);
+          const latestSeatStatusByKey = freshSeatsResponse.data.reduce(
+            (map, section) => {
+              for (const seat of section.seats) {
+                map.set(
+                  toSeatSelectionId(section.ticketTypeId, seat.seatIndex),
+                  seat.status,
+                );
+              }
+              return map;
+            },
+            new Map<string, "available" | "locked" | "sold">(),
+          );
+          const staleSeats = selectedSeats.filter((seat) => {
+            const status = latestSeatStatusByKey.get(
+              toSeatSelectionId(seat.ticketTypeId, seat.seatIndex),
+            );
+            return status !== "available";
+          });
+          for (const seat of staleSeats) {
+            removeSeat(seat.id);
+          }
+          toast.error(
+            "Some selected seats were just taken. We updated your selection. Please continue again.",
+          );
+        } else {
+          const freshEventResponse = await getEventBySlug(slug);
+          const latestTicketTypes = freshEventResponse.data.ticketTypes ?? [];
+          for (const ticket of tickets) {
+            const latestTicketType = latestTicketTypes.find(
+              (ticketType) => ticketType.id === ticket.ticketTypeId,
+            );
+            if (!latestTicketType) {
+              deleteTicket(ticket.ticketTypeId);
+              continue;
+            }
+            const availableQuantity =
+              latestTicketType.quantity != null &&
+              latestTicketType.soldCount != null
+                ? Math.max(0, latestTicketType.quantity - latestTicketType.soldCount)
+                : (latestTicketType.quantity ?? 0);
+            if (availableQuantity <= 0) {
+              deleteTicket(ticket.ticketTypeId);
+              continue;
+            }
+            const excess = ticket.quantity - availableQuantity;
+            if (excess > 0) {
+              for (let i = 0; i < excess; i += 1) {
+                decrementTicket(ticket.ticketTypeId);
+              }
+            }
+          }
+          toast.error(
+            "Ticket availability changed. We updated your selection. Please continue again.",
+          );
+        }
         return;
       }
 
@@ -303,7 +465,9 @@ export function TicketSelection({ slug }: Props) {
 
   if (!isStoreHydrated || authorized !== true) return null;
 
-  const selectedSeatIds = selectedSeats.map((s) => s.id);
+  const selectedSeatIds = selectedSeats.map((seat) =>
+    toSeatSelectionId(seat.ticketTypeId, seat.seatIndex),
+  );
 
   const eventTitle = event?.eventName ?? "";
   const eventDateStr = event
@@ -327,9 +491,8 @@ export function TicketSelection({ slug }: Props) {
       <div className="flex flex-1 flex-col md:flex-row">
         <div className="border-b border-border md:w-[55%] md:border-b-0 md:border-r">
           <SeatMap
-            ticketTypes={ticketTypes}
             fallbackImageUrl={eventImageUrl}
-            selectedZoneId={selectedZoneId}
+            isSeatedEvent={isSeated}
             onZoneClick={handleZoneClick}
             canvas={canvas}
             availability={availability}
@@ -348,7 +511,7 @@ export function TicketSelection({ slug }: Props) {
             eventDate={event ? fmtIsoDate(event.eventDate) : ""}
             onContinue={handleContinue}
             onChangeDate={() => {}}
-            mode={isSeated && canvas ? "seat" : "zone"}
+            mode={isSeated ? "seat" : "zone"}
             maxTicketsPerOrder={maxTicketsPerOrder}
             tickets={tickets}
             selectedZoneId={selectedZoneId}
@@ -360,6 +523,7 @@ export function TicketSelection({ slug }: Props) {
             selectedSeats={selectedSeats}
             onSeatRemove={removeSeat}
             onSeatClearAll={clearSeats}
+            seatAvailability={availability}
             isLoading={isCreating}
           />
         </div>
@@ -372,21 +536,25 @@ function findNextAvailableSeatForTicketType(
   ticketTypeId: string,
   availability: SectionAvailability[],
   selectedSeatIds: string[],
+  selectedSeatIndices: number[],
   ticketTypes: TicketType[],
 ): SelectedSeat | null {
   const selected = new Set(selectedSeatIds);
+  const selectedIndices = new Set(selectedSeatIndices);
   const seat = availability
     .find((group) => group.ticketTypeId === ticketTypeId)
     ?.seats.find(
       (candidate) =>
-        candidate.status === "available" && !selected.has(candidate.seatLabel),
+        candidate.status === "available" &&
+        !selected.has(toSeatSelectionId(ticketTypeId, candidate.seatIndex)) &&
+        !selectedIndices.has(candidate.seatIndex),
     );
 
   if (!seat) return null;
 
   const ticketType = ticketTypes.find((tt) => tt.id === ticketTypeId);
   return {
-    id: seat.seatLabel,
+    id: toSeatSelectionId(ticketTypeId, seat.seatIndex),
     label: `${ticketType?.name ?? "Seat"} - ${seat.seatLabel}`,
     ticketTypeId,
     seatIndex: seat.seatIndex,

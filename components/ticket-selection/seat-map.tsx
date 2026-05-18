@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, ChevronUp, MapPin } from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
 import { CanvasSeatMap } from "./seat-map/canvas-seat-map";
@@ -10,13 +10,11 @@ import { isSvgImageSource } from "@/lib/image/is-svg-image-source";
 export type { SelectedSeat } from "./seat-map/canvas-seat-map";
 import type { SeatMapCanvas } from "@/schemas/seat-map";
 import type { SectionAvailability } from "@/schemas/seat";
-import type { TicketType } from "@/schemas/ticket-type";
 
 type Props = {
-  ticketTypes: TicketType[];
   fallbackImageUrl?: string;
+  isSeatedEvent?: boolean;
   // Zone mode
-  selectedZoneId?: string | null;
   onZoneClick?: (ticketTypeId: string) => void;
   // Canvas seat mode
   canvas?: SeatMapCanvas;
@@ -27,9 +25,8 @@ type Props = {
 };
 
 export function SeatMap({
-  ticketTypes,
   fallbackImageUrl,
-  selectedZoneId = null,
+  isSeatedEvent = false,
   onZoneClick,
   canvas,
   availability = [],
@@ -73,6 +70,17 @@ export function SeatMap({
             onZoneSelect={onZoneClick}
             maxSeats={maxSeats}
           />
+        ) : isSeatedEvent ? (
+          <div className="flex flex-1 items-center justify-center rounded-md border border-border bg-muted/30 py-16 text-center">
+            <div className="space-y-2 px-6">
+              <p className="text-sm font-medium text-foreground">
+                Seat map unavailable
+              </p>
+              <p className="text-xs text-muted-foreground">
+                This is a seated event. Please retry later or contact support.
+              </p>
+            </div>
+          </div>
         ) : fallbackImageUrl ? (
           <div className="relative w-full overflow-hidden rounded-md border border-border bg-muted/30">
             <div className="relative aspect-4/3 w-full">

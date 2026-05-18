@@ -10,6 +10,7 @@ import type {
 } from "@/schemas/seat-map";
 import type { SectionAvailability, SeatAvailability } from "@/schemas/seat";
 import { Button } from "@/components/ui/button";
+import { toSeatSelectionId } from "@/lib/booking/seat-selection-id";
 
 export type SelectedSeat = {
   id: string;
@@ -152,7 +153,12 @@ function CanvasOverview({
               const total = seats.length;
               const sold = Math.max(0, total - available);
               const selectedInSection = seats.filter((s) =>
-                selectedSet.has(s.seatLabel),
+                selectedSet.has(
+                  toSeatSelectionId(
+                    s.ticketTypeId ?? el.ticketTypeId ?? el.id,
+                    s.seatIndex,
+                  ),
+                ),
               ).length;
               const soldOut = total > 0 && available === 0;
               const hasData = total > 0;
@@ -168,12 +174,10 @@ function CanvasOverview({
                   style={{ cursor: isInteractive ? "pointer" : "default" }}
                   onClick={() => {
                     if (!isInteractive) return;
-                    if (el.ticketTypeId) onZoneSelect?.(el.ticketTypeId);
                     onSectionClick(el);
                   }}
                   onKeyDown={(e) => {
                     if ((e.key === "Enter" || e.key === " ") && isInteractive) {
-                      if (el.ticketTypeId) onZoneSelect?.(el.ticketTypeId);
                       onSectionClick(el);
                     }
                   }}
@@ -425,7 +429,11 @@ function SectionDetail({
                   {label}
                 </span>
                 {rowSeats.map((seat) => {
-                  const isSelected = selectedSet.has(seat.seatLabel);
+                  const resolvedTicketTypeId =
+                    seat.ticketTypeId ?? section.ticketTypeId ?? section.id;
+                  const isSelected = selectedSet.has(
+                    toSeatSelectionId(resolvedTicketTypeId, seat.seatIndex),
+                  );
                   const isAvailable = seat.status === "available";
                   const isLocked = seat.status === "locked";
                   return (
@@ -440,12 +448,13 @@ function SectionDetail({
                         if (!isSelected && totalSelected >= maxSeats) return;
                         if (!isAvailable && !isSelected) return;
                         onSeatToggle({
-                          id: seat.seatLabel,
+                          id: toSeatSelectionId(
+                            resolvedTicketTypeId,
+                            seat.seatIndex,
+                          ),
                           label: `${section.name} · ${seat.seatLabel}`,
                           ticketTypeId:
-                            seat.ticketTypeId ??
-                            section.ticketTypeId ??
-                            section.id,
+                            resolvedTicketTypeId,
                           seatIndex: seat.seatIndex,
                         });
                       }}
