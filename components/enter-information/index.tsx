@@ -3,10 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { Ticket, WalletCards } from "lucide-react";
 import { toast } from "sonner";
 import { clearBuySession } from "@/lib/booking/buy-session";
 import { isValidEmail } from "@/lib/form/email";
 import { isAppError } from "@/core/error";
+import { fmt } from "@/lib/strings/money";
 import { useBookingStore } from "@/lib/store/booking";
 import { useEventBySlug } from "@/hooks/use-events";
 import { useReservation } from "@/hooks/use-booking";
@@ -20,10 +22,32 @@ import {
   RecipientInfoForm,
   type RecipientFormHandle,
 } from "./recipient-info-form";
-import { TicketDeliveryMethod } from "./ticket-delivery-method";
 import { StickyValidationBar } from "./sticky-validation-bar";
 
 type Props = { slug: string };
+const AUTO_DELIVERY_METHOD = "email_and_physical";
+
+function buildEstimatedTotalFromStore(
+  ticketTypes: { id: string; price?: number }[],
+  tickets: { ticketTypeId: string; quantity: number }[],
+  selectedSeats: { ticketTypeId: string }[],
+) {
+  const byTicketTypeId = new Map(
+    ticketTypes.map((tt) => [tt.id, tt.price ?? 0]),
+  );
+
+  const gaTotal = tickets.reduce((sum, row) => {
+    const price = byTicketTypeId.get(row.ticketTypeId) ?? 0;
+    return sum + price * row.quantity;
+  }, 0);
+
+  const seatedTotal = selectedSeats.reduce((sum, seat) => {
+    const price = byTicketTypeId.get(seat.ticketTypeId) ?? 0;
+    return sum + price;
+  }, 0);
+
+  return gaTotal > 0 ? gaTotal : seatedTotal;
+}
 
 export function EnterInformation({ slug }: Props) {
   const router = useRouter();
@@ -36,7 +60,6 @@ export function EnterInformation({ slug }: Props) {
     ticketTypes,
     mapType,
     recipient,
-    deliveryMethod,
     hydrateFromReservation,
     updateRecipient,
   } = useBookingStore();
@@ -107,6 +130,28 @@ export function EnterInformation({ slug }: Props) {
     isValidEmail(recipient.email) &&
     !!recipient.phoneNumber?.trim();
 
+  const reservationItems = reservationResult?.data?.items;
+  const reservationTicketCount = reservationItems?.reduce(
+    (sum, item) => sum + item.quantity,
+    0,
+  );
+
+  const selectedTicketCountFromStore =
+    selectedSeats.length > 0
+      ? selectedSeats.length
+      : tickets.reduce((sum, item) => sum + item.quantity, 0);
+
+  const ticketCount = reservationTicketCount ?? selectedTicketCountFromStore;
+
+  const estimatedTotalFromStore = buildEstimatedTotalFromStore(
+    ticketTypes,
+    tickets,
+    selectedSeats,
+  );
+  const totalAmount =
+    reservationResult?.data?.totalAmount ?? estimatedTotalFromStore;
+  const currency = reservationResult?.data?.currency ?? "VND";
+
   const handleContinue = async () => {
     const valid = await formRef.current?.triggerValidation();
     if (!valid || !reservationId) return;
@@ -120,7 +165,7 @@ export function EnterInformation({ slug }: Props) {
           phoneNumber: recipient.phoneNumber,
           idPassport: recipient.idPassport || null,
         },
-        deliveryMethod,
+        deliveryMethod: AUTO_DELIVERY_METHOD,
       });
       router.replace(`/buy/${slug}/payment`);
     } catch (err) {
@@ -163,6 +208,41 @@ export function EnterInformation({ slug }: Props) {
         eventLocation={eventSummary.venueVi}
       />
 
+      <div className="border-b border-border md:hidden">
+        <div className="space-y-3 px-5 py-4">
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">
+              Before You Continue
+            </h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Complete required recipient details and confirm your order
+              summary.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div className="rounded-sm border border-border bg-muted/30 p-2.5">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Ticket className="size-3.5" />
+                <span>Tickets</span>
+              </div>
+              <p className="mt-1 text-sm font-semibold text-foreground">
+                {ticketCount}
+              </p>
+            </div>
+            <div className="rounded-sm border border-border bg-muted/30 p-2.5">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <WalletCards className="size-3.5" />
+                <span>Total</span>
+              </div>
+              <p className="mt-1 text-sm font-semibold text-foreground">
+                {fmt(totalAmount)} {currency}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="flex flex-1 flex-col-reverse md:flex-row">
         <div
           className="border-t border-border md:w-[40%] md:overflow-y-auto md:border-t-0 md:border-r"
@@ -185,11 +265,8 @@ export function EnterInformation({ slug }: Props) {
           className="flex flex-1 flex-col md:w-[60%] md:overflow-y-auto"
           style={{ maxHeight: "calc(100vh - var(--header-height) - 6rem)" }}
         >
-          <div className="flex flex-col gap-6 p-5 pb-8">
+          <div className="flex flex-col gap-8 p-5 pb-8">
             <RecipientInfoForm ref={formRef} />
-            <div className="border-t border-border pt-4">
-              <TicketDeliveryMethod />
-            </div>
           </div>
         </div>
       </div>

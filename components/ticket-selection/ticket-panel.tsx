@@ -8,6 +8,7 @@ import type { SelectedTicket } from "../../schemas/seat/types";
 import type { SelectedSeat } from "./seat-map";
 import { fmt } from "@/lib/strings/money";
 import { ZoneMode } from "@/schemas/seat";
+import type { SectionAvailability } from "@/schemas/seat";
 import type { TicketType } from "@/schemas/ticket-type";
 
 type Props = {
@@ -30,6 +31,7 @@ type Props = {
   selectedSeats?: SelectedSeat[];
   onSeatRemove?: (seatId: string) => void;
   onSeatClearAll?: () => void;
+  seatAvailability?: SectionAvailability[];
 };
 
 export function TicketPanel({
@@ -50,6 +52,7 @@ export function TicketPanel({
   selectedSeats = [],
   onSeatRemove,
   onSeatClearAll,
+  seatAvailability = [],
 }: Props) {
   const [summaryOpen, setSummaryOpen] = useState(true);
 
@@ -72,6 +75,7 @@ export function TicketPanel({
       ? selectedSeats.filter((seat) => seat.ticketTypeId === ticketTypeId)
           .length
       : (tickets.find((t) => t.ticketTypeId === ticketTypeId)?.quantity ?? 0);
+  const selectedSeatIds = new Set(selectedSeats.map((seat) => seat.id));
 
   return (
     <div className="flex h-full flex-col">
@@ -104,16 +108,37 @@ export function TicketPanel({
             {ticketTypes.map((tt) => {
               const qty = getQty(tt.id);
               const isHighlighted = tt.id === selectedZoneId;
-              const available =
+              const limitHit = totalQty >= maxTicketsPerOrder;
+              const availableSeatsForTicketType =
+                mode === "seat" && seatAvailability.length > 0
+                  ? (
+                      seatAvailability.find(
+                        (section) => section.ticketTypeId === tt.id,
+                      )?.seats ?? []
+                    ).filter(
+                      (seat) =>
+                        seat.status === "available" &&
+                        !selectedSeatIds.has(seat.seatLabel),
+                    ).length
+                  : null;
+              const availableForZoneMode =
                 tt.quantity != null && tt.soldCount != null
                   ? Math.max(0, tt.quantity - tt.soldCount)
                   : null;
-              const isSoldOut = available !== null && available === 0;
-              const limitHit = totalQty >= maxTicketsPerOrder;
+              const isSoldOut =
+                mode === "seat"
+                  ? availableSeatsForTicketType !== null &&
+                    availableSeatsForTicketType === 0
+                  : availableForZoneMode !== null && availableForZoneMode === 0;
               const canIncrease =
-                !isSoldOut &&
-                !limitHit &&
-                (available === null || qty < available);
+                mode === "seat"
+                  ? !limitHit &&
+                    (availableSeatsForTicketType === null ||
+                      availableSeatsForTicketType > 0)
+                  : !isSoldOut &&
+                    !limitHit &&
+                    (availableForZoneMode === null ||
+                      qty < availableForZoneMode);
               return (
                 <div
                   key={tt.id}
