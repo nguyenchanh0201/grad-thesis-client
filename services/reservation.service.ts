@@ -7,6 +7,8 @@ import {
   ReservationListResultSchema,
   ReservationResult,
   ReservationResultSchema,
+  UpdateReservationRecipientResult,
+  UpdateReservationRecipientResultSchema,
 } from "@/schemas/reservation";
 
 export type CreateSeatedReservationPayload = {
@@ -88,12 +90,12 @@ export const getReservation = async (
 export const updateReservationRecipient = async (
   id: string,
   payload: UpdateReservationRecipientPayload,
-): Promise<ReservationResult> => {
+): Promise<UpdateReservationRecipientResult> => {
   const response = await apiClient.patch(
     `/reservations/${id}/recipient`,
     payload,
   );
-  return parseOrThrow(ReservationResultSchema, response);
+  return parseOrThrow(UpdateReservationRecipientResultSchema, response);
 };
 
 export const cancelReservation = async (

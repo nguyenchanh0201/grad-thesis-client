@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { clearBuySession } from "@/lib/booking/buy-session";
 import { isValidEmail } from "@/lib/form/email";
 import { isAppError } from "@/core/error";
@@ -126,7 +127,13 @@ export function EnterInformation({ slug }: Props) {
       if (isAppError(err) && err.status === 409) {
         clearBuySession(slug);
         router.replace(`/events/${slug}`);
+        return;
       }
+      if (isAppError(err)) {
+        toast.error(err.message);
+        return;
+      }
+      toast.error("Could not continue to the next step. Please try again.");
     } finally {
       setIsSubmitting(false);
     }

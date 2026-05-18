@@ -61,6 +61,23 @@ export type ReservationItem = z.infer<typeof ReservationItemSchema>;
 export const ReservationResultSchema = BaseResponseSchema(ReservationSchema);
 export type ReservationResult = z.infer<typeof ReservationResultSchema>;
 
+export const UpdateReservationRecipientSchema = z.object({
+  id: BigIntIdSchema,
+  status: z.enum(["PENDING", "EXPIRED", "PAID", "CANCELLED", "PAYMENT_LOCKED"]),
+  totalAmount: AmountSchema,
+  currency: z.string().optional(),
+  expiresAt: z.iso.datetime().optional(),
+  recipient: ReservationRecipientSchema.nullable().optional(),
+  deliveryMethod: z.string().nullable().optional(),
+});
+
+export const UpdateReservationRecipientResultSchema = BaseResponseSchema(
+  UpdateReservationRecipientSchema,
+);
+export type UpdateReservationRecipientResult = z.infer<
+  typeof UpdateReservationRecipientResultSchema
+>;
+
 export const ReservationListResultSchema =
   PagedResponseSchema(ReservationSchema);
 export type ReservationListResult = z.infer<typeof ReservationListResultSchema>;

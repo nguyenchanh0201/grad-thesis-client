@@ -34,7 +34,11 @@ export function StickyValidationBar({ isValid, onBack, onContinue }: Props) {
             <span className="hidden sm:inline">Select the ticket again</span>
             <span className="sm:hidden">Go back</span>
           </Button>
-          <Button onClick={onContinue} className={cn(!isValid && "opacity-60")}>
+          <Button
+            onClick={onContinue}
+            disabled={!isValid}
+            className={cn(!isValid && "cursor-not-allowed opacity-60")}
+          >
             Continue <ArrowRight />
           </Button>
         </div>
