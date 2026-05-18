@@ -32,18 +32,29 @@ export function DiscountCodeInput({ subtotal }: Props) {
 
   return (
     <div className="space-y-3">
-      <h3 className="text-sm font-semibold text-foreground">Discount code</h3>
-      <div className="flex">
+      <div className="space-y-1">
+        <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+          Promotion
+        </p>
+        <h3 className="line-clamp-none text-base font-medium text-foreground">
+          Add a discount code
+        </h3>
+        <p className="line-clamp-none text-sm leading-6 text-muted-foreground">
+          Applied discounts are reflected in the order total before payment.
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-2 sm:flex-row">
         <Input
           value={input}
           onChange={handleChange}
           placeholder="Enter discount code"
-          className="flex-1 rounded-none py-5"
+          className="min-h-11 flex-1 border-0 bg-gray-50"
           onKeyDown={(e) => e.key === "Enter" && handleApply()}
         />
         <Button
           variant="default"
-          className="h-auto rounded-none"
+          className="min-h-11 sm:px-6"
           onClick={handleApply}
           disabled={loading || !input.trim()}
         >
@@ -52,14 +63,16 @@ export function DiscountCodeInput({ subtotal }: Props) {
       </div>
 
       {discountCode && discountCode.valid && (
-        <p className="flex items-center gap-1.5 text-xs text-green-600">
+        <p className="line-clamp-none flex items-center gap-1.5 text-xs text-muted-foreground">
           <CheckCircle2 className="size-3.5" />
-          Code applied — saving{" "}
+          Code applied - saving{" "}
           {discountCode.discountAmount.toLocaleString("vi-VN")} VND
         </p>
       )}
       {discountCode && !discountCode.valid && (
-        <p className="text-xs text-destructive">{discountCode.errorMessage}</p>
+        <p className="line-clamp-none text-xs text-destructive">
+          {discountCode.errorMessage}
+        </p>
       )}
     </div>
   );

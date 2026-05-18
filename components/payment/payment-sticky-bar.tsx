@@ -13,8 +13,8 @@ type Props = {
 export function PaymentStickyBar({ canContinue, onBack, onContinue }: Props) {
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background/95 backdrop-blur-sm">
-      <div className="mx-auto flex max-w-screen-2xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-        <p className="min-w-0 text-xs text-muted-foreground">
+      <div className="mx-auto flex max-w-screen-2xl flex-col gap-3 px-4 py-3 sm:px-6 md:flex-row md:items-center md:justify-between">
+        <p className="line-clamp-none min-w-0 text-xs leading-relaxed text-muted-foreground md:max-w-[60ch]">
           By clicking Continue you have read and agree to TicketGo&apos;s{" "}
           <a
             href="/operation-regulations"
@@ -26,15 +26,15 @@ export function PaymentStickyBar({ canContinue, onBack, onContinue }: Props) {
           </a>
         </p>
 
-        <div className="flex shrink-0 items-center gap-2">
-          <Button variant="outline" onClick={onBack}>
+        <div className="grid shrink-0 grid-cols-2 gap-2 sm:flex sm:items-center">
+          <Button variant="outline" onClick={onBack} className="min-h-11">
             <span className="hidden sm:inline">Select the ticket again</span>
             <span className="sm:hidden">Go back</span>
           </Button>
           <Button
             onClick={onContinue}
             disabled={!canContinue}
-            className={cn(!canContinue && "opacity-60")}
+            className={cn("min-h-11", !canContinue && "opacity-60")}
           >
             Continue <ArrowRight className="size-4" />
           </Button>

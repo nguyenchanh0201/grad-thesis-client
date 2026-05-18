@@ -7,10 +7,12 @@ export type EventPaymentConfig = {
 const PAYMENT_METHODS: PaymentMethod[] = [
   {
     id: "vnpay",
+    providerCode: "vnpay",
     label: "VNPay",
     description: "Scan QR code, pay instantly via VNPay",
     iconKey: "qr-code",
     enabled: true,
+    sortOrder: 10,
   },
   // Future methods — set enabled: true and add to eventConfig.allowedMethods to activate
   // { id: "international_card", label: "International payment card", description: "Fill in additional information, smart security", iconKey: "credit-card", enabled: false },
