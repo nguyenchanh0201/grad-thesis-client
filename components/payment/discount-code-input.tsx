@@ -5,6 +5,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { isAppError } from "@/core/error";
 import {
   applyReservationVoucher,
@@ -26,6 +33,16 @@ export function DiscountCodeInput({ reservationId, vouchers = [] }: Props) {
   const { discountCode, setDiscountCode } = useBookingStore();
   const [input, setInput] = useState(discountCode?.code ?? "");
   const [loading, setLoading] = useState(false);
+  const selectedVoucherCode = vouchers.some((voucher) => voucher.code === input)
+    ? input
+    : undefined;
+
+  const formatVoucherSummary = (voucher: AvailableVoucher) => {
+    if (voucher.discountType === VOUCHER_DISCOUNT_TYPE.PERCENT) {
+      return `${voucher.discountValue}% off`;
+    }
+    return `${voucher.discountValue.toLocaleString("vi-VN")} VND off`;
+  };
 
   const handleApply = async () => {
     if (!input.trim() || !reservationId) return;
@@ -97,6 +114,39 @@ export function DiscountCodeInput({ reservationId, vouchers = [] }: Props) {
         </p>
       </div>
 
+      {vouchers.length > 0 ? (
+        <div className="space-y-1">
+          <p className="text-xs text-muted-foreground">My vouchers</p>
+          <Select
+            value={selectedVoucherCode}
+            onValueChange={(value) => {
+              setInput(value);
+              if (discountCode) setDiscountCode(null);
+            }}
+            disabled={loading}
+          >
+            <SelectTrigger className="min-h-11 w-full border-0 bg-gray-50 px-3 text-sm">
+              <SelectValue placeholder="Select a voucher" />
+            </SelectTrigger>
+            <SelectContent
+              align="start"
+              className="w-[var(--radix-select-trigger-width)]"
+            >
+              {vouchers.map((voucher) => (
+                <SelectItem key={voucher.code} value={voucher.code}>
+                  <span className="flex w-full items-center justify-between gap-3">
+                    <span>{voucher.code}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {formatVoucherSummary(voucher)}
+                    </span>
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      ) : null}
+
       <div className="flex flex-col gap-2 sm:flex-row">
         <Input
           value={input}
@@ -138,25 +188,6 @@ export function DiscountCodeInput({ reservationId, vouchers = [] }: Props) {
           {discountCode.errorMessage}
         </p>
       )}
-
-      {vouchers.length > 0 ? (
-        <div className="space-y-2">
-          <p className="text-xs text-muted-foreground">Available vouchers</p>
-          <div className="flex flex-wrap gap-2">
-            {vouchers.map((voucher) => (
-              <button
-                key={voucher.code}
-                type="button"
-                className="rounded-full bg-gray-100 px-3 py-1.5 text-xs text-foreground hover:bg-gray-200"
-                onClick={() => setInput(voucher.code)}
-                disabled={loading}
-              >
-                {voucher.code}
-              </button>
-            ))}
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }

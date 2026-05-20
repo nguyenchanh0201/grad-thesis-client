@@ -6,6 +6,7 @@ import {
   Calendar,
   MapPin,
   Ticket,
+  Loader2,
   Facebook,
   Globe,
   Instagram,
@@ -73,10 +74,9 @@ export function EventDetailHeader({
   const badge = event.status ? STATUS_BADGE[event.status] : null;
   const firstDate = event.dates[0];
   const extraDates = event.dates.length - 1;
-  const buttonLabel =
-    isInitialized && !isLoggedIn
-      ? (ctaLabel ?? "Login required to buy tickets")
-      : "Buy Tickets";
+  const buttonLabel = isLoggedIn
+    ? "Buy Tickets"
+    : (ctaLabel ?? "Login required to buy tickets");
   const hasSocialLinks =
     event.socialLinks?.facebook ||
     event.socialLinks?.website ||
@@ -140,9 +140,14 @@ export function EventDetailHeader({
             </div>
             <Button
               onClick={onCTAClick}
-              className="hidden h-auto w-full py-3.5 text-base font-semibold md:flex"
+              disabled={!isInitialized}
+              className="hidden h-auto w-full py-3.5 text-base font-semibold md:flex disabled:opacity-100"
             >
-              {buttonLabel}
+              {!isInitialized ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden />
+              ) : (
+                buttonLabel
+              )}
             </Button>
           </div>
 
@@ -284,9 +289,14 @@ export function EventDetailHeader({
       <Button
         ref={mobileCTARef}
         onClick={onCTAClick}
-        className="fixed bottom-0 left-0 right-0 z-50 w-full bg-primary text-center text-base font-semibold text-primary-foreground md:hidden py-8"
+        disabled={!isInitialized}
+        className="fixed bottom-0 left-0 right-0 z-50 w-full bg-primary text-center text-base font-semibold text-primary-foreground md:hidden py-8 disabled:opacity-100"
       >
-        {buttonLabel}
+        {!isInitialized ? (
+          <Loader2 className="size-4 animate-spin" aria-hidden />
+        ) : (
+          buttonLabel
+        )}
       </Button>
     </section>
   );

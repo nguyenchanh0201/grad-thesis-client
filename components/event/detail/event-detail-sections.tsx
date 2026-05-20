@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import TabBar, { TabItem } from "@/components/shared/tab-bar";
 import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 import type { EventDetail } from "@/schemas/event";
 import { AboutSection } from "./about-section";
 import { ScheduleSection } from "./schedule-section";
@@ -39,6 +40,7 @@ export function EventDetailSections({ event }: Props) {
   const isLoggedIn = !!user;
 
   const handleBuy = () => {
+    if (!isInitialized) return;
     if (isInitialized && !isLoggedIn) {
       const redirect = `/buy/${event.slug}/queue?intent=1`;
       router.push(`/auth/login?redirect=${encodeURIComponent(redirect)}`);
@@ -81,11 +83,16 @@ export function EventDetailSections({ event }: Props) {
           <Button
             variant="default"
             onClick={handleBuy}
-            className="px-10 py-5 hidden shrink-0 md:flex"
+            disabled={!isInitialized}
+            className="px-10 py-5 hidden shrink-0 md:flex disabled:opacity-100"
           >
-            {isInitialized && !isLoggedIn
-              ? "Login required to buy tickets"
-              : "Buy Tickets"}
+            {!isInitialized ? (
+              <Loader2 className="size-4 animate-spin" aria-hidden />
+            ) : isLoggedIn ? (
+              "Buy Tickets"
+            ) : (
+              "Login required to buy tickets"
+            )}
           </Button>
         </div>
         <TabBar tabs={tabs} selected={activeTab} onChange={handleTabChange} />
