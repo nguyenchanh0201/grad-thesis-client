@@ -24,6 +24,7 @@ const BUY_STEPS: Record<string, BuyStep> = {
   tickets: { currentStep: 1, confirmBack: true },
   info: { currentStep: 2 },
   payment: { currentStep: 3 },
+  confirmation: { currentStep: 4 },
 };
 
 type BuyProcessContextValue = ReturnType<typeof useBuyProcessSession>;
@@ -61,7 +62,9 @@ function ActiveBuyProcessShell({
   slug: string;
   step: BuyStep;
 }) {
-  const session = useBuyProcessSession(slug);
+  const session = useBuyProcessSession(slug, {
+    skipReservationSync: step.currentStep === 4,
+  });
   const [isLeaveDialogOpen, setIsLeaveDialogOpen] = useState(false);
   const { formatted, timeRemaining, timedOut, hasSyncedExpiry } = session;
   const isWarning = timeRemaining <= 60;
@@ -70,6 +73,7 @@ function ActiveBuyProcessShell({
     if (step.backHref) return step.backHref;
     if (step.currentStep === 2) return `/buy/${slug}/tickets`;
     if (step.currentStep === 3) return `/buy/${slug}/info`;
+    if (step.currentStep === 4) return `/buy/${slug}/payment`;
     return "/events";
   }, [slug, step.backHref, step.currentStep]);
 
@@ -105,7 +109,13 @@ function ActiveBuyProcessShell({
         confirmVariant="destructive"
         onConfirm={handleExitPurchaseFlow}
       />
-      <TimeoutModal open={timedOut} onOk={handleExitPurchaseFlow} />
+      <TimeoutModal
+        open={timedOut}
+        isLoading
+        title="Booking session expired"
+        description="Your booking time is over. Please wait while we redirect you back to the event page."
+        loadingLabel="Redirecting..."
+      />
     </BuyProcessContext.Provider>
   );
 }

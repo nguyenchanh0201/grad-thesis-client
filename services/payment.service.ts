@@ -2,7 +2,9 @@ import { apiClient } from "@/lib/api/api-client";
 import { parseOrThrow } from "@/lib/api/api-utils";
 import { BaseResponseSchema } from "@/schemas/api";
 import {
+  PaymentConfirmationResponseSchema,
   PaymentMethodsResponseSchema,
+  type PaymentConfirmationResponse,
   type PaymentMethod,
 } from "@/schemas/payment";
 import { z } from "zod";
@@ -39,5 +41,15 @@ export const getPaymentMethodsByEventSlug = async (
     params: { eventSlug },
   });
   const parsed = parseOrThrow(PaymentMethodsResponseSchema, response);
+  return parsed.data;
+};
+
+export const getPaymentConfirmationStatus = async (
+  reservationId: string,
+): Promise<PaymentConfirmationResponse["data"]> => {
+  const response = await apiClient.get(
+    `/payment/confirmations/${reservationId}`,
+  );
+  const parsed = parseOrThrow(PaymentConfirmationResponseSchema, response);
   return parsed.data;
 };

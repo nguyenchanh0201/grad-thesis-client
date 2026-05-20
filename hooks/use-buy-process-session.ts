@@ -19,6 +19,7 @@ const BUY_HEARTBEAT_INTERVAL_MS = 10_000;
 type UseBuyProcessSessionOptions = {
   autoRedirectOnTimeout?: boolean;
   timeoutRedirectDelayMs?: number;
+  skipReservationSync?: boolean;
 };
 
 export function useBuyProcessSession(
@@ -26,6 +27,7 @@ export function useBuyProcessSession(
   {
     autoRedirectOnTimeout = true,
     timeoutRedirectDelayMs = TIMEOUT_REDIRECT_DELAY_MS,
+    skipReservationSync = false,
   }: UseBuyProcessSessionOptions = {},
 ) {
   const router = useRouter();
@@ -37,7 +39,7 @@ export function useBuyProcessSession(
   const waitRoomSlug = useBookingStore((state) => state.waitRoomSlug);
   const isExitingRef = useRef(false);
   const { data: reservationResult, error: reservationError } = useReservation(
-    reservationId ?? undefined,
+    skipReservationSync ? undefined : (reservationId ?? undefined),
   );
 
   const exitPurchaseFlow = useCallback(() => {
@@ -73,17 +75,19 @@ export function useBuyProcessSession(
   ]);
 
   useEffect(() => {
+    if (skipReservationSync) return;
     if (!reservationError) return;
     if (isReservationUnavailableError(reservationError)) {
       syncToExpiry(new Date(0).toISOString());
     }
-  }, [reservationError, syncToExpiry]);
+  }, [reservationError, skipReservationSync, syncToExpiry]);
 
   useEffect(() => {
+    if (skipReservationSync) return;
     const expiresAt = reservationResult?.data?.expiresAt;
     if (!expiresAt) return;
     syncToExpiry(expiresAt);
-  }, [reservationResult?.data?.expiresAt, syncToExpiry]);
+  }, [reservationResult?.data?.expiresAt, skipReservationSync, syncToExpiry]);
 
   useEffect(() => {
     if (!hasBuySession(slug) || !waitRoomToken) return;

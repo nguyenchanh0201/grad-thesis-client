@@ -1,20 +1,30 @@
 "use client";
 
-import { useEffect, useMemo, useState, useId } from "react";
+import { useEffect, useMemo, useId } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { isAppError } from "@/core/error";
+import { RESERVATION_POLL_INTERVAL_MS } from "@/lib/booking/config";
 import { useBookingStore } from "@/lib/store/booking";
 import { clearBuySession } from "@/lib/booking/buy-session";
-import { useBuyProcessSession } from "@/hooks/use-buy-process-session";
-import { createVNPayUrl } from "@/services/payment.service";
 import {
-  isReservationUnavailableError,
-  useReservation,
-} from "@/hooks/use-booking";
-import { TimeoutModal } from "@/components/ticket-selection/timeout-modal";
+  createVNPayUrl,
+  getPaymentConfirmationStatus,
+  getPaymentMethodsByEventSlug,
+} from "@/services/payment.service";
+import { RESERVATION_STATUS } from "@/schemas/reservation/reservation.schema";
+import { useBuyProcess } from "@/components/buy-process/buy-process-shell";
 import type { GatewayLineItem } from "@/schemas/payment-gateway";
 import type { SelectedTicket } from "@/schemas/seat/types";
 import type { SelectedSeat } from "@/components/ticket-selection/seat-map";
 import type { MapType } from "@/schemas/seat";
 import type { TicketType } from "@/schemas/ticket-type";
+import {
+  buildPaymentReference,
+  buildTransferQrValue,
+  getManualTransferDetails,
+  getPaymentMethodPresentation,
+} from "./payment-method-config";
+import { BookingResult } from "./booking-result";
 import { PaymentPanel } from "./payment-pannel";
 import { OrderSummarySidebar } from "./order-summary-sidebar";
 import { GatewayFooter } from "./gateway-footer";
@@ -65,19 +75,25 @@ export function PaymentGateway({ slug }: Props) {
   const {
     reservationId,
     waitRoomToken,
+    paymentMethodId,
     tickets,
     selectedSeats,
     ticketTypes,
     mapType,
     discountCode,
   } = useBookingStore();
-  const { timedOut, syncToExpiry, exitPurchaseFlow } =
-    useBuyProcessSession(slug);
+  const { syncToExpiry, exitPurchaseFlow } = useBuyProcess();
   const {
-    data: reservationResult,
-    error: reservationError,
-    isLoading: isReservationLoading,
-  } = useReservation(reservationId ?? undefined);
+    data: confirmation,
+    error: confirmationError,
+    isLoading: isConfirmationLoading,
+  } = useQuery({
+    queryKey: ["payment-confirmation", reservationId],
+    queryFn: () => getPaymentConfirmationStatus(reservationId!),
+    enabled: !!reservationId,
+    retry: false,
+    refetchInterval: RESERVATION_POLL_INTERVAL_MS,
+  });
 
   const uid = useId();
   const invoiceId = `INV-${SESSION_TIMESTAMP}-${uid.replace(/:/g, "")}`;
@@ -91,12 +107,87 @@ export function PaymentGateway({ slug }: Props) {
   const discountAmount = discountCode?.valid ? discountCode.discountAmount : 0;
   const total = Math.max(0, subtotal - discountAmount);
 
-  const [isPaying, setIsPaying] = useState(false);
-  const reservationExpiresAt = reservationResult?.data?.expiresAt;
+  const reservationExpiresAt = confirmation?.expiresAt;
+  const reservationTotalAmount = Number(confirmation?.totalAmount ?? 0);
+  const reservationStatus = confirmation?.reservationStatus;
+  const eventId = confirmation?.eventId;
   const deadline = useMemo(
     () => (reservationExpiresAt ? new Date(reservationExpiresAt) : null),
     [reservationExpiresAt],
   );
+  const { data: availableMethods = [] } = useQuery({
+    queryKey: ["payment-methods", slug],
+    queryFn: () => getPaymentMethodsByEventSlug(slug),
+    enabled: !!slug,
+  });
+
+  const confirmationMethod = confirmation?.activeMethod ?? undefined;
+  const effectiveMethodId = confirmation?.payment?.methodId ?? paymentMethodId;
+  const selectedMethod = useMemo(() => {
+    if (confirmationMethod) return confirmationMethod;
+    return availableMethods.find((method) => method.id === effectiveMethodId);
+  }, [availableMethods, confirmationMethod, effectiveMethodId]);
+  const presentation = useMemo(
+    () => getPaymentMethodPresentation(effectiveMethodId, selectedMethod),
+    [effectiveMethodId, selectedMethod],
+  );
+  const paymentReference = useMemo(
+    () => buildPaymentReference(reservationId, invoiceId),
+    [invoiceId, reservationId],
+  );
+  const transferDetails = useMemo(
+    () =>
+      getManualTransferDetails(
+        effectiveMethodId,
+        selectedMethod,
+        reservationId,
+        presentation.label,
+        paymentReference,
+        reservationTotalAmount || total,
+      ),
+    [
+      effectiveMethodId,
+      paymentReference,
+      presentation.label,
+      reservationId,
+      reservationTotalAmount,
+      selectedMethod,
+      total,
+    ],
+  );
+  const transferQrValue = useMemo(
+    () =>
+      buildTransferQrValue(
+        selectedMethod,
+        reservationId,
+        paymentReference,
+        reservationTotalAmount || total,
+        transferDetails,
+      ),
+    [
+      paymentReference,
+      reservationId,
+      reservationTotalAmount,
+      selectedMethod,
+      total,
+      transferDetails,
+    ],
+  );
+  const isPaymentSuccess = reservationStatus === RESERVATION_STATUS.PAID;
+  const isPaymentFailed =
+    reservationStatus === RESERVATION_STATUS.CANCELLED ||
+    reservationStatus === RESERVATION_STATUS.EXPIRED;
+  const prepareGatewayMutation = useMutation({
+    mutationFn: createVNPayUrl,
+    retry: false,
+  });
+  const hostedGatewayUrl =
+    confirmation?.payment?.paymentUrl ??
+    prepareGatewayMutation.data?.paymentUrl ??
+    null;
+  const resolvedQrValue = presentation.isHostedGateway
+    ? (hostedGatewayUrl ?? `PENDING:${paymentReference}`)
+    : transferQrValue;
 
   useEffect(() => {
     if (reservationId) return;
@@ -105,43 +196,57 @@ export function PaymentGateway({ slug }: Props) {
   }, [exitPurchaseFlow, reservationId, slug]);
 
   useEffect(() => {
-    if (!reservationError) return;
-    if (isReservationUnavailableError(reservationError)) {
+    if (!confirmationError || !isAppError(confirmationError)) return;
+    if ([403, 404, 409].includes(confirmationError.status)) {
       syncToExpiry(new Date(0).toISOString());
     }
-  }, [reservationError, syncToExpiry]);
+  }, [confirmationError, syncToExpiry]);
 
   useEffect(() => {
     if (!reservationExpiresAt) return;
     syncToExpiry(reservationExpiresAt);
   }, [reservationExpiresAt, syncToExpiry]);
 
-  const handlePay = async () => {
-    if (!reservationId) return;
-    const eventId = reservationResult?.data?.eventId;
-    if (!eventId) return;
+  useEffect(() => {
+    if (!presentation.isHostedGateway) return;
+    if (!reservationId || !eventId) return;
+    if (isPaymentSuccess || isPaymentFailed) return;
+    if (hostedGatewayUrl || prepareGatewayMutation.isPending) return;
 
-    setIsPaying(true);
-    try {
-      const response = await createVNPayUrl({
-        reservationId,
-        eventId,
-        waitRoomToken: waitRoomToken ?? undefined,
-      });
-      window.location.href = response.paymentUrl;
-    } catch {
-      setIsPaying(false);
-    }
-  };
+    prepareGatewayMutation.mutate({
+      reservationId,
+      eventId,
+      waitRoomToken: waitRoomToken ?? undefined,
+    });
+  }, [
+    eventId,
+    hostedGatewayUrl,
+    isPaymentFailed,
+    isPaymentSuccess,
+    presentation.isHostedGateway,
+    prepareGatewayMutation,
+    reservationId,
+    waitRoomToken,
+  ]);
 
-  if (!reservationId || !deadline || isReservationLoading) {
+  if (!reservationId || !deadline || isConfirmationLoading) return null;
+  if (isPaymentSuccess) {
     return (
-      <TimeoutModal
-        open={timedOut}
-        onOk={() => {
-          clearBuySession(slug);
-          exitPurchaseFlow();
-        }}
+      <BookingResult
+        slug={slug}
+        isSuccess
+        invoiceId={paymentReference}
+        amount={reservationTotalAmount || total}
+      />
+    );
+  }
+  if (isPaymentFailed) {
+    return (
+      <BookingResult
+        slug={slug}
+        isSuccess={false}
+        invoiceId={paymentReference}
+        amount={reservationTotalAmount || total}
       />
     );
   }
@@ -153,8 +258,16 @@ export function PaymentGateway({ slug }: Props) {
           <PaymentPanel
             deadline={deadline}
             totalAmount={total}
-            isPaying={isPaying}
-            onPay={handlePay}
+            presentation={presentation}
+            isHostedGateway={presentation.isHostedGateway}
+            transferDetails={transferDetails}
+            transferQrValue={resolvedQrValue}
+            isPreparingGateway={prepareGatewayMutation.isPending}
+            gatewayError={
+              prepareGatewayMutation.isError
+                ? "Could not prepare payment QR. Please refresh and try again."
+                : null
+            }
           />
         </div>
         <div className="bg-muted/20 md:w-2/5">
@@ -175,14 +288,7 @@ export function PaymentGateway({ slug }: Props) {
           />
         </div>
       </div>
-      <GatewayFooter />
-      <TimeoutModal
-        open={timedOut}
-        onOk={() => {
-          clearBuySession(slug);
-          exitPurchaseFlow();
-        }}
-      />
+      <GatewayFooter providerName={presentation.label} />
     </div>
   );
 }
