@@ -1,28 +1,81 @@
 "use client";
 
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { applyDiscountCode } from "@/lib/payment/applyDiscountCode";
+import { isAppError } from "@/core/error";
+import {
+  applyReservationVoucher,
+  removeReservationVoucher,
+} from "@/services/reservation.service";
 import { useBookingStore } from "@/lib/store/booking";
+import { reservationKeys } from "@/hooks/use-booking";
+import { toast } from "sonner";
+import type { AvailableVoucher } from "@/schemas/reservation";
+import { VOUCHER_DISCOUNT_TYPE } from "@/schemas/payment";
 
 type Props = {
-  subtotal: number;
+  reservationId?: string | null;
+  vouchers?: AvailableVoucher[];
 };
 
-export function DiscountCodeInput({ subtotal }: Props) {
+export function DiscountCodeInput({ reservationId, vouchers = [] }: Props) {
+  const queryClient = useQueryClient();
   const { discountCode, setDiscountCode } = useBookingStore();
   const [input, setInput] = useState(discountCode?.code ?? "");
   const [loading, setLoading] = useState(false);
 
   const handleApply = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() || !reservationId) return;
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 400));
-    const result = applyDiscountCode(input, subtotal);
-    setDiscountCode(result);
-    setLoading(false);
+    try {
+      const result = await applyReservationVoucher(reservationId, input);
+      const voucher = result.data.voucher;
+      if (voucher) {
+        setDiscountCode({
+          code: voucher.code,
+          valid: true,
+          type: voucher.type,
+          discountAmount: result.data.discountAmount,
+        });
+      }
+      await queryClient.invalidateQueries({
+        queryKey: reservationKeys.detail(reservationId),
+      });
+    } catch (error) {
+      setDiscountCode({
+        code: input.trim().toUpperCase(),
+        valid: false,
+        type: VOUCHER_DISCOUNT_TYPE.FIXED,
+        discountAmount: 0,
+        errorMessage: isAppError(error)
+          ? error.message
+          : "Could not apply voucher code",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRemove = async () => {
+    if (!reservationId || !discountCode?.valid) return;
+    setLoading(true);
+    try {
+      await removeReservationVoucher(reservationId);
+      setDiscountCode(null);
+      await queryClient.invalidateQueries({
+        queryKey: reservationKeys.detail(reservationId),
+      });
+      toast.success("Voucher removed");
+    } catch (error) {
+      toast.error(
+        isAppError(error) ? error.message : "Could not remove voucher code",
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -56,10 +109,21 @@ export function DiscountCodeInput({ subtotal }: Props) {
           variant="default"
           className="min-h-11 sm:px-6"
           onClick={handleApply}
-          disabled={loading || !input.trim()}
+          disabled={loading || !input.trim() || !reservationId}
         >
           {loading ? <Loader2 className="size-4 animate-spin" /> : "Apply"}
         </Button>
+        {discountCode?.valid ? (
+          <Button
+            type="button"
+            variant="outline"
+            className="min-h-11 sm:px-6"
+            onClick={handleRemove}
+            disabled={loading || !reservationId}
+          >
+            Remove
+          </Button>
+        ) : null}
       </div>
 
       {discountCode && discountCode.valid && (
@@ -74,6 +138,25 @@ export function DiscountCodeInput({ subtotal }: Props) {
           {discountCode.errorMessage}
         </p>
       )}
+
+      {vouchers.length > 0 ? (
+        <div className="space-y-2">
+          <p className="text-xs text-muted-foreground">Available vouchers</p>
+          <div className="flex flex-wrap gap-2">
+            {vouchers.map((voucher) => (
+              <button
+                key={voucher.code}
+                type="button"
+                className="rounded-full bg-gray-100 px-3 py-1.5 text-xs text-foreground hover:bg-gray-200"
+                onClick={() => setInput(voucher.code)}
+                disabled={loading}
+              >
+                {voucher.code}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

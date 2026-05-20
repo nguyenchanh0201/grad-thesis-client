@@ -1,19 +1,21 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useBookingStore } from "@/lib/store/booking";
+import { useReservation } from "@/hooks/use-booking";
 import { useEventBySlug } from "@/hooks/use-events";
 import { fmtIsoDate, fmtIsoTime } from "@/lib/date/utils";
 import { EventBanner } from "@/components/ticket-selection/event-banner";
 import { useBuyProcess } from "@/components/buy-process/buy-process-shell";
 import { OrderSummaryPanel } from "@/components/enter-information/order-summary-pannel";
 import { getPaymentMethodsByEventSlug } from "@/services/payment.service";
+import { getAvailableVouchers } from "@/services/reservation.service";
 import { PaymentMethodSelector } from "./payment-method-selector";
 import { DiscountCodeInput } from "./discount-code-input";
 import { PaymentStickyBar } from "./payment-sticky-bar";
-import type { PaymentMethodId } from "@/schemas/payment";
+import { VOUCHER_DISCOUNT_TYPE, type PaymentMethodId } from "@/schemas/payment";
 
 type Props = { slug: string };
 
@@ -31,6 +33,7 @@ export function Payment({ slug }: Props) {
     discountCode,
     paymentMethodId,
     setPaymentMethodId,
+    setDiscountCode,
   } = useBookingStore();
 
   useEffect(() => {
@@ -41,6 +44,10 @@ export function Payment({ slug }: Props) {
 
   const { data: eventResult } = useEventBySlug(slug);
   const event = eventResult?.data;
+  const { data: reservationResult } = useReservation(
+    reservationId ?? undefined,
+  );
+  const reservation = reservationResult?.data;
 
   const {
     data: availableMethods = [],
@@ -51,6 +58,18 @@ export function Payment({ slug }: Props) {
     queryFn: () => getPaymentMethodsByEventSlug(slug),
     enabled: !!slug,
   });
+
+  const {
+    data: vouchersResult,
+    isLoading: isVouchersLoading,
+    isError: isVouchersError,
+  } = useQuery({
+    queryKey: ["vouchers", slug],
+    queryFn: () => getAvailableVouchers(slug),
+    enabled: !!slug,
+  });
+
+  const availableVouchers = vouchersResult?.data ?? [];
 
   useEffect(() => {
     const hasSelectedMethod = availableMethods.some(
@@ -64,19 +83,6 @@ export function Payment({ slug }: Props) {
   const hasSelectedEligibleMethod = availableMethods.some(
     (method) => method.id === paymentMethodId,
   );
-
-  const subtotal = useMemo(() => {
-    if (mapType === "zone") {
-      return tickets.reduce((sum, t) => {
-        const tt = ticketTypes.find((x) => x.id === t.ticketTypeId);
-        return sum + (tt?.price ?? 0) * t.quantity;
-      }, 0);
-    }
-    return selectedSeats.reduce((sum, s) => {
-      const tt = ticketTypes.find((x) => x.id === s.ticketTypeId);
-      return sum + (tt?.price ?? 0);
-    }, 0);
-  }, [tickets, selectedSeats, ticketTypes, mapType]);
 
   const eventSummary = {
     title: event?.eventName ?? "",
@@ -93,6 +99,31 @@ export function Payment({ slug }: Props) {
   const discountProp = discountCode?.valid
     ? { code: discountCode.code, amount: discountCode.discountAmount }
     : null;
+
+  useEffect(() => {
+    const voucher = reservation?.voucher;
+    if (!voucher) {
+      if (discountCode) {
+        setDiscountCode(null);
+      }
+      return;
+    }
+
+    if (
+      discountCode?.valid &&
+      discountCode.code === voucher.code &&
+      discountCode.discountAmount === voucher.discountAmount
+    ) {
+      return;
+    }
+
+    setDiscountCode({
+      code: voucher.code,
+      valid: true,
+      type: voucher.type ?? VOUCHER_DISCOUNT_TYPE.FIXED,
+      discountAmount: voucher.discountAmount,
+    });
+  }, [discountCode, reservation?.voucher, setDiscountCode]);
 
   const handleContinue = () => {
     router.replace(`/buy/${slug}/confirmation`);
@@ -163,7 +194,21 @@ export function Payment({ slug }: Props) {
               </p>
             ) : null}
 
-            <DiscountCodeInput subtotal={subtotal} />
+            <DiscountCodeInput
+              reservationId={reservationId}
+              vouchers={availableVouchers}
+            />
+            {isVouchersLoading ? (
+              <p className="text-xs text-muted-foreground">
+                Loading vouchers...
+              </p>
+            ) : null}
+            {isVouchersError ? (
+              <p className="text-xs text-destructive">
+                Could not load vouchers. You can still enter a voucher code
+                manually.
+              </p>
+            ) : null}
           </div>
         </section>
       </main>
