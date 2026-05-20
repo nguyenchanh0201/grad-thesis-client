@@ -2,6 +2,10 @@ import { PAGINATION } from "@/core/constants";
 import { apiClient } from "@/lib/api/api-client";
 import { parseOrThrow } from "@/lib/api/api-utils";
 import {
+  AvailableVoucherListResult,
+  AvailableVoucherListResultSchema,
+  ApplyReservationVoucherResult,
+  ApplyReservationVoucherResultSchema,
   CreateReservationResponseSchema,
   ReservationListResult,
   ReservationListResultSchema,
@@ -103,4 +107,32 @@ export const cancelReservation = async (
 ): Promise<ReservationResult> => {
   const response = await apiClient.post(`/reservations/${id}/cancel`);
   return parseOrThrow(ReservationResultSchema, response);
+};
+
+export const applyReservationVoucher = async (
+  id: string,
+  code: string,
+): Promise<ApplyReservationVoucherResult> => {
+  const response = await apiClient.post(`/reservations/${id}/voucher`, {
+    code,
+  });
+  return parseOrThrow(ApplyReservationVoucherResultSchema, response);
+};
+
+export const removeReservationVoucher = async (
+  id: string,
+): Promise<ApplyReservationVoucherResult> => {
+  const response = await apiClient.post(`/reservations/${id}/voucher/remove`);
+  return parseOrThrow(ApplyReservationVoucherResultSchema, response);
+};
+
+export const getAvailableVouchers = async (
+  eventSlug: string,
+  page?: number,
+  limit?: number,
+): Promise<AvailableVoucherListResult> => {
+  const response = await apiClient.get("/vouchers", {
+    params: { eventSlug, page, limit },
+  });
+  return parseOrThrow(AvailableVoucherListResultSchema, response);
 };

@@ -4,6 +4,7 @@ import {
   BaseResponseSchema,
   PagedResponseSchema,
 } from "../api";
+import { VoucherDiscountTypeSchema } from "../payment";
 
 // BE sends string status names
 export const RESERVATION_STATUS = {
@@ -47,6 +48,15 @@ export const ReservationSchema = z.object({
   userId: BigIntIdSchema.optional(),
   status: z.enum(["PENDING", "EXPIRED", "PAID", "CANCELLED", "PAYMENT_LOCKED"]),
   totalAmount: AmountSchema,
+  subtotalAmount: AmountSchema.optional(),
+  voucher: z
+    .object({
+      code: z.string(),
+      type: VoucherDiscountTypeSchema.nullable().optional(),
+      discountAmount: AmountSchema,
+    })
+    .nullable()
+    .optional(),
   currency: z.string().optional(),
   items: z.array(ReservationItemSchema).optional(),
   expiresAt: z.iso.datetime().optional(),
@@ -65,6 +75,15 @@ export const UpdateReservationRecipientSchema = z.object({
   id: BigIntIdSchema,
   status: z.enum(["PENDING", "EXPIRED", "PAID", "CANCELLED", "PAYMENT_LOCKED"]),
   totalAmount: AmountSchema,
+  subtotalAmount: AmountSchema.optional(),
+  voucher: z
+    .object({
+      code: z.string(),
+      type: VoucherDiscountTypeSchema.nullable().optional(),
+      discountAmount: AmountSchema,
+    })
+    .nullable()
+    .optional(),
   currency: z.string().optional(),
   expiresAt: z.iso.datetime().optional(),
   recipient: ReservationRecipientSchema.nullable().optional(),
@@ -89,4 +108,46 @@ export const CreateReservationResponseSchema = z.object({
 });
 export type CreateReservationResponse = z.infer<
   typeof CreateReservationResponseSchema
+>;
+
+export const ApplyReservationVoucherSchema = z.object({
+  reservationId: BigIntIdSchema,
+  totalAmount: AmountSchema,
+  subtotalAmount: AmountSchema,
+  discountAmount: AmountSchema,
+  voucher: z
+    .object({
+      code: z.string(),
+      type: VoucherDiscountTypeSchema,
+    })
+    .nullable(),
+});
+
+export const ApplyReservationVoucherResultSchema = BaseResponseSchema(
+  ApplyReservationVoucherSchema,
+);
+export type ApplyReservationVoucherResult = z.infer<
+  typeof ApplyReservationVoucherResultSchema
+>;
+
+export const AvailableVoucherSchema = z.object({
+  code: z.string(),
+  description: z.string().nullable(),
+  discountType: VoucherDiscountTypeSchema,
+  discountValue: AmountSchema,
+  maxDiscountAmount: AmountSchema,
+  minOrderAmount: AmountSchema,
+  startsAt: z.iso.datetime().nullable(),
+  endsAt: z.iso.datetime().nullable(),
+  ticketTypeIds: z.array(BigIntIdSchema),
+});
+
+export type AvailableVoucher = z.infer<typeof AvailableVoucherSchema>;
+
+export const AvailableVoucherListResultSchema = PagedResponseSchema(
+  AvailableVoucherSchema,
+);
+
+export type AvailableVoucherListResult = z.infer<
+  typeof AvailableVoucherListResultSchema
 >;
