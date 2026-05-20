@@ -1,13 +1,25 @@
 "use client";
 
+import { LoaderCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type Props = {
   open: boolean;
-  onOk: () => void;
+  onOk?: () => void;
+  isLoading?: boolean;
+  title?: string;
+  description?: string;
+  loadingLabel?: string;
 };
 
-export function TimeoutModal({ open, onOk }: Props) {
+export function TimeoutModal({
+  open,
+  onOk,
+  isLoading = false,
+  title = "Ticket booking timeout",
+  description = "You can only complete the ticket booking within a 10-minute time frame. Please rebook.",
+  loadingLabel = "Redirecting...",
+}: Props) {
   if (!open) return null;
 
   return (
@@ -23,17 +35,29 @@ export function TimeoutModal({ open, onOk }: Props) {
           id="timeout-title"
           className="text-base font-semibold text-foreground"
         >
-          Ticket booking timeout
+          {title}
         </h2>
         <p id="timeout-desc" className="mt-2 text-sm text-muted-foreground">
-          You can only complete the ticket booking within a 10-minute time
-          frame. Please rebook.
+          {description}
         </p>
-        <div className="mt-5">
-          <Button variant="outline" onClick={onOk} className="w-full">
-            OK
-          </Button>
-        </div>
+
+        {isLoading ? (
+          <div className="mt-5 flex items-center justify-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+            <LoaderCircle className="h-4 w-4 animate-spin" />
+            <span>{loadingLabel}</span>
+          </div>
+        ) : (
+          <div className="mt-5">
+            <Button
+              variant="outline"
+              onClick={onOk}
+              disabled={!onOk}
+              className="w-full"
+            >
+              OK
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

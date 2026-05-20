@@ -1,6 +1,6 @@
 "use client";
 
-import { Clock3 } from "lucide-react";
+import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BackButton } from "../shared/back-button";
 
@@ -8,6 +8,7 @@ const STEPS = [
   { label: "Select Tickets", num: 1 },
   { label: "Enter Information", num: 2 },
   { label: "Payment", num: 3 },
+  { label: "Confirmation", num: 4 },
 ];
 
 type Props = {
@@ -45,14 +46,15 @@ export function ProgressSteps({
                 <span
                   className={cn(
                     "flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
-                    isActive && "bg-primary text-primary-foreground",
-                    isDone && "bg-primary/20 text-primary",
+                    isActive &&
+                      "border border-primary bg-primary/10 text-primary",
+                    isDone && "bg-primary text-primary-foreground",
                     !isActive &&
                       !isDone &&
                       "border border-border text-muted-foreground",
                   )}
                 >
-                  {num}
+                  {isDone ? <Check className="size-3.5" /> : num}
                 </span>
                 <span
                   className={cn(

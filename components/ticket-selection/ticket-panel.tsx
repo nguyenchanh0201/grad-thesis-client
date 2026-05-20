@@ -109,7 +109,7 @@ export function TicketPanel({
             </div>
           )}
 
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto pb-28 md:pb-0">
             {ticketTypes.map((tt) => {
               const qty = getQty(tt.id);
               const isHighlighted = mode === "zone" && tt.id === selectedZoneId;
@@ -275,127 +275,129 @@ export function TicketPanel({
         </div>
       )}
 
-      {/* Summary */}
-      {totalQty > 0 && (
-        <div className="border-t border-border bg-muted/30">
-          <Button
-            variant="link"
-            onClick={mode === "seat" ? onSeatClearAll : onDeleteAll}
-            className="w-full flex justify-end pr-5 text-sm text-muted-foreground underline-offset-2 hover:text-destructive hover:underline"
-          >
-            Clear all
-          </Button>
+      <div className="sticky bottom-0 z-20 mt-auto border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:static md:bg-background md:backdrop-blur-none">
+        {/* Summary */}
+        {totalQty > 0 && (
+          <div className="border-b border-border bg-muted/30">
+            <Button
+              variant="link"
+              onClick={mode === "seat" ? onSeatClearAll : onDeleteAll}
+              className="w-full flex justify-end pr-5 text-sm text-muted-foreground underline-offset-2 hover:text-destructive hover:underline"
+            >
+              Clear all
+            </Button>
 
-          <Button
-            variant="outline"
-            onClick={() => setSummaryOpen((v) => !v)}
-            className="flex w-full items-center justify-between px-5 py-3 text-sm font-semibold"
-            aria-expanded={summaryOpen}
-          >
-            <span>
-              {mode === "seat"
-                ? `${totalQty} seat${totalQty > 1 ? "s" : ""} selected`
-                : `Selected tickets (${totalQty})`}
-            </span>
-            {summaryOpen ? (
-              <ChevronDown className="size-4 text-muted-foreground" />
-            ) : (
-              <ChevronUp className="size-4 text-muted-foreground" />
-            )}
-          </Button>
+            <Button
+              variant="outline"
+              onClick={() => setSummaryOpen((v) => !v)}
+              className="flex w-full items-center justify-between px-5 py-3 text-sm font-semibold"
+              aria-expanded={summaryOpen}
+            >
+              <span>
+                {mode === "seat"
+                  ? `${totalQty} seat${totalQty > 1 ? "s" : ""} selected`
+                  : `Selected tickets (${totalQty})`}
+              </span>
+              {summaryOpen ? (
+                <ChevronDown className="size-4 text-muted-foreground" />
+              ) : (
+                <ChevronUp className="size-4 text-muted-foreground" />
+              )}
+            </Button>
 
-          {summaryOpen && (
-            <div className="space-y-1 px-5 pb-3">
-              {mode === "zone" &&
-                tickets.map((t) => {
-                  const tt = ticketTypes.find((x) => x.id === t.ticketTypeId);
-                  if (!tt) return null;
-                  return (
-                    <div
-                      key={t.ticketTypeId}
-                      className="flex items-center justify-between text-sm"
-                    >
-                      <span className="truncate text-foreground">
-                        {tt.name} x {t.quantity}
-                      </span>
-                      <div className="flex shrink-0 items-center gap-3 pl-4">
-                        <span className="text-muted-foreground">
-                          {fmt(tt.price * t.quantity)} {tt.currency}
+            {summaryOpen && (
+              <div className="max-h-48 space-y-1 overflow-y-auto px-5 pb-3 md:max-h-none md:overflow-visible">
+                {mode === "zone" &&
+                  tickets.map((t) => {
+                    const tt = ticketTypes.find((x) => x.id === t.ticketTypeId);
+                    if (!tt) return null;
+                    return (
+                      <div
+                        key={t.ticketTypeId}
+                        className="flex items-center justify-between text-sm"
+                      >
+                        <span className="truncate text-foreground">
+                          {tt.name} x {t.quantity}
                         </span>
-                        <Button
-                          variant="ghost"
-                          onClick={() => onDeleteTicket?.(t.ticketTypeId)}
-                          aria-label={`Remove ${tt.name}`}
-                          className="text-muted-foreground transition hover:text-destructive"
-                        >
-                          <Trash2 className="size-3.5" />
-                        </Button>
+                        <div className="flex shrink-0 items-center gap-3 pl-4">
+                          <span className="text-muted-foreground">
+                            {fmt(tt.price * t.quantity)} {tt.currency}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            onClick={() => onDeleteTicket?.(t.ticketTypeId)}
+                            aria-label={`Remove ${tt.name}`}
+                            className="text-muted-foreground transition hover:text-destructive"
+                          >
+                            <Trash2 className="size-3.5" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
 
-              {mode === "seat" &&
-                selectedSeats.map((seat) => {
-                  const tt = ticketTypes.find(
-                    (ticketType) => ticketType.id === seat.ticketTypeId,
-                  );
-                  if (!tt) return null;
-                  return (
-                    <div
-                      key={seat.id}
-                      className="flex items-center justify-between text-sm"
-                    >
-                      <div className="min-w-0">
-                        <span className="block truncate text-foreground">
-                          {seat.label}
-                        </span>
-                        <span className="block truncate text-xs text-muted-foreground">
-                          {tt.name}
-                        </span>
+                {mode === "seat" &&
+                  selectedSeats.map((seat) => {
+                    const tt = ticketTypes.find(
+                      (ticketType) => ticketType.id === seat.ticketTypeId,
+                    );
+                    if (!tt) return null;
+                    return (
+                      <div
+                        key={seat.id}
+                        className="flex items-center justify-between text-sm"
+                      >
+                        <div className="min-w-0">
+                          <span className="block truncate text-foreground">
+                            {seat.label}
+                          </span>
+                          <span className="block truncate text-xs text-muted-foreground">
+                            {tt.name}
+                          </span>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-3 pl-4">
+                          <span className="text-muted-foreground">
+                            {fmt(tt.price)} {tt.currency}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            onClick={() => onSeatRemove?.(seat.id)}
+                            aria-label={`Remove ${seat.label}`}
+                            className="text-muted-foreground transition hover:text-destructive"
+                          >
+                            <Trash2 className="size-3.5" />
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex shrink-0 items-center gap-3 pl-4">
-                        <span className="text-muted-foreground">
-                          {fmt(tt.price)} {tt.currency}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          onClick={() => onSeatRemove?.(seat.id)}
-                          aria-label={`Remove ${seat.label}`}
-                          className="text-muted-foreground transition hover:text-destructive"
-                        >
-                          <Trash2 className="size-3.5" />
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
 
-              <div className="flex items-center justify-between border-t border-border pt-2 text-sm font-semibold">
-                <span>Subtotal</span>
-                <span>{fmt(totalPrice)} VND</span>
+                <div className="flex items-center justify-between border-t border-border pt-2 text-sm font-semibold">
+                  <span>Subtotal</span>
+                  <span>{fmt(totalPrice)} VND</span>
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-      )}
+            )}
+          </div>
+        )}
 
-      {/* CTA */}
-      <div className="border-t border-border p-4">
-        <Button
-          onClick={onContinue}
-          disabled={totalQty === 0 || isLoading}
-          className={cn(
-            "h-11 w-full text-sm font-semibold",
-            (totalQty === 0 || isLoading) && "opacity-50",
-          )}
-        >
-          {isLoading
-            ? "Processing..."
-            : totalQty === 0
-              ? "Select tickets to continue"
-              : `${fmt(totalPrice)} VND - Continue`}
-        </Button>
+        {/* CTA */}
+        <div className="p-4">
+          <Button
+            onClick={onContinue}
+            disabled={totalQty === 0 || isLoading}
+            className={cn(
+              "h-11 w-full text-sm font-semibold",
+              (totalQty === 0 || isLoading) && "opacity-50",
+            )}
+          >
+            {isLoading
+              ? "Processing..."
+              : totalQty === 0
+                ? "Select tickets to continue"
+                : `${fmt(totalPrice)} VND - Continue`}
+          </Button>
+        </div>
       </div>
     </div>
   );
