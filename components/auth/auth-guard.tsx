@@ -32,10 +32,9 @@ export function AuthGuard({
   }, [user, isInitialized, router, redirectTo]);
 
   // User present (from persist or fresh login) — render immediately, no flicker.
-  if (user) return <>{children}</>;
-
-  // No user yet, but initialization is still in progress (refresh call in flight).
   if (!isInitialized) return <GuardSkeleton />;
+
+  if (user) return <>{children}</>;
 
   // No user, initialization done — redirect is firing from the effect.
   return null;

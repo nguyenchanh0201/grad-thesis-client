@@ -1,3 +1,4 @@
+import { AuthGuard } from "@/components/auth/auth-guard";
 import { Header } from "@/components/homepage/header";
 import { BuyProcessShell } from "@/components/buy-process/buy-process-shell";
 
@@ -9,7 +10,9 @@ export default function BookingLayout({
   return (
     <>
       <Header hideSearchBar />
-      <BuyProcessShell>{children}</BuyProcessShell>
+      <AuthGuard>
+        <BuyProcessShell>{children}</BuyProcessShell>
+      </AuthGuard>
     </>
   );
 }

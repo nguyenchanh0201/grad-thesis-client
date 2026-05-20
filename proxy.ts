@@ -1,7 +1,8 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
-const SESSION_COOKIE = "refresh_token";
+const ACCESS_SESSION_COOKIE = "sAccessToken";
+const REFRESH_SESSION_COOKIE = "sRefreshToken";
 
 const PROTECTED_PATHS = ["/my-tickets", "/account"];
 const GUEST_ONLY_PATHS = ["/auth/login", "/auth/register"];
@@ -22,7 +23,9 @@ export function proxy(req: NextRequest) {
     }
   }
 
-  const hasSession = req.cookies.has(SESSION_COOKIE);
+  const hasSession =
+    req.cookies.has(ACCESS_SESSION_COOKIE) ||
+    req.cookies.has(REFRESH_SESSION_COOKIE);
 
   if (!hasSession && matchesAny(pathname, PROTECTED_PATHS)) {
     const loginUrl = new URL("/auth/login", req.url);

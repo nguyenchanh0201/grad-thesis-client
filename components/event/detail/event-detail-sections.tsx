@@ -39,6 +39,11 @@ export function EventDetailSections({ event }: Props) {
   const isLoggedIn = !!user;
 
   const handleBuy = () => {
+    if (isInitialized && !isLoggedIn) {
+      const redirect = `/buy/${event.slug}/queue?intent=1`;
+      router.push(`/auth/login?redirect=${encodeURIComponent(redirect)}`);
+      return;
+    }
     setQueueIntent(event.slug);
     router.push(`/buy/${event.slug}/queue?intent=1`);
   };

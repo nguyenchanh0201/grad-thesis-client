@@ -12,15 +12,18 @@ interface GuestGuardProps {
 }
 
 export function GuestGuard({ children, redirectTo = "/" }: GuestGuardProps) {
+  const isInitialized = useAuthStore((s) => s.isInitialized);
   const user = useAuthStore((s) => s.user);
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect");
 
   useEffect(() => {
-    if (!user) return;
+    if (!isInitialized || !user) return;
     router.replace(resolvePostAuthRedirect(redirect, redirectTo));
-  }, [user, router, redirectTo, redirect]);
+  }, [isInitialized, user, router, redirectTo, redirect]);
+
+  if (!isInitialized) return null;
 
   // Redirect is in flight — render nothing to avoid a flash of the auth form.
   if (user) return null;

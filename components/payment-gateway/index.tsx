@@ -28,6 +28,7 @@ import { BookingResult } from "./booking-result";
 import { PaymentPanel } from "./payment-pannel";
 import { OrderSummarySidebar } from "./order-summary-sidebar";
 import { GatewayFooter } from "./gateway-footer";
+import { Button } from "@/components/ui/button";
 
 function buildLineItems(
   tickets: SelectedTicket[],
@@ -188,6 +189,10 @@ export function PaymentGateway({ slug }: Props) {
   const resolvedQrValue = presentation.isHostedGateway
     ? (hostedGatewayUrl ?? `PENDING:${paymentReference}`)
     : transferQrValue;
+  const isUnauthorizedConfirmation =
+    isAppError(confirmationError) && confirmationError.status === 401;
+  const hasConfirmationError =
+    !!confirmationError && !isUnauthorizedConfirmation;
 
   useEffect(() => {
     if (reservationId) return;
@@ -229,7 +234,51 @@ export function PaymentGateway({ slug }: Props) {
     waitRoomToken,
   ]);
 
-  if (!reservationId || !deadline || isConfirmationLoading) return null;
+  if (!reservationId || isConfirmationLoading) return null;
+
+  if (isUnauthorizedConfirmation) {
+    return (
+      <div className="flex min-h-[calc(100vh-var(--header-height))] items-center justify-center px-6">
+        <div className="w-full max-w-lg rounded-sm border border-border bg-background p-6 text-center">
+          <h1 className="text-xl font-semibold text-foreground">
+            Session expired
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Please sign in again to continue your payment.
+          </p>
+          <Button
+            className="mt-5 w-full"
+            onClick={() => {
+              if (typeof window === "undefined") return;
+              const redirect =
+                window.location.pathname + window.location.search;
+              window.location.assign(
+                `/auth/login?redirect=${encodeURIComponent(redirect)}`,
+              );
+            }}
+          >
+            Sign in
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (hasConfirmationError || !deadline) {
+    return (
+      <div className="flex min-h-[calc(100vh-var(--header-height))] items-center justify-center px-6">
+        <div className="w-full max-w-lg rounded-sm border border-border bg-background p-6 text-center">
+          <h1 className="text-xl font-semibold text-foreground">
+            Confirmation unavailable
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            We could not load your payment confirmation details. Please refresh
+            this page and try again.
+          </p>
+        </div>
+      </div>
+    );
+  }
   if (isPaymentSuccess) {
     return (
       <BookingResult

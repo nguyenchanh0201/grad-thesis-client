@@ -31,6 +31,22 @@ export const refreshClient = axios.create({
   withCredentials: true,
 });
 
+function redirectToLoginForUnauthorized() {
+  if (typeof window === "undefined") return;
+  const { pathname, search } = window.location;
+  if (pathname.startsWith("/auth")) return;
+  const redirect = `${pathname}${search}`;
+  window.location.replace(
+    `/auth/login?redirect=${encodeURIComponent(redirect)}`,
+  );
+}
+
+function handleUnauthorized(reason?: unknown): UnauthorizedError {
+  useAuthStore.getState().clearAuth();
+  redirectToLoginForUnauthorized();
+  return new UnauthorizedError("Session expired. Please log in again.", reason);
+}
+
 apiClient.interceptors.request.use((config) => {
   const correlationId = uuidv4();
   config.headers = config.headers ?? {};
@@ -47,10 +63,6 @@ apiClient.interceptors.request.use((config) => {
     }
   }
 
-  const { accessToken } = useAuthStore.getState();
-  if (accessToken) {
-    config.headers.Authorization = `Bearer ${accessToken}`;
-  }
   return config;
 });
 
@@ -140,13 +152,7 @@ apiClient.interceptors.response.use(
         })
         .catch((refreshError) => {
           flushQueue(refreshError);
-          useAuthStore.getState().clearAuth();
-          return Promise.reject(
-            new UnauthorizedError(
-              "Session expired. Please log in again.",
-              refreshError,
-            ),
-          );
+          return Promise.reject(handleUnauthorized(refreshError));
         })
         .finally(() => {
           isRefreshing = false;
@@ -165,6 +171,8 @@ apiClient.interceptors.response.use(
     }
 
     if (status === 401) {
+      useAuthStore.getState().clearAuth();
+      redirectToLoginForUnauthorized();
       return Promise.reject(new UnauthorizedError(originalErrorMessage, error));
     }
 
