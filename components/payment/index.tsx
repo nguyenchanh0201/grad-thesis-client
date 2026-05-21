@@ -96,8 +96,9 @@ export function Payment({ slug }: Props) {
     venueAddress: event?.venue?.address ?? "",
   };
 
-  const discountProp = discountCode?.valid
-    ? { code: discountCode.code, amount: discountCode.discountAmount }
+  const appliedVoucher = reservation?.voucher ?? null;
+  const discountProp = appliedVoucher
+    ? { code: appliedVoucher.code, amount: appliedVoucher.discountAmount }
     : null;
 
   useEffect(() => {
@@ -159,6 +160,9 @@ export function Payment({ slug }: Props) {
             selectedSeats={selectedSeats}
             mapType={mapType}
             recipient={recipient}
+            reservationItems={reservation?.items}
+            reservationTotalAmount={reservation?.totalAmount}
+            reservationSubtotalAmount={reservation?.subtotalAmount}
             discount={discountProp}
           />
         </section>
@@ -197,6 +201,7 @@ export function Payment({ slug }: Props) {
             <DiscountCodeInput
               reservationId={reservationId}
               vouchers={availableVouchers}
+              appliedVoucher={appliedVoucher}
             />
             {isVouchersLoading ? (
               <p className="text-xs text-muted-foreground">

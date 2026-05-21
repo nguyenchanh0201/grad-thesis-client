@@ -13,6 +13,7 @@ import { RedirectButton } from "@/components/queue/redirect-button";
 import { AuthGuard } from "@/components/auth/auth-guard";
 import { useQueuePolling } from "@/hooks/use-queue-polling";
 import { useAuthStore } from "@/lib/store/auth.store";
+import { useBookingStore } from "@/lib/store/booking";
 import { useEventBySlug } from "@/hooks/use-events";
 import { hasBuySession, setBuySession } from "@/lib/booking/buy-session";
 import { sendHeartbeat } from "@/services/queue.service";
@@ -37,6 +38,7 @@ function QueuePageContent() {
   const user = useAuthStore((s) => s.user);
   const isAuthInitialized = useAuthStore((s) => s.isInitialized);
   const userId = isAuthInitialized ? (user?.id ?? null) : null;
+  const beginBuySession = useBookingStore((s) => s.beginBuySession);
 
   const { data: eventResult } = useEventBySlug(slug);
   const event = eventResult?.data;
@@ -93,6 +95,9 @@ function QueuePageContent() {
         clearQueueIntent(slug);
         const resolvedExpiry = await resolveSessionExpiry();
         const hasSession = setBuySession(slug, resolvedExpiry ?? undefined);
+        if (hasSession) {
+          beginBuySession(slug, token);
+        }
         router.replace(hasSession ? `/buy/${slug}/tickets` : `/events/${slug}`);
         return;
       }
@@ -100,13 +105,23 @@ function QueuePageContent() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [polledStatus, resolveSessionExpiry, router, slug]);
+  }, [
+    beginBuySession,
+    polledStatus,
+    resolveSessionExpiry,
+    router,
+    slug,
+    token,
+  ]);
 
   const handleRedirect = async () => {
     hasRedirectedRef.current = true;
     clearQueueIntent(slug);
     const resolvedExpiry = await resolveSessionExpiry();
     const hasSession = setBuySession(slug, resolvedExpiry ?? undefined);
+    if (hasSession) {
+      beginBuySession(slug, token);
+    }
     router.replace(hasSession ? `/buy/${slug}/tickets` : `/events/${slug}`);
   };
 

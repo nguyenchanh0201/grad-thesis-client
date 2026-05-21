@@ -2,16 +2,11 @@
 
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { isAppError } from "@/core/error";
 import {
   applyReservationVoucher,
@@ -22,20 +17,28 @@ import { reservationKeys } from "@/hooks/use-booking";
 import { toast } from "sonner";
 import type { AvailableVoucher } from "@/schemas/reservation";
 import { VOUCHER_DISCOUNT_TYPE } from "@/schemas/payment";
+import { cn } from "@/lib/utils";
 
 type Props = {
   reservationId?: string | null;
   vouchers?: AvailableVoucher[];
+  appliedVoucher?: {
+    code: string;
+    discountAmount: number;
+    type?: string | null;
+  } | null;
 };
 
-export function DiscountCodeInput({ reservationId, vouchers = [] }: Props) {
+export function DiscountCodeInput({
+  reservationId,
+  vouchers = [],
+  appliedVoucher = null,
+}: Props) {
   const queryClient = useQueryClient();
   const { discountCode, setDiscountCode } = useBookingStore();
   const [input, setInput] = useState(discountCode?.code ?? "");
   const [loading, setLoading] = useState(false);
-  const selectedVoucherCode = vouchers.some((voucher) => voucher.code === input)
-    ? input
-    : undefined;
+  const [isInputFocused, setIsInputFocused] = useState(false);
 
   const formatVoucherSummary = (voucher: AvailableVoucher) => {
     if (voucher.discountType === VOUCHER_DISCOUNT_TYPE.PERCENT) {
@@ -76,6 +79,33 @@ export function DiscountCodeInput({ reservationId, vouchers = [] }: Props) {
     }
   };
 
+  const handleApplyFromList = async (code: string) => {
+    if (!reservationId) return;
+    setInput(code);
+    setLoading(true);
+    try {
+      const result = await applyReservationVoucher(reservationId, code);
+      const voucher = result.data.voucher;
+      if (voucher) {
+        setDiscountCode({
+          code: voucher.code,
+          valid: true,
+          type: voucher.type,
+          discountAmount: result.data.discountAmount,
+        });
+      }
+      await queryClient.invalidateQueries({
+        queryKey: reservationKeys.detail(reservationId),
+      });
+    } catch (error) {
+      toast.error(
+        isAppError(error) ? error.message : "Could not apply voucher",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleRemove = async () => {
     if (!reservationId || !discountCode?.valid) return;
     setLoading(true);
@@ -100,94 +130,105 @@ export function DiscountCodeInput({ reservationId, vouchers = [] }: Props) {
     if (discountCode) setDiscountCode(null);
   };
 
+  const normalizedQuery = input.trim().toLowerCase();
+  const filteredVouchers = vouchers.filter((voucher) => {
+    if (!normalizedQuery) return true;
+    return (
+      voucher.code.toLowerCase().includes(normalizedQuery) ||
+      (voucher.description ?? "").toLowerCase().includes(normalizedQuery)
+    );
+  });
+  const showVoucherList =
+    isInputFocused && vouchers.length > 0 && !loading && !appliedVoucher;
+
   return (
-    <div className="space-y-3">
-      <div className="space-y-1">
-        <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-          Promotion
-        </p>
-        <h3 className="line-clamp-none text-base font-medium text-foreground">
-          Add a discount code
-        </h3>
-        <p className="line-clamp-none text-sm leading-6 text-muted-foreground">
-          Applied discounts are reflected in the order total before payment.
-        </p>
-      </div>
-
-      {vouchers.length > 0 ? (
-        <div className="space-y-1">
-          <p className="text-xs text-muted-foreground">My vouchers</p>
-          <Select
-            value={selectedVoucherCode}
-            onValueChange={(value) => {
-              setInput(value);
-              if (discountCode) setDiscountCode(null);
+    <div className="space-y-3 sm:space-y-4">
+      <div className="relative space-y-2">
+        <div className="flex items-stretch gap-2">
+          <Input
+            value={input}
+            onChange={handleChange}
+            placeholder="Enter discount code"
+            className="min-h-11 w-full border-0 bg-gray-50 text-sm"
+            onFocus={() => setIsInputFocused(true)}
+            onBlur={() => {
+              window.setTimeout(() => setIsInputFocused(false), 120);
             }}
-            disabled={loading}
-          >
-            <SelectTrigger className="min-h-11 w-full border-0 bg-gray-50 px-3 text-sm">
-              <SelectValue placeholder="Select a voucher" />
-            </SelectTrigger>
-            <SelectContent
-              align="start"
-              className="w-[var(--radix-select-trigger-width)]"
-            >
-              {vouchers.map((voucher) => (
-                <SelectItem key={voucher.code} value={voucher.code}>
-                  <span className="flex w-full items-center justify-between gap-3">
-                    <span>{voucher.code}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {formatVoucherSummary(voucher)}
-                    </span>
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      ) : null}
-
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <Input
-          value={input}
-          onChange={handleChange}
-          placeholder="Enter discount code"
-          className="min-h-11 flex-1 border-0 bg-gray-50"
-          onKeyDown={(e) => e.key === "Enter" && handleApply()}
-        />
-        <Button
-          variant="default"
-          className="min-h-11 sm:px-6"
-          onClick={handleApply}
-          disabled={loading || !input.trim() || !reservationId}
-        >
-          {loading ? <Loader2 className="size-4 animate-spin" /> : "Apply"}
-        </Button>
-        {discountCode?.valid ? (
+            onKeyDown={(e) => e.key === "Enter" && handleApply()}
+          />
           <Button
-            type="button"
-            variant="outline"
-            className="min-h-11 sm:px-6"
-            onClick={handleRemove}
-            disabled={loading || !reservationId}
+            variant="default"
+            className="min-h-11 shrink-0 px-4 sm:px-6"
+            onClick={handleApply}
+            disabled={loading || !input.trim() || !reservationId}
           >
-            Remove
+            {loading ? <Loader2 className="size-4 animate-spin" /> : "Apply"}
           </Button>
+        </div>
+        {showVoucherList ? (
+          <div className="absolute z-30 mt-1 w-full overflow-y-auto rounded-md py-1 shadow-md ring-1 ring-border">
+            {filteredVouchers.length > 0 ? (
+              filteredVouchers.map((voucher) => (
+                <button
+                  key={voucher.code}
+                  type="button"
+                  className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left text-sm"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => handleApplyFromList(voucher.code)}
+                >
+                  <span className="font-medium">{voucher.code}</span>
+                  <span className="text-right text-xs text-muted-foreground">
+                    {formatVoucherSummary(voucher)}
+                  </span>
+                </button>
+              ))
+            ) : (
+              <p className="px-3 py-2 text-sm text-muted-foreground">
+                No voucher found.
+              </p>
+            )}
+          </div>
         ) : null}
       </div>
 
-      {discountCode && discountCode.valid && (
-        <p className="line-clamp-none flex items-center gap-1.5 text-xs text-muted-foreground">
-          <CheckCircle2 className="size-3.5" />
-          Code applied - saving{" "}
-          {discountCode.discountAmount.toLocaleString("vi-VN")} VND
-        </p>
-      )}
       {discountCode && !discountCode.valid && (
         <p className="line-clamp-none text-xs text-destructive">
           {discountCode.errorMessage}
         </p>
       )}
+
+      <Card
+        size="sm"
+        className={cn("gap-2 bg-muted/30", !appliedVoucher && "hidden")}
+      >
+        <CardHeader>
+          <CardTitle className="text-sm">Applied vouchers</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {appliedVoucher ? (
+            <div className="flex items-center justify-between gap-3 text-sm">
+              <div className="flex items-center gap-2">
+                <Badge variant="outline">{appliedVoucher.code}</Badge>
+                <span className="text-muted-foreground">
+                  -{appliedVoucher.discountAmount.toLocaleString("vi-VN")} VND
+                </span>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2"
+                onClick={handleRemove}
+                disabled={loading || !reservationId}
+              >
+                Remove
+              </Button>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">No voucher applied.</p>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

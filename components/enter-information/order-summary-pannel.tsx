@@ -32,6 +32,7 @@ type Props = {
   recipient: RecipientInfo;
   reservationItems?: ReservationItem[];
   reservationTotalAmount?: number;
+  reservationSubtotalAmount?: number;
   reservationCurrency?: string;
   discount?: { code: string; amount: number } | null;
 };
@@ -135,6 +136,7 @@ export function OrderSummaryPanel({
   recipient,
   reservationItems,
   reservationTotalAmount,
+  reservationSubtotalAmount,
   reservationCurrency,
   discount,
 }: Props) {
@@ -144,14 +146,14 @@ export function OrderSummaryPanel({
       ? reservationRows
       : buildSeatRows(tickets, selectedSeats, ticketTypes, mapType);
   const currency = reservationCurrency ?? seatRows[0]?.currency ?? "VND";
-  const subtotal = reservationTotalAmount ?? computeTotal(seatRows);
-  const total = discount?.amount
-    ? Math.max(0, subtotal - discount.amount)
-    : subtotal;
+  const computedSubtotal = computeTotal(seatRows);
+  const subtotal = reservationSubtotalAmount ?? computedSubtotal;
+  const total =
+    reservationTotalAmount ??
+    (discount?.amount ? Math.max(0, subtotal - discount.amount) : subtotal);
 
   return (
     <div className="flex flex-col">
-      {/* Event card */}
       <div className="p-5">
         <div className="relative aspect-4/3 w-full overflow-hidden rounded-sm bg-muted">
           {event.image && (
@@ -174,7 +176,6 @@ export function OrderSummaryPanel({
         </div>
       </div>
 
-      {/* Ticket Delivery Info */}
       <CollapsibleSection title="Ticket Delivery Info">
         <div className="space-y-3 text-sm">
           <Card size="sm" className="gap-3 bg-muted/35">
@@ -230,7 +231,6 @@ export function OrderSummaryPanel({
         </div>
       </CollapsibleSection>
 
-      {/* Seating Area & Tickets */}
       <CollapsibleSection title="Seating Area & Tickets">
         {seatRows.length === 0 ? (
           <p className="text-sm text-muted-foreground">No tickets selected</p>
@@ -243,7 +243,7 @@ export function OrderSummaryPanel({
               >
                 <span className="font-medium text-foreground">{row.label}</span>
                 <div className="flex items-center gap-4 text-right">
-                  <span className="text-muted-foreground">×{row.quantity}</span>
+                  <span className="text-muted-foreground">x{row.quantity}</span>
                   <span className="font-medium text-primary">
                     {fmt(row.unitPrice)} {row.currency}
                   </span>
@@ -254,7 +254,6 @@ export function OrderSummaryPanel({
         )}
       </CollapsibleSection>
 
-      {/* Payment Information */}
       <CollapsibleSection
         title="Payment Information"
         rightSlot={
@@ -274,7 +273,7 @@ export function OrderSummaryPanel({
             <div className="flex items-center justify-between text-green-600">
               <span>Discount ({discount.code})</span>
               <span className="font-medium">
-                −{fmt(discount.amount)} {currency}
+                -{fmt(discount.amount)} {currency}
               </span>
             </div>
           ) : null}
