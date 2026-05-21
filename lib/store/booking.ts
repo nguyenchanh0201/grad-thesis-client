@@ -39,6 +39,7 @@ type BookingState = {
   billingRequested: boolean;
 
   initStep1: (payload: InitStep1Payload) => void;
+  beginBuySession: (slug: string, waitRoomToken?: string | null) => void;
   setWaitRoomToken: (token: string | null, slug?: string | null) => void;
   setReservationId: (id: string | null) => void;
   hydrateFromReservation: (reservation: Reservation) => void;
@@ -119,6 +120,19 @@ export const useBookingStore = create<BookingState>()(
                   ...seat,
                   id: toSeatSelectionId(seat.ticketTypeId, seat.seatIndex),
                 })),
+          };
+        }),
+
+      beginBuySession: (slug, waitRoomToken) =>
+        set((s) => {
+          const token =
+            waitRoomToken ?? (s.waitRoomSlug === slug ? s.waitRoomToken : null);
+
+          return {
+            ...INITIAL_STATE,
+            slug,
+            waitRoomToken: token,
+            waitRoomSlug: token ? slug : null,
           };
         }),
 
