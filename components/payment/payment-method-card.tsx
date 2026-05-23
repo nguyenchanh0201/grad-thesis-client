@@ -8,6 +8,7 @@ import { Label } from "../ui/label";
 
 const ICONS: Record<PaymentMethodId, React.ElementType> = {
   vnpay: QrCode,
+  mock: CreditCard,
   bank_transfer: Banknote,
   international_card: CreditCard,
   momo: Wallet,

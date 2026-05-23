@@ -11,7 +11,7 @@ import { EventBanner } from "@/components/ticket-selection/event-banner";
 import { useBuyProcess } from "@/components/buy-process/buy-process-shell";
 import { OrderSummaryPanel } from "@/components/enter-information/order-summary-pannel";
 import {
-  createVNPayUrl,
+  preparePayment,
   getPaymentConfirmationStatus,
   getPaymentMethodsByEventSlug,
 } from "@/services/payment.service";
@@ -100,7 +100,9 @@ export function Payment({ slug }: Props) {
   const hasSelectedEligibleMethod = availableMethods.some(
     (method) => method.id === paymentMethodId,
   );
-  const isVnpaySelected = paymentMethodId === "vnpay";
+  const selectedMethod = availableMethods.find((m) => m.id === paymentMethodId);
+  const isHostedGateway =
+    selectedMethod?.checkoutConfig?.type === "hosted_gateway";
   const reservationStatus = confirmation?.reservationStatus;
   const isReservationTerminal =
     reservationStatus === RESERVATION_STATUS.PAID ||
@@ -110,7 +112,7 @@ export function Payment({ slug }: Props) {
     reservationStatus === RESERVATION_STATUS.PENDING ||
     reservationStatus === RESERVATION_STATUS.PAYMENT_LOCKED;
   const createPaymentMutation = useMutation({
-    mutationFn: createVNPayUrl,
+    mutationFn: preparePayment,
     retry: false,
   });
 
@@ -157,8 +159,7 @@ export function Payment({ slug }: Props) {
   }, [discountCode, reservation?.voucher, setDiscountCode]);
 
   const handleContinue = () => {
-    if (!reservationId || !reservation) return;
-    if (!isVnpaySelected) return;
+    if (!reservationId || !reservation || !paymentMethodId) return;
     if (!waitRoomToken) {
       router.replace(`/buy/${slug}/queue`);
       return;
@@ -169,14 +170,14 @@ export function Payment({ slug }: Props) {
     }
 
     createPaymentMutation.mutate(
-      {
-        reservationId,
-        waitRoomToken,
-      },
+      { reservationId, waitRoomToken, methodId: paymentMethodId },
       {
         onSuccess: (result) => {
           if (typeof window === "undefined") return;
-          window.location.assign(result.paymentUrl);
+          if (result.paymentUrl) {
+            window.open(result.paymentUrl, "_blank", "noopener,noreferrer");
+          }
+          router.replace(`/buy/${slug}/confirmation`);
         },
       },
     );
@@ -229,7 +230,7 @@ export function Payment({ slug }: Props) {
                 Review and pay
               </h1>
               <p className="line-clamp-none max-w-2xl text-sm leading-6 text-muted-foreground">
-                Confirm your order details and continue to VNPay checkout.
+                Confirm your order details and continue to payment.
               </p>
             </div>
 
@@ -276,7 +277,7 @@ export function Payment({ slug }: Props) {
             ) : null}
             {createPaymentMutation.isError ? (
               <p className="text-xs text-destructive">
-                Could not start VNPay checkout. Please refresh and try again.
+                Could not start checkout. Please refresh and try again.
               </p>
             ) : null}
 
@@ -305,7 +306,7 @@ export function Payment({ slug }: Props) {
           !!reservationId &&
           !!reservation &&
           hasSelectedEligibleMethod &&
-          isVnpaySelected &&
+          isHostedGateway &&
           canPayReservation &&
           !isReservationTerminal &&
           !isConfirmationLoading

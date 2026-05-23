@@ -81,8 +81,8 @@ export function getPaymentMethodPresentation(
     case "vnpay":
     default:
       return {
-        label: selectedMethod?.label ?? "VNPay",
-        subtitle: "Hosted checkout with QR, ATM, and wallet options",
+        label: selectedMethod?.label ?? "Payment Gateway",
+        subtitle: selectedMethod?.description ?? "Hosted checkout — you will be redirected to complete payment",
         isHostedGateway,
         details:
           "Payment status will be updated automatically after provider confirmation.",

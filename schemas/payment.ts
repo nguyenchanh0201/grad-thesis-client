@@ -3,6 +3,7 @@ import { BaseResponseSchema } from "./api";
 
 export const PaymentMethodIdSchema = z.enum([
   "vnpay",
+  "mock",
   "bank_transfer",
   "international_card",
   "momo",
