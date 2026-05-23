@@ -8,9 +8,19 @@ type Props = {
   canContinue: boolean;
   onBack: () => void;
   onContinue: () => void;
+  continueLabel?: string;
+  continueBusyLabel?: string;
+  isContinuing?: boolean;
 };
 
-export function PaymentStickyBar({ canContinue, onBack, onContinue }: Props) {
+export function PaymentStickyBar({
+  canContinue,
+  onBack,
+  onContinue,
+  continueLabel = "Continue",
+  continueBusyLabel = "Redirecting...",
+  isContinuing = false,
+}: Props) {
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background/95 backdrop-blur-sm">
       <div className="mx-auto flex max-w-screen-2xl flex-col gap-3 px-4 py-3 sm:px-6 md:flex-row md:items-center md:justify-between">
@@ -33,10 +43,11 @@ export function PaymentStickyBar({ canContinue, onBack, onContinue }: Props) {
           </Button>
           <Button
             onClick={onContinue}
-            disabled={!canContinue}
+            disabled={!canContinue || isContinuing}
             className={cn("min-h-11", !canContinue && "opacity-60")}
           >
-            Continue <ArrowRight className="size-4" />
+            {isContinuing ? continueBusyLabel : continueLabel}{" "}
+            <ArrowRight className="size-4" />
           </Button>
         </div>
       </div>

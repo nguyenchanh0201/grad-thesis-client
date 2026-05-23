@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ticket, WalletCards } from "lucide-react";
 import { toast } from "sonner";
 import { clearBuySession } from "@/lib/booking/buy-session";
@@ -13,7 +13,10 @@ import { useBookingStore } from "@/lib/store/booking";
 import { useEventBySlug } from "@/hooks/use-events";
 import { useReservation } from "@/hooks/use-booking";
 import { getIdentityMe } from "@/services/identity.service";
-import { updateReservationRecipient } from "@/services/reservation.service";
+import {
+  cancelReservation,
+  updateReservationRecipient,
+} from "@/services/reservation.service";
 import { fmtIsoDate, fmtIsoTime } from "@/lib/date/utils";
 import { EventBanner } from "@/components/ticket-selection/event-banner";
 import { useBuyProcess } from "@/components/buy-process/buy-process-shell";
@@ -51,6 +54,7 @@ function buildEstimatedTotalFromStore(
 
 export function EnterInformation({ slug }: Props) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { exitPurchaseFlow } = useBuyProcess();
 
   const {
@@ -62,10 +66,13 @@ export function EnterInformation({ slug }: Props) {
     recipient,
     hydrateFromReservation,
     updateRecipient,
+    setReservationId,
   } = useBookingStore();
 
+  const isReturningToTicketsRef = useRef(false);
+
   useEffect(() => {
-    if (reservationId === null) {
+    if (reservationId === null && !isReturningToTicketsRef.current) {
       exitPurchaseFlow();
     }
   }, [exitPurchaseFlow, reservationId]);
@@ -184,8 +191,31 @@ export function EnterInformation({ slug }: Props) {
     }
   };
 
-  const handleBack = () => {
-    router.replace(`/buy/${slug}/tickets`);
+  const handleBack = async () => {
+    if (!reservationId || isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await cancelReservation(reservationId);
+      isReturningToTicketsRef.current = true;
+      setReservationId(null);
+      await queryClient.invalidateQueries({
+        queryKey: ["reservations"],
+      });
+      router.replace(`/buy/${slug}/tickets`);
+    } catch (err) {
+      if (isAppError(err) && err.status === 409) {
+        clearBuySession(slug);
+        router.replace(`/events/${slug}`);
+        return;
+      }
+      toast.error(
+        isAppError(err)
+          ? err.message
+          : "Could not release your current selection. Please try again.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const eventSummary = {

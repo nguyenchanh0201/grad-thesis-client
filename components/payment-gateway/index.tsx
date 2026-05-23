@@ -7,9 +7,9 @@ import { RESERVATION_POLL_INTERVAL_MS } from "@/lib/booking/config";
 import { useBookingStore } from "@/lib/store/booking";
 import { clearBuySession } from "@/lib/booking/buy-session";
 import {
-  createVNPayUrl,
   getPaymentConfirmationStatus,
   getPaymentMethodsByEventSlug,
+  preparePayment,
 } from "@/services/payment.service";
 import { RESERVATION_STATUS } from "@/schemas/reservation/reservation.schema";
 import { useBuyProcess } from "@/components/buy-process/buy-process-shell";
@@ -24,7 +24,6 @@ import {
   getManualTransferDetails,
   getPaymentMethodPresentation,
 } from "./payment-method-config";
-import { BookingResult } from "./booking-result";
 import { PaymentPanel } from "./payment-pannel";
 import { OrderSummarySidebar } from "./order-summary-sidebar";
 import { GatewayFooter } from "./gateway-footer";
@@ -108,10 +107,10 @@ export function PaymentGateway({ slug }: Props) {
   const discountAmount = discountCode?.valid ? discountCode.discountAmount : 0;
   const total = Math.max(0, subtotal - discountAmount);
 
-  const reservationExpiresAt = confirmation?.expiresAt;
+  const reservationExpiresAt =
+    confirmation?.effectiveExpiresAt ?? confirmation?.expiresAt;
   const reservationTotalAmount = Number(confirmation?.totalAmount ?? 0);
   const reservationStatus = confirmation?.reservationStatus;
-  const eventId = confirmation?.eventId;
   const deadline = useMemo(
     () => (reservationExpiresAt ? new Date(reservationExpiresAt) : null),
     [reservationExpiresAt],
@@ -178,17 +177,28 @@ export function PaymentGateway({ slug }: Props) {
   const isPaymentFailed =
     reservationStatus === RESERVATION_STATUS.CANCELLED ||
     reservationStatus === RESERVATION_STATUS.EXPIRED;
-  const prepareGatewayMutation = useMutation({
-    mutationFn: createVNPayUrl,
+  const preparePaymentMutation = useMutation({
+    mutationFn: preparePayment,
     retry: false,
   });
+  const preparedPayment = preparePaymentMutation.data;
+  const activePaymentUrl =
+    confirmation?.payment?.status === "INITIATED"
+      ? confirmation.payment.paymentUrl
+      : null;
   const hostedGatewayUrl =
-    confirmation?.payment?.paymentUrl ??
-    prepareGatewayMutation.data?.paymentUrl ??
-    null;
-  const resolvedQrValue = presentation.isHostedGateway
-    ? (hostedGatewayUrl ?? `PENDING:${paymentReference}`)
-    : transferQrValue;
+    preparedPayment?.paymentUrl ?? activePaymentUrl ?? null;
+  const resolvedTransferDetails = preparedPayment?.transfer ?? transferDetails;
+  const resolvedQrValue =
+    preparedPayment?.qrPayload ??
+    (presentation.isHostedGateway ? (hostedGatewayUrl ?? "") : transferQrValue);
+  const panelPaymentState = isPaymentSuccess
+    ? "success"
+    : isPaymentFailed || preparePaymentMutation.isError
+      ? "failed"
+      : preparePaymentMutation.isPending
+        ? "loading"
+        : "ready";
   const isUnauthorizedConfirmation =
     isAppError(confirmationError) && confirmationError.status === 401;
   const hasConfirmationError =
@@ -213,23 +223,24 @@ export function PaymentGateway({ slug }: Props) {
   }, [reservationExpiresAt, syncToExpiry]);
 
   useEffect(() => {
-    if (!presentation.isHostedGateway) return;
-    if (!reservationId || !eventId) return;
+    if (!reservationId || !effectiveMethodId) return;
     if (isPaymentSuccess || isPaymentFailed) return;
-    if (hostedGatewayUrl || prepareGatewayMutation.isPending) return;
+    if (preparePaymentMutation.isPending) return;
+    if (preparePaymentMutation.isError) return;
+    if (preparedPayment?.methodId === effectiveMethodId) return;
 
-    prepareGatewayMutation.mutate({
+    preparePaymentMutation.mutate({
       reservationId,
-      eventId,
+      methodId: effectiveMethodId,
       waitRoomToken: waitRoomToken ?? undefined,
     });
   }, [
-    eventId,
-    hostedGatewayUrl,
+    effectiveMethodId,
     isPaymentFailed,
     isPaymentSuccess,
-    presentation.isHostedGateway,
-    prepareGatewayMutation,
+    preparePaymentMutation,
+    preparePaymentMutation.isError,
+    preparedPayment?.methodId,
     reservationId,
     waitRoomToken,
   ]);
@@ -279,41 +290,23 @@ export function PaymentGateway({ slug }: Props) {
       </div>
     );
   }
-  if (isPaymentSuccess) {
-    return (
-      <BookingResult
-        slug={slug}
-        isSuccess
-        invoiceId={paymentReference}
-        amount={reservationTotalAmount || total}
-      />
-    );
-  }
-  if (isPaymentFailed) {
-    return (
-      <BookingResult
-        slug={slug}
-        isSuccess={false}
-        invoiceId={paymentReference}
-        amount={reservationTotalAmount || total}
-      />
-    );
-  }
-
   return (
     <div className="flex min-h-[calc(100vh-var(--header-height))] flex-col">
       <div className="flex flex-1 flex-col md:flex-row">
         <div className="flex-1 border-b border-border md:border-b-0 md:border-r md:w-3/5">
           <PaymentPanel
             deadline={deadline}
-            totalAmount={total}
+            totalAmount={
+              preparedPayment?.amount ?? (reservationTotalAmount || total)
+            }
             presentation={presentation}
             isHostedGateway={presentation.isHostedGateway}
-            transferDetails={transferDetails}
+            transferDetails={resolvedTransferDetails}
             transferQrValue={resolvedQrValue}
-            isPreparingGateway={prepareGatewayMutation.isPending}
+            paymentState={panelPaymentState}
+            isPreparingGateway={preparePaymentMutation.isPending}
             gatewayError={
-              prepareGatewayMutation.isError
+              preparePaymentMutation.isError
                 ? "Could not prepare payment QR. Please refresh and try again."
                 : null
             }

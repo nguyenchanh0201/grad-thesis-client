@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useBookingStore } from "@/lib/store/booking";
 import { useReservation } from "@/hooks/use-booking";
 import { useEventBySlug } from "@/hooks/use-events";
@@ -10,12 +10,17 @@ import { fmtIsoDate, fmtIsoTime } from "@/lib/date/utils";
 import { EventBanner } from "@/components/ticket-selection/event-banner";
 import { useBuyProcess } from "@/components/buy-process/buy-process-shell";
 import { OrderSummaryPanel } from "@/components/enter-information/order-summary-pannel";
-import { getPaymentMethodsByEventSlug } from "@/services/payment.service";
+import {
+  createVNPayUrl,
+  getPaymentConfirmationStatus,
+  getPaymentMethodsByEventSlug,
+} from "@/services/payment.service";
 import { getAvailableVouchers } from "@/services/reservation.service";
 import { PaymentMethodSelector } from "./payment-method-selector";
 import { DiscountCodeInput } from "./discount-code-input";
 import { PaymentStickyBar } from "./payment-sticky-bar";
 import { VOUCHER_DISCOUNT_TYPE, type PaymentMethodId } from "@/schemas/payment";
+import { RESERVATION_STATUS } from "@/schemas/reservation/reservation.schema";
 
 type Props = { slug: string };
 
@@ -25,6 +30,7 @@ export function Payment({ slug }: Props) {
 
   const {
     reservationId,
+    waitRoomToken,
     tickets,
     selectedSeats,
     ticketTypes,
@@ -48,6 +54,17 @@ export function Payment({ slug }: Props) {
     reservationId ?? undefined,
   );
   const reservation = reservationResult?.data;
+  const {
+    data: confirmation,
+    isLoading: isConfirmationLoading,
+    isError: isConfirmationError,
+  } = useQuery({
+    queryKey: ["payment-confirmation", reservationId],
+    queryFn: () => getPaymentConfirmationStatus(reservationId!),
+    enabled: !!reservationId,
+    retry: false,
+    refetchInterval: 5000,
+  });
 
   const {
     data: availableMethods = [],
@@ -83,6 +100,19 @@ export function Payment({ slug }: Props) {
   const hasSelectedEligibleMethod = availableMethods.some(
     (method) => method.id === paymentMethodId,
   );
+  const isVnpaySelected = paymentMethodId === "vnpay";
+  const reservationStatus = confirmation?.reservationStatus;
+  const isReservationTerminal =
+    reservationStatus === RESERVATION_STATUS.PAID ||
+    reservationStatus === RESERVATION_STATUS.CANCELLED ||
+    reservationStatus === RESERVATION_STATUS.EXPIRED;
+  const canPayReservation =
+    reservationStatus === RESERVATION_STATUS.PENDING ||
+    reservationStatus === RESERVATION_STATUS.PAYMENT_LOCKED;
+  const createPaymentMutation = useMutation({
+    mutationFn: createVNPayUrl,
+    retry: false,
+  });
 
   const eventSummary = {
     title: event?.eventName ?? "",
@@ -127,7 +157,29 @@ export function Payment({ slug }: Props) {
   }, [discountCode, reservation?.voucher, setDiscountCode]);
 
   const handleContinue = () => {
-    router.replace(`/buy/${slug}/confirmation`);
+    if (!reservationId || !reservation) return;
+    if (!isVnpaySelected) return;
+    if (!waitRoomToken) {
+      router.replace(`/buy/${slug}/queue`);
+      return;
+    }
+    if (!canPayReservation) {
+      router.replace(`/buy/${slug}/confirmation`);
+      return;
+    }
+
+    createPaymentMutation.mutate(
+      {
+        reservationId,
+        waitRoomToken,
+      },
+      {
+        onSuccess: (result) => {
+          if (typeof window === "undefined") return;
+          window.location.assign(result.paymentUrl);
+        },
+      },
+    );
   };
 
   const handleBack = () => {
@@ -177,8 +229,7 @@ export function Payment({ slug }: Props) {
                 Review and pay
               </h1>
               <p className="line-clamp-none max-w-2xl text-sm leading-6 text-muted-foreground">
-                Confirm your order details and choose a payment method. You will
-                complete payment on the selected gateway page.
+                Confirm your order details and continue to VNPay checkout.
               </p>
             </div>
 
@@ -195,6 +246,37 @@ export function Payment({ slug }: Props) {
             {isPaymentMethodsError ? (
               <p className="text-xs text-destructive">
                 Could not load payment methods. Please refresh and try again.
+              </p>
+            ) : null}
+
+            {isConfirmationLoading ? (
+              <p className="text-xs text-muted-foreground">
+                Loading payment status...
+              </p>
+            ) : null}
+            {isConfirmationError ? (
+              <p className="text-xs text-destructive">
+                Could not load current payment status.
+              </p>
+            ) : null}
+            {reservationStatus === RESERVATION_STATUS.PAID ? (
+              <p className="text-xs text-emerald-600">
+                This reservation is already paid.
+              </p>
+            ) : null}
+            {reservationStatus === RESERVATION_STATUS.CANCELLED ? (
+              <p className="text-xs text-destructive">
+                This reservation has been cancelled.
+              </p>
+            ) : null}
+            {reservationStatus === RESERVATION_STATUS.EXPIRED ? (
+              <p className="text-xs text-destructive">
+                This reservation has expired.
+              </p>
+            ) : null}
+            {createPaymentMutation.isError ? (
+              <p className="text-xs text-destructive">
+                Could not start VNPay checkout. Please refresh and try again.
               </p>
             ) : null}
 
@@ -219,9 +301,20 @@ export function Payment({ slug }: Props) {
       </main>
 
       <PaymentStickyBar
-        canContinue={hasSelectedEligibleMethod}
+        canContinue={
+          !!reservationId &&
+          !!reservation &&
+          hasSelectedEligibleMethod &&
+          isVnpaySelected &&
+          canPayReservation &&
+          !isReservationTerminal &&
+          !isConfirmationLoading
+        }
         onBack={handleBack}
         onContinue={handleContinue}
+        continueLabel="Buy"
+        continueBusyLabel="Proceeding..."
+        isContinuing={createPaymentMutation.isPending}
       />
     </div>
   );

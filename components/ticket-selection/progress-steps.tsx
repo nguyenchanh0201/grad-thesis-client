@@ -8,7 +8,6 @@ const STEPS = [
   { label: "Select Tickets", num: 1 },
   { label: "Enter Information", num: 2 },
   { label: "Payment", num: 3 },
-  { label: "Confirmation", num: 4 },
 ];
 
 type Props = {

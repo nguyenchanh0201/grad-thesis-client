@@ -1,6 +1,6 @@
 "use client";
 
-import { Copy, QrCode } from "lucide-react";
+import { CheckCircle2, Copy, Loader2, QrCode, XCircle } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ type Props = {
   isHostedGateway?: boolean;
   transferDetails: ManualTransferDetails;
   transferQrValue: string;
+  paymentState: "ready" | "loading" | "success" | "failed";
   isPreparingGateway?: boolean;
   gatewayError?: string | null;
 };
@@ -29,9 +30,11 @@ export function PaymentPanel({
   isHostedGateway = false,
   transferDetails,
   transferQrValue,
+  paymentState,
   isPreparingGateway = false,
   gatewayError = null,
 }: Props) {
+  const qrState = isPreparingGateway ? "loading" : paymentState;
   const fields = [
     { label: "Provider", value: presentation.label },
     { label: "Recipient", value: transferDetails.recipientName },
@@ -93,20 +96,38 @@ export function PaymentPanel({
       <div className="space-y-4 rounded-lg border border-border bg-card p-4">
         <div className="flex flex-col items-center gap-3">
           <div className="rounded-lg border border-border bg-white p-3">
-            {isPreparingGateway ? (
+            {qrState === "loading" ? (
               <div className="flex h-[180px] w-[180px] items-center justify-center text-xs text-muted-foreground">
-                Preparing payment QR...
+                <Loader2 className="h-9 w-9 animate-spin" />
+              </div>
+            ) : qrState === "success" ? (
+              <div className="flex h-[180px] w-[180px] items-center justify-center text-emerald-600">
+                <CheckCircle2 className="h-16 w-16" />
+              </div>
+            ) : qrState === "failed" ? (
+              <div className="flex h-[180px] w-[180px] items-center justify-center text-destructive">
+                <XCircle className="h-16 w-16" />
               </div>
             ) : isHostedGateway && gatewayError ? (
               <div className="flex h-[180px] w-[180px] items-center justify-center text-xs text-muted-foreground">
                 QR unavailable
               </div>
-            ) : (
+            ) : transferQrValue.trim().length > 0 ? (
               <QRCodeCanvas value={transferQrValue} size={180} level="H" />
+            ) : (
+              <div className="flex h-[180px] w-[180px] items-center justify-center text-xs text-muted-foreground">
+                QR unavailable
+              </div>
             )}
           </div>
           <p className="text-center text-xs text-muted-foreground">
-            Use your banking app or wallet to complete payment.
+            {qrState === "success"
+              ? "Payment confirmed."
+              : qrState === "failed"
+                ? "Payment failed or the reservation expired."
+                : qrState === "loading"
+                  ? "Preparing payment details..."
+                  : "Use your banking app or wallet to complete payment."}
           </p>
           {gatewayError ? (
             <p className="text-center text-xs text-destructive">
@@ -147,10 +168,12 @@ export function PaymentPanel({
         </div>
       ) : null}
 
-      <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-        We will automatically update this page when the payment provider
-        confirms success or failure.
-      </div>
+      {qrState === "ready" || qrState === "loading" ? (
+        <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+          We will automatically update this page when the payment provider
+          confirms success or failure.
+        </div>
+      ) : null}
     </div>
   );
 }
