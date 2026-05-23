@@ -127,12 +127,29 @@ export const removeReservationVoucher = async (
 };
 
 export const getAvailableVouchers = async (
-  eventSlug: string,
+  eventSlug?: string,
   page?: number,
   limit?: number,
 ): Promise<AvailableVoucherListResult> => {
   const response = await apiClient.get("/vouchers", {
-    params: { eventSlug, page, limit },
+    params: {
+      ...(eventSlug ? { eventSlug } : {}),
+      ...(page ? { page } : {}),
+      ...(limit ? { limit } : {}),
+    },
+  });
+  return parseOrThrow(AvailableVoucherListResultSchema, response);
+};
+
+export const getMyVouchers = async ({
+  page = PAGINATION.DEFAULT_PAGE,
+  limit = PAGINATION.DEFAULT_LIMIT,
+}: {
+  page?: number;
+  limit?: number;
+} = {}): Promise<AvailableVoucherListResult> => {
+  const response = await apiClient.get("/vouchers/my", {
+    params: { page, limit },
   });
   return parseOrThrow(AvailableVoucherListResultSchema, response);
 };

@@ -63,9 +63,41 @@ export type PaymentMethodsResponse = z.infer<
   typeof PaymentMethodsResponseSchema
 >;
 
+export const PaymentTransferDetailsSchema = z.object({
+  recipientName: z.string(),
+  bankName: z.string(),
+  accountNumber: z.string(),
+  accountName: z.string(),
+  walletName: z.string().optional(),
+  supportedApps: z.array(z.string()).default([]),
+  transferContent: z.string(),
+  note: z.string().optional(),
+});
+
+export const PreparePaymentDataSchema = z.object({
+  transactionId: z.string(),
+  externalRefId: z.string(),
+  methodId: PaymentMethodIdSchema,
+  providerCode: z.string(),
+  checkoutType: z.enum(["hosted_gateway", "manual_transfer", "wallet"]),
+  amount: z.number(),
+  currency: z.literal("VND"),
+  expiresAt: z.iso.datetime(),
+  qrPayload: z.string(),
+  paymentUrl: z.string().nullable().optional(),
+  transfer: PaymentTransferDetailsSchema.optional(),
+});
+
+export const PreparePaymentResponseSchema = BaseResponseSchema(
+  PreparePaymentDataSchema,
+);
+export type PreparePaymentData = z.infer<typeof PreparePaymentDataSchema>;
+
 export const PaymentConfirmationSchema = z.object({
   reservationId: z.string(),
-  eventId: z.string(),
+  // Compatibility: some backend nodes may still omit these fields.
+  eventCode: z.string().optional(),
+  eventSlug: z.string().optional(),
   reservationStatus: z.enum([
     "PENDING",
     "PAYMENT_LOCKED",
@@ -76,11 +108,12 @@ export const PaymentConfirmationSchema = z.object({
   totalAmount: z.number(),
   currency: z.literal("VND"),
   expiresAt: z.iso.datetime(),
+  effectiveExpiresAt: z.iso.datetime().optional(),
   payment: z
     .object({
       id: z.string(),
       externalRefId: z.string(),
-      status: z.enum(["INITIATED", "SUCCESS", "FAILED", "REFUNDED"]),
+      status: z.enum(["INITIATED", "SUCCESS", "FAILED", "REFUNDED", "VOIDED"]),
       providerCode: z.string(),
       methodId: PaymentMethodIdSchema.nullable(),
       paymentUrl: z.string().nullable(),

@@ -2,7 +2,6 @@ import { z } from "zod";
 import {
   BigIntIdSchema,
   BaseResponseSchema,
-  PagedResponseSchema,
 } from "../api";
 
 export const NotificationTypeSchema = z.enum([
@@ -18,8 +17,10 @@ export const NotificationSchema = z.object({
   userId: BigIntIdSchema,
   type: NotificationTypeSchema,
   title: z.string(),
-  message: z.string(),
+  body: z.string().optional(),
+  message: z.string().optional(),
   isRead: z.boolean(),
+  payload: z.record(z.string(), z.unknown()).optional().nullable(),
   data: z.record(z.string(), z.unknown()).optional(),
   createdAt: z.iso.datetime(),
 });

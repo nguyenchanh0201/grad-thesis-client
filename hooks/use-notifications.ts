@@ -19,10 +19,11 @@ export const notificationKeys = {
 export function useNotifications(
   userId: string | undefined,
   page = PAGINATION.DEFAULT_PAGE,
+  limit: number = PAGINATION.DEFAULT_LIMIT,
 ) {
   return useQuery({
-    queryKey: notificationKeys.list(userId ?? "", page),
-    queryFn: () => getNotifications({ userId: userId!, page }),
+    queryKey: [...notificationKeys.list(userId ?? "", page), limit],
+    queryFn: () => getNotifications({ userId: userId!, page, limit }),
     enabled: !!userId,
     refetchInterval: NOTIFICATION_POLL_MS,
     staleTime: NOTIFICATION_POLL_MS,

@@ -44,7 +44,10 @@ const ReservationRecipientSchema = z.object({
 
 export const ReservationSchema = z.object({
   id: BigIntIdSchema,
-  eventId: BigIntIdSchema,
+  // Transitional compatibility: some legacy reservation responses can omit these
+  // fields even though the public contract is moving to eventCode/eventSlug.
+  eventCode: z.string().optional(),
+  eventSlug: z.string().optional(),
   userId: BigIntIdSchema.optional(),
   status: z.enum(["PENDING", "EXPIRED", "PAID", "CANCELLED", "PAYMENT_LOCKED"]),
   totalAmount: AmountSchema,

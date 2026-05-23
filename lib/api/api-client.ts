@@ -35,9 +35,12 @@ function redirectToLoginForUnauthorized() {
   if (typeof window === "undefined") return;
   const { pathname, search } = window.location;
   if (pathname.startsWith("/auth")) return;
-  const shouldRedirect = ["/buy/", "/my-tickets", "/account"].some((prefix) =>
-    pathname.startsWith(prefix),
-  );
+  const shouldRedirect = [
+    "/buy/",
+    "/ticket-and-voucher",
+    "/my-tickets",
+    "/account",
+  ].some((prefix) => pathname.startsWith(prefix));
   if (!shouldRedirect) return;
   const redirect = `${pathname}${search}`;
   window.location.replace(
