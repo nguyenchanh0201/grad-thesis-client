@@ -1,12 +1,7 @@
-import { AuthGuard } from "@/components/auth/auth-guard";
-import { MyTickets } from "@/components/my-tickets";
+import { redirect } from "next/navigation";
 
-export const metadata = { title: "My Tickets" };
+export const metadata = { title: "Ticket & Voucher" };
 
 export default function MyTicketsPage() {
-  return (
-    <AuthGuard>
-      <MyTickets />
-    </AuthGuard>
-  );
+  redirect("/ticket-and-voucher");
 }

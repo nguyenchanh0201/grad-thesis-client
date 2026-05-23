@@ -81,12 +81,12 @@ export function UserProfile() {
 
         <nav className="py-1" aria-label="Account menu">
           <Link
-            href="/my-tickets"
+            href="/ticket-and-voucher"
             onClick={() => setOpen(false)}
             className="flex items-center gap-3 px-4 py-2.5 text-sm text-foreground transition-colors hover:bg-muted/60"
           >
             <Ticket className="h-4 w-4 shrink-0 text-muted-foreground" />
-            My Tickets
+            Ticket & Voucher
           </Link>
           <Link
             href="/account/settings"
