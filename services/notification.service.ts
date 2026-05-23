@@ -2,11 +2,21 @@ import { PAGINATION } from "@/core/constants";
 import { apiClient } from "@/lib/api/api-client";
 import { parseOrThrow } from "@/lib/api/api-utils";
 import {
+  NotificationSchema,
   NotificationResult,
   NotificationResultSchema,
+  NotificationsDataSchema,
   NotificationsResult,
   NotificationsResultSchema,
 } from "@/schemas/notification";
+
+const NotificationsApiContractSchema = NotificationsResultSchema.or(
+  NotificationsDataSchema.transform((data) => ({ success: true, data })),
+);
+
+const NotificationApiContractSchema = NotificationResultSchema.or(
+  NotificationSchema.transform((data) => ({ success: true, data })),
+);
 
 export const getNotifications = async ({
   userId,
@@ -20,7 +30,7 @@ export const getNotifications = async ({
   const response = await apiClient.get("/notifications", {
     params: { userId, page, limit },
   });
-  return parseOrThrow(NotificationsResultSchema, response);
+  return parseOrThrow(NotificationsApiContractSchema, response);
 };
 
 export const markNotificationRead = async (
@@ -30,7 +40,7 @@ export const markNotificationRead = async (
   const response = await apiClient.patch(`/notifications/${id}/read`, null, {
     params: { userId },
   });
-  return parseOrThrow(NotificationResultSchema, response);
+  return parseOrThrow(NotificationApiContractSchema, response);
 };
 
 export const markAllNotificationsRead = async (
