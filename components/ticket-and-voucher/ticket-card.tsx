@@ -5,7 +5,7 @@ import Image from "next/image";
 import { Calendar, MapPin, Ticket, QrCode } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatPrice } from "@/lib/strings/money";
+import { fmt } from "@/lib/strings/money";
 import { BackendTicket, BackendTicketStatus } from "@/schemas/ticket";
 import { TicketQRModal } from "./ticket-qr-modal";
 import { isSvgImageSource } from "@/lib/image/is-svg-image-source";
@@ -88,6 +88,15 @@ export function TicketCard({ ticket }: Props) {
             {event.eventName}
           </p>
 
+          <div className="flex flex-col gap-1 text-sm sm:flex-row sm:items-baseline sm:gap-2">
+            <span className="shrink-0 font-medium text-muted-foreground">
+              Ticket code:
+            </span>
+            <span className="max-w-full overflow-hidden text-ellipsis font-mono text-xs text-foreground/80">
+              {code}
+            </span>
+          </div>
+
           {/* Date + Venue */}
           <div className="space-y-1.5">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -107,21 +116,18 @@ export function TicketCard({ ticket }: Props) {
 
           <div className="border-t border-border" />
 
-          {/* Seat / zone + code */}
+          {/* Seat / zone */}
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
               <Ticket className="h-3.5 w-3.5 shrink-0" />
               <span>{seatLabel}</span>
             </div>
-            <span className="ml-auto font-mono text-xs text-muted-foreground/70">
-              {code}
-            </span>
           </div>
 
           {/* Price + action */}
           <div className="flex items-center justify-between gap-3">
             <span className="text-base font-bold text-primary">
-              {formatPrice(ticketType.price, ticketType.currency)}
+              {fmt(ticketType.price)} {ticketType.currency}
             </span>
             {canShowQR && (
               <Button
