@@ -42,6 +42,16 @@ const ReservationRecipientSchema = z.object({
   idPassport: z.string().nullable().optional(),
 });
 
+export const ReservationEventSchema = z.object({
+  eventName: z.string(),
+  eventDate: z.iso.datetime(),
+  featuredImageUrl: z.string().nullable().optional(),
+  venueName: z.string().nullable().optional(),
+  city: z.string().nullable().optional(),
+});
+
+export type ReservationEvent = z.infer<typeof ReservationEventSchema>;
+
 export const ReservationSchema = z.object({
   id: BigIntIdSchema,
   // Transitional compatibility: some legacy reservation responses can omit these
@@ -66,6 +76,7 @@ export const ReservationSchema = z.object({
   createdAt: z.iso.datetime().optional(),
   recipient: ReservationRecipientSchema.nullable().optional(),
   deliveryMethod: z.string().nullable().optional(),
+  event: ReservationEventSchema.optional(),
 });
 
 export type Reservation = z.infer<typeof ReservationSchema>;
