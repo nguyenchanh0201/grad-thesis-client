@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { clearBuySession, hasBuySession } from "@/lib/booking/buy-session";
+import { clearQueueIntent } from "@/lib/booking/queue-intent";
 import { isAppError } from "@/core/error";
 import { TIMEOUT_REDIRECT_DELAY_MS } from "@/lib/booking/config";
 import { useBookingStore } from "@/lib/store/booking";
@@ -47,6 +48,7 @@ export function useBuyProcessSession(
     isExitingRef.current = true;
     reset();
     storeReset();
+    clearQueueIntent(slug);
     router.replace(`/events/${slug}`);
   }, [reset, router, slug, storeReset]);
 

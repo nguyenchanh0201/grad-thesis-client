@@ -15,7 +15,11 @@ import { useQueuePolling } from "@/hooks/use-queue-polling";
 import { useAuthStore } from "@/lib/store/auth.store";
 import { useBookingStore } from "@/lib/store/booking";
 import { useEventBySlug } from "@/hooks/use-events";
-import { hasBuySession, setBuySession } from "@/lib/booking/buy-session";
+import {
+  clearBuySession,
+  hasBuySession,
+  setBuySession,
+} from "@/lib/booking/buy-session";
 import { sendHeartbeat } from "@/services/queue.service";
 import {
   clearQueueIntent,
@@ -126,6 +130,8 @@ function QueuePageContent() {
   };
 
   const handleRejoin = () => {
+    clearBuySession(slug);
+    clearQueueIntent(slug);
     router.replace(slug ? `/events/${slug}` : "/events");
   };
 
