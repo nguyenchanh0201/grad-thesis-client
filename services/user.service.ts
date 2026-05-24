@@ -4,10 +4,10 @@ import { ROLES } from "@/schemas/user/role";
 import { getIdentityMe, updateIdentityMe } from "./identity.service";
 
 function mapRole(role: string): ProfileUser["role"] {
-  if (role === "ORGANIZER") return ROLES["ORGANIZER"];
-  if (role === "ADMIN") return ROLES["ADMIN"];
-  if (role === "SUPER_ADMIN") return ROLES["SUPER_ADMIN"];
-  return ROLES["USER"];
+  if (role === "ORGANIZER") return "ORGANIZER";
+  if (role === "ADMIN") return "ADMIN";
+  if (role === "SUPER_ADMIN") return "SUPER_ADMIN";
+  return "USER";
 }
 
 function mapIdentityToProfile(

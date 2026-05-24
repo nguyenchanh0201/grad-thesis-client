@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { ProfileFormValues, profileSchema } from "@/schemas/user";
+import { ProfileFormValues, profileFormSchema } from "@/schemas/user";
 import { ROLES } from "@/schemas/user/role";
 import { UserProfilePicture } from "./profile-picture";
 import { useUpdateUserProfile, useUserProfile } from "@/hooks/user-profile";
@@ -26,7 +26,7 @@ export function ProfileSettings() {
     reset,
     formState: { errors, isDirty },
   } = useForm<ProfileFormValues>({
-    resolver: zodResolver(profileSchema),
+    resolver: zodResolver(profileFormSchema),
     defaultValues: {
       name: user?.name ?? "",
       phone: user?.phone ?? "",
