@@ -55,6 +55,8 @@ export function useLogout() {
     onSettled: () => {
       clearAuth();
       queryClient.removeQueries({ queryKey: ["current-user"] });
+      queryClient.removeQueries({ queryKey: ["tickets"] });
+      queryClient.removeQueries({ queryKey: ["reservations"] });
     },
   });
 }
