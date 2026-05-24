@@ -453,8 +453,7 @@ function SectionDetail({
                             seat.seatIndex,
                           ),
                           label: `${section.name} · ${seat.seatLabel}`,
-                          ticketTypeId:
-                            resolvedTicketTypeId,
+                          ticketTypeId: resolvedTicketTypeId,
                           seatIndex: seat.seatIndex,
                         });
                       }}
@@ -464,7 +463,9 @@ function SectionDetail({
                         isAvailable && !isSelected
                           ? "cursor-pointer hover:opacity-90"
                           : "",
-                        isLocked ? "cursor-not-allowed opacity-60" : "",
+                        isLocked && !isSelected
+                          ? "cursor-not-allowed opacity-60"
+                          : "",
                         !isAvailable && !isSelected && !isLocked
                           ? "cursor-not-allowed opacity-30"
                           : "",

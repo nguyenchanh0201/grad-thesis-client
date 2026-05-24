@@ -24,6 +24,7 @@ type BookingState = {
   waitRoomToken: string | null;
   waitRoomSlug: string | null;
   reservationId: string | null;
+  reservationSeatIndices: number[];
   ticketTypes: TicketType[];
   mapType: MapType;
   selectedZoneId: string | null;
@@ -76,6 +77,7 @@ const INITIAL_STATE = {
   waitRoomToken: null as string | null,
   waitRoomSlug: null as string | null,
   reservationId: null as string | null,
+  reservationSeatIndices: [] as number[],
   ticketTypes: [] as TicketType[],
   mapType: "zone" as MapType,
   selectedZoneId: null,
@@ -167,6 +169,7 @@ export const useBookingStore = create<BookingState>()(
 
           return {
             reservationId: reservation.id,
+            reservationSeatIndices: selectedSeats.map((s) => s.seatIndex),
             tickets,
             selectedSeats,
             recipient: reservation.recipient
@@ -272,6 +275,7 @@ export const useBookingStore = create<BookingState>()(
         waitRoomToken,
         waitRoomSlug,
         reservationId,
+        reservationSeatIndices,
         ticketTypes,
         mapType,
         selectedZoneId,
@@ -287,6 +291,7 @@ export const useBookingStore = create<BookingState>()(
         waitRoomToken,
         waitRoomSlug,
         reservationId,
+        reservationSeatIndices,
         ticketTypes,
         mapType,
         selectedZoneId,

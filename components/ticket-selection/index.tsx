@@ -17,7 +17,10 @@ import { SeatMap } from "./seat-map";
 import { useBuyProcess } from "@/components/buy-process/buy-process-shell";
 import type { SelectedSeat } from "./seat-map";
 import { fmtIsoDate } from "@/lib/date";
-import { getEventBySlug, getEventSeatsByEventCode } from "@/services/event.service";
+import {
+  getEventBySlug,
+  getEventSeatsByEventCode,
+} from "@/services/event.service";
 import { SectionAvailability } from "@/schemas/seat";
 import { SeatMapCanvasSchema } from "@/schemas/seat-map";
 import type { TicketType } from "@/schemas/ticket-type";
@@ -39,6 +42,7 @@ export function TicketSelection({ slug }: Props) {
     selectedZoneId,
     waitRoomToken,
     waitRoomSlug,
+    reservationSeatIndices,
     initStep1,
     setSelectedZoneId,
     setReservationId,
@@ -286,26 +290,28 @@ export function TicketSelection({ slug }: Props) {
 
       if (isSeated && canvas) {
         if (!eventCode) {
-          toast.error("Could not verify seat availability. Please refresh and try again.");
+          toast.error(
+            "Could not verify seat availability. Please refresh and try again.",
+          );
           return;
         }
 
         const freshSeatsResponse = await getEventSeatsByEventCode(eventCode);
-        const latestSeatStatusByKey =
-          freshSeatsResponse.data.reduce(
-            (map, section) => {
-              for (const seat of section.seats) {
-                map.set(
-                  toSeatSelectionId(section.ticketTypeId, seat.seatIndex),
-                  seat.status,
-                );
-              }
-              return map;
-            },
-            new Map<string, "available" | "locked" | "sold">(),
-          );
+        const latestSeatStatusByKey = freshSeatsResponse.data.reduce(
+          (map, section) => {
+            for (const seat of section.seats) {
+              map.set(
+                toSeatSelectionId(section.ticketTypeId, seat.seatIndex),
+                seat.status,
+              );
+            }
+            return map;
+          },
+          new Map<string, "available" | "locked" | "sold">(),
+        );
 
         const staleSeats = selectedSeats.filter((seat) => {
+          if (reservationSeatIndices.includes(seat.seatIndex)) return false;
           const status = latestSeatStatusByKey.get(
             toSeatSelectionId(seat.ticketTypeId, seat.seatIndex),
           );
@@ -331,8 +337,12 @@ export function TicketSelection({ slug }: Props) {
           if (!latestTicketType) return true;
 
           const availableQuantity =
-            latestTicketType.quantity != null && latestTicketType.soldCount != null
-              ? Math.max(0, latestTicketType.quantity - latestTicketType.soldCount)
+            latestTicketType.quantity != null &&
+            latestTicketType.soldCount != null
+              ? Math.max(
+                  0,
+                  latestTicketType.quantity - latestTicketType.soldCount,
+                )
               : (latestTicketType.quantity ?? 0);
 
           return availableQuantity <= 0 || ticket.quantity > availableQuantity;
@@ -412,6 +422,7 @@ export function TicketSelection({ slug }: Props) {
             new Map<string, "available" | "locked" | "sold">(),
           );
           const staleSeats = selectedSeats.filter((seat) => {
+            if (reservationSeatIndices.includes(seat.seatIndex)) return false;
             const status = latestSeatStatusByKey.get(
               toSeatSelectionId(seat.ticketTypeId, seat.seatIndex),
             );
@@ -437,7 +448,10 @@ export function TicketSelection({ slug }: Props) {
             const availableQuantity =
               latestTicketType.quantity != null &&
               latestTicketType.soldCount != null
-                ? Math.max(0, latestTicketType.quantity - latestTicketType.soldCount)
+                ? Math.max(
+                    0,
+                    latestTicketType.quantity - latestTicketType.soldCount,
+                  )
                 : (latestTicketType.quantity ?? 0);
             if (availableQuantity <= 0) {
               deleteTicket(ticket.ticketTypeId);
