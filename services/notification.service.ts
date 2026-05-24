@@ -37,16 +37,20 @@ export const markNotificationRead = async (
   id: string,
   userId: string,
 ): Promise<NotificationResult> => {
-  const response = await apiClient.patch(`/notifications/${id}/read`, null, {
-    params: { userId },
-  });
+  const response = await apiClient.patch(
+    `/notifications/${id}/read`,
+    undefined,
+    {
+      params: { userId },
+    },
+  );
   return parseOrThrow(NotificationApiContractSchema, response);
 };
 
 export const markAllNotificationsRead = async (
   userId: string,
 ): Promise<void> => {
-  await apiClient.patch("/notifications/read-all", null, {
+  await apiClient.patch("/notifications/read-all", undefined, {
     params: { userId },
   });
 };
