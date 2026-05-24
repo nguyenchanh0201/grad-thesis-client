@@ -57,6 +57,13 @@ export const BackendTicketSchema = z.object({
     venue: VenueSchema,
     slug: z.string(),
   }),
+  order: z
+    .object({
+      id: BigIntIdSchema,
+      orderNumber: z.string(),
+      createdAt: z.iso.datetime().optional(),
+    })
+    .optional(),
   seat: z
     .object({
       row: z.string(),

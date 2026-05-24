@@ -23,9 +23,12 @@ const STATUS_CONFIG: Record<
   CANCELLED: { label: "Cancelled", variant: "destructive" },
 };
 
-type Props = { reservation: Reservation };
+type Props = {
+  reservation: Reservation;
+  onOpenDetails: (reservation: Reservation) => void;
+};
 
-export function ReservationCard({ reservation }: Props) {
+export function ReservationCard({ reservation, onOpenDetails }: Props) {
   const { status, totalAmount, currency, event, eventSlug } = reservation;
   const { label: statusLabel, variant: statusVariant } = STATUS_CONFIG[status];
   const canPay = status === "PENDING" || status === "PAYMENT_LOCKED";
@@ -46,8 +49,18 @@ export function ReservationCard({ reservation }: Props) {
     : null;
 
   return (
-    <article className="flex flex-col overflow-hidden rounded-sm border border-border transition-shadow hover:shadow-md sm:flex-row">
-      <div className="relative aspect-5/2 w-full shrink-0 sm:aspect-auto sm:w-44 sm:self-stretch">
+    <article
+      id={`reservation-${reservation.id}`}
+      className="relative flex flex-col overflow-hidden rounded-sm border border-border transition-shadow hover:shadow-md sm:flex-row"
+    >
+      <button
+        type="button"
+        aria-label={`View order details for ${event?.eventName ?? "event"}`}
+        className="absolute inset-0 z-10 cursor-pointer rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        onClick={() => onOpenDetails(reservation)}
+      />
+
+      <div className="pointer-events-none relative z-20 aspect-5/2 w-full shrink-0 sm:aspect-auto sm:w-44 sm:self-stretch">
         {event?.featuredImageUrl ? (
           <Image
             src={event.featuredImageUrl}
@@ -62,7 +75,7 @@ export function ReservationCard({ reservation }: Props) {
         )}
       </div>
 
-      <div className="flex flex-1 flex-col gap-3 p-4 sm:p-5">
+      <div className="pointer-events-none relative z-20 flex flex-1 flex-col gap-3 p-4 sm:p-5">
         <div className="flex items-start justify-between gap-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Reservation
@@ -103,7 +116,12 @@ export function ReservationCard({ reservation }: Props) {
             {fmt(totalAmount)} {currency ?? "VND"}
           </span>
           {canPay && eventSlug && (
-            <Button asChild variant="default" size="sm">
+            <Button
+              asChild
+              variant="default"
+              size="sm"
+              className="pointer-events-auto relative z-30"
+            >
               <Link href={`/buy/${eventSlug}/info`}>Complete Payment</Link>
             </Button>
           )}

@@ -29,13 +29,17 @@ const STATUS_CONFIG: Record<
   },
 };
 
-type Props = { tickets: BackendTicket[] };
+type Props = {
+  tickets: BackendTicket[];
+  onOpenDetails: (tickets: BackendTicket[]) => void;
+};
 
-export function TicketGroupCard({ tickets }: Props) {
+export function TicketGroupCard({ tickets, onOpenDetails }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [qrTicket, setQrTicket] = useState<BackendTicket | null>(null);
 
   const event = tickets[0].event;
+  const order = tickets[0].order;
 
   // e.g. "2x GA - 1x VIP"
   const typeCounts = tickets.reduce<Record<string, number>>((acc, t) => {
@@ -75,9 +79,16 @@ export function TicketGroupCard({ tickets }: Props) {
 
   return (
     <>
-      <article className="overflow-hidden rounded-sm border border-border transition-shadow hover:shadow-md">
+      <article className="relative overflow-hidden rounded-sm border border-border transition-shadow hover:shadow-md">
+        <button
+          type="button"
+          aria-label={`View ticket details for ${event.eventName}`}
+          className="absolute inset-0 z-10 cursor-pointer rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          onClick={() => onOpenDetails(tickets)}
+        />
+
         {/* Card header, always visible */}
-        <div className="flex flex-col sm:flex-row">
+        <div className="pointer-events-none relative z-20 flex flex-col sm:flex-row">
           {/* Event image */}
           <div className="relative aspect-5/2 w-full shrink-0 sm:aspect-auto sm:w-44 sm:self-stretch">
             {event.featuredImageUrl ? (
@@ -99,7 +110,7 @@ export function TicketGroupCard({ tickets }: Props) {
             {/* Type summary + status badges */}
             <div className="flex items-start justify-between gap-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                {typeSummary}
+                {order ? `${typeSummary} - ${order.orderNumber}` : typeSummary}
               </p>
               <div className="flex shrink-0 flex-wrap justify-end gap-1">
                 {validCount > 0 && (
@@ -153,7 +164,7 @@ export function TicketGroupCard({ tickets }: Props) {
               <Button
                 variant="outline"
                 size="sm"
-                className="gap-1.5"
+                className="pointer-events-auto relative z-30 gap-1.5"
                 onClick={() => setExpanded((v) => !v)}
               >
                 {expanded ? (
@@ -169,7 +180,7 @@ export function TicketGroupCard({ tickets }: Props) {
 
         {/* Expanded individual ticket rows */}
         {expanded && (
-          <div className="divide-y divide-border border-t border-border">
+          <div className="pointer-events-none relative z-20 divide-y divide-border border-t border-border">
             {tickets.map((ticket) => {
               const { label: statusLabel, variant: statusVariant } =
                 STATUS_CONFIG[ticket.status];
@@ -203,6 +214,7 @@ export function TicketGroupCard({ tickets }: Props) {
                       variant="outline"
                       size="icon-sm"
                       aria-label="Show QR code"
+                      className="pointer-events-auto relative z-30"
                       onClick={() => setQrTicket(ticket)}
                     >
                       <QrCode className="h-4 w-4" />

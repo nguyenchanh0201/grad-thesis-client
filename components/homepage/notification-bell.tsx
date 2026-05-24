@@ -39,6 +39,18 @@ function getNotificationMessage(item: Notification): string {
   return legacyMessage ?? "";
 }
 
+function getNotificationAction(item: Notification): string | null {
+  const reservationId = item.payload?.reservationId;
+  if (
+    item.type === "ORDER_CONFIRMED" &&
+    (typeof reservationId === "string" || typeof reservationId === "number")
+  ) {
+    return `/ticket-and-voucher?r=${encodeURIComponent(String(reservationId))}`;
+  }
+
+  return item.action ?? null;
+}
+
 export function NotificationBell({ userId }: { userId: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -56,12 +68,14 @@ export function NotificationBell({ userId }: { userId: string }) {
   const latestItems = notifications.slice(0, LATEST_NOTIFICATIONS_LIMIT);
 
   const handleItemClick = (item: Notification) => {
+    const action = getNotificationAction(item);
+
     if (!item.isRead && !markRead.isPending) {
       markRead.mutate({ id: item.id, userId });
     }
-    if (item.action) {
+    if (action) {
       setOpen(false);
-      router.push(item.action);
+      router.push(action);
     }
   };
 

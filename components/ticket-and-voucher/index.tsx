@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,12 +20,15 @@ import {
   useMyTickets,
   useMyVouchers,
 } from "@/hooks/use-tickets";
+import { useReservation } from "@/hooks/use-booking";
 import { AvailableVoucher, Reservation } from "@/schemas/reservation";
 import { BackendTicket, BackendTicketStatus } from "@/schemas/ticket";
 import { TicketGroupCard } from "./ticket-group-card";
 import { ReservationCard } from "./reservation-card";
 import { VoucherCard } from "./voucher-card";
 import { VoucherDetailDialog } from "./voucher-detail-dialog";
+import { OrderDetailDialog } from "./order-detail-dialog";
+import { TicketDetailDialog } from "./ticket-detail-dialog";
 
 type TabId = "all" | "upcoming" | "past" | "vouchers";
 
@@ -57,6 +61,17 @@ function groupByEvent(tickets: BackendTicket[]): BackendTicket[][] {
   return Array.from(map.values());
 }
 
+// Group tickets by order, preserving order of first occurrence.
+function groupByOrder(tickets: BackendTicket[]): BackendTicket[][] {
+  const map = new Map<string, BackendTicket[]>();
+  for (const ticket of tickets) {
+    const key = ticket.order?.id ?? `event:${ticket.event.slug}`;
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(ticket);
+  }
+  return Array.from(map.values());
+}
+
 function ticketGroupMatches(group: BackendTicket[], q: string): boolean {
   return group.some(
     (t) =>
@@ -82,6 +97,17 @@ export function TicketAndVoucher() {
   const [query, setQuery] = useState("");
   const [selectedVoucher, setSelectedVoucher] =
     useState<AvailableVoucher | null>(null);
+  const [selectedReservation, setSelectedReservation] =
+    useState<Reservation | null>(null);
+  const [selectedTicketGroup, setSelectedTicketGroup] = useState<
+    BackendTicket[] | null
+  >(null);
+
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const router = useRouter();
+  const highlightId = searchParams.get("r");
+  const openedReservationParamRef = useRef<string | null>(null);
 
   const { data, isLoading, isError } = useMyTickets();
   const {
@@ -94,13 +120,55 @@ export function TicketAndVoucher() {
     isLoading: isReservationsLoading,
     isError: isReservationsError,
   } = useMyReservations();
+  const {
+    data: highlightedReservationResult,
+    isFetching: isHighlightedReservationFetching,
+  } = useReservation(highlightId ?? undefined);
+
+  useEffect(() => {
+    if (!highlightId) {
+      openedReservationParamRef.current = null;
+      return;
+    }
+    if (isHighlightedReservationFetching) return;
+
+    const highlightedReservation = highlightedReservationResult?.data;
+    if (!highlightedReservation) return;
+
+    const timeoutId = window.setTimeout(() => {
+      setActiveTab("all");
+      setSelectedReservation(highlightedReservation);
+
+      if (openedReservationParamRef.current !== highlightId) {
+        openedReservationParamRef.current = highlightId;
+        const el = document.getElementById(`reservation-${highlightId}`);
+        el?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+
+      const nextParams = new URLSearchParams(searchParams.toString());
+      nextParams.delete("r");
+      const nextQuery = nextParams.toString();
+      router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, {
+        scroll: false,
+      });
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [
+    highlightId,
+    highlightedReservationResult?.data,
+    isHighlightedReservationFetching,
+    pathname,
+    router,
+    searchParams,
+  ]);
 
   const { upcomingGroups, pastGroups } = useMemo(() => {
     const all = data?.data ?? [];
     const upcoming = all.filter(isUpcoming);
     const past = all.filter((t) => !isUpcoming(t));
     return {
-      upcomingGroups: groupByEvent(upcoming),
+      upcomingGroups: groupByOrder(upcoming),
       pastGroups: groupByEvent(past),
     };
   }, [data]);
@@ -215,6 +283,7 @@ export function TicketAndVoucher() {
                   <ReservationCard
                     key={reservation.id}
                     reservation={reservation}
+                    onOpenDetails={setSelectedReservation}
                   />
                 ))}
               </div>
@@ -246,7 +315,11 @@ export function TicketAndVoucher() {
             ) : (
               <div className="flex flex-col gap-4 pb-12">
                 {filteredUpcoming.map((group) => (
-                  <TicketGroupCard key={group[0].event.slug} tickets={group} />
+                  <TicketGroupCard
+                    key={group[0].order?.id ?? group[0].event.slug}
+                    tickets={group}
+                    onOpenDetails={setSelectedTicketGroup}
+                  />
                 ))}
               </div>
             )}
@@ -275,7 +348,11 @@ export function TicketAndVoucher() {
             ) : (
               <div className="flex flex-col gap-4 pb-12">
                 {filteredPast.map((group) => (
-                  <TicketGroupCard key={group[0].event.slug} tickets={group} />
+                  <TicketGroupCard
+                    key={group[0].event.slug}
+                    tickets={group}
+                    onOpenDetails={setSelectedTicketGroup}
+                  />
                 ))}
               </div>
             )}
@@ -323,6 +400,20 @@ export function TicketAndVoucher() {
         voucher={selectedVoucher}
         onOpenChange={(open) => {
           if (!open) setSelectedVoucher(null);
+        }}
+      />
+      <OrderDetailDialog
+        open={selectedReservation !== null}
+        reservation={selectedReservation}
+        onOpenChange={(open) => {
+          if (!open) setSelectedReservation(null);
+        }}
+      />
+      <TicketDetailDialog
+        open={selectedTicketGroup !== null}
+        tickets={selectedTicketGroup}
+        onOpenChange={(open) => {
+          if (!open) setSelectedTicketGroup(null);
         }}
       />
     </main>
