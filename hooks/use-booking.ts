@@ -30,6 +30,8 @@ export function useReservation(id: string | undefined) {
     queryFn: () => getReservation(id!),
     enabled: !!id,
     retry: false,
+    staleTime: 0,
+    refetchOnMount: "always",
     refetchInterval: RESERVATION_POLL_INTERVAL_MS,
   });
 }

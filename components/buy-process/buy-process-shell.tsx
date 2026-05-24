@@ -3,6 +3,7 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -69,6 +70,25 @@ function ActiveBuyProcessShell({
   const [isLeaveDialogOpen, setIsLeaveDialogOpen] = useState(false);
   const { formatted, timeRemaining, timedOut, hasSyncedExpiry } = session;
   const isWarning = timeRemaining <= 60;
+
+  useEffect(() => {
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, []);
+
+  useEffect(() => {
+    window.history.pushState({ buyFlowGuard: true }, "");
+    const onPopState = () => {
+      window.history.pushState({ buyFlowGuard: true }, "");
+      setIsLeaveDialogOpen(true);
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
 
   const backHref = useMemo(() => {
     if (step.backHref) return step.backHref;
