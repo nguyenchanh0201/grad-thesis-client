@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Bell } from "lucide-react";
 
 import {
@@ -39,6 +40,7 @@ function getNotificationMessage(item: Notification): string {
 }
 
 export function NotificationBell({ userId }: { userId: string }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const notificationsQuery = useNotifications(
     userId,
@@ -57,6 +59,10 @@ export function NotificationBell({ userId }: { userId: string }) {
     if (!item.isRead && !markRead.isPending) {
       markRead.mutate({ id: item.id, userId });
     }
+    if (item.action) {
+      setOpen(false);
+      router.push(item.action);
+    }
   };
 
   return (
@@ -65,7 +71,7 @@ export function NotificationBell({ userId }: { userId: string }) {
         <Button
           type="button"
           variant="ghost"
-          className="relative rounded-full p-2 text-muted-foreground hover:text-foreground"
+          className="relative rounded-full p-2 text-muted-foreground hover:bg-transparent hover:text-foreground"
           aria-label="Open notifications"
           aria-expanded={open}
         >
@@ -112,23 +118,25 @@ export function NotificationBell({ userId }: { userId: string }) {
                 type="button"
                 onClick={() => handleItemClick(item)}
                 className={cn(
-                  "relative flex w-full flex-col gap-1 px-4 py-3 text-left transition-colors hover:bg-muted/50",
+                  "flex w-full items-center gap-4 px-4 py-3 text-left transition-colors hover:bg-muted/50",
                   !item.isRead && "bg-muted/60",
                 )}
               >
-                <p className="truncate text-sm font-medium text-foreground">
-                  {item.title}
-                </p>
-                {showMessage && (
-                  <p className="line-clamp-2 text-xs text-muted-foreground">
-                    {message}
+                <div className="min-w-0 flex-1 space-y-1">
+                  <p className="truncate text-sm font-medium text-foreground">
+                    {item.title}
                   </p>
-                )}
-                <p className="truncate text-xs text-muted-foreground">
-                  {formatNotificationDate(item.createdAt)}
-                </p>
+                  {showMessage && (
+                    <p className="line-clamp-2 text-xs text-muted-foreground">
+                      {message}
+                    </p>
+                  )}
+                  <p className="truncate text-xs text-muted-foreground">
+                    {formatNotificationDate(item.createdAt)}
+                  </p>
+                </div>
                 {!item.isRead && (
-                  <span className="absolute right-3 top-1/2 size-2 -translate-y-1/2 rounded-full bg-destructive" />
+                  <span className="size-2 shrink-0 rounded-full bg-destructive" />
                 )}
               </button>
             );

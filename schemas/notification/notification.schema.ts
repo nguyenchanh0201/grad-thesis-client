@@ -1,8 +1,5 @@
 import { z } from "zod";
-import {
-  BigIntIdSchema,
-  BaseResponseSchema,
-} from "../api";
+import { BigIntIdSchema, BaseResponseSchema } from "../api";
 
 export const NotificationTypeSchema = z.enum([
   "ORDER_CONFIRMED",
@@ -22,6 +19,7 @@ export const NotificationSchema = z.object({
   isRead: z.boolean(),
   payload: z.record(z.string(), z.unknown()).optional().nullable(),
   data: z.record(z.string(), z.unknown()).optional(),
+  action: z.string().optional().nullable(),
   createdAt: z.iso.datetime(),
 });
 export type Notification = z.infer<typeof NotificationSchema>;
