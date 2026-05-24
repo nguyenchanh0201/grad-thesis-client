@@ -5,6 +5,7 @@ import { useForm, Controller, useWatch } from "react-hook-form";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { isValidEmail } from "@/lib/form/email";
+import { isValidPhoneNumber } from "@/lib/form/phone";
 import { useBookingStore } from "@/lib/store/booking";
 import { useCountryCodes } from "@/hooks/use-country-code";
 import { FieldWrap } from "./field-wrap";
@@ -186,6 +187,8 @@ export const RecipientInfoForm = forwardRef<RecipientFormHandle, object>(
                 className={cn("flex-1", errClass("phoneNumber"))}
                 {...register("phoneNumber", {
                   required: "Phone number is required",
+                  validate: (v) =>
+                    isValidPhoneNumber(v) || "Enter a valid phone number",
                 })}
               />
             </div>
