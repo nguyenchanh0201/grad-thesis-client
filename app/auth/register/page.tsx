@@ -104,7 +104,7 @@ export default function RegisterPage() {
           />
 
           <div className="space-y-1">
-            <div className="flex gap-2 items-center">
+            <div className="flex items-center gap-2">
               <Controller
                 name="agreeToTerms"
                 control={control}
@@ -123,11 +123,14 @@ export default function RegisterPage() {
                   />
                 )}
               />
-              <Label htmlFor="agreeToTerms">
+              <Label
+                htmlFor="agreeToTerms"
+                className="block min-w-0 flex-1 text-sm leading-snug"
+              >
                 I agree to TicketGo&apos;s{" "}
                 <Link
                   href="/terms"
-                  className="font-medium text-primary hover:underline underline-offset-4 leading-none"
+                  className="inline font-medium text-primary hover:underline underline-offset-4"
                   onClick={(e) => e.stopPropagation()}
                 >
                   Terms and Conditions
