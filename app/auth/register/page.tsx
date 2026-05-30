@@ -8,6 +8,7 @@ import { useSearchParams } from "next/navigation";
 import { AuthCard } from "@/components/auth/auth-card";
 import { InputField } from "@/components/auth/input-field";
 import { AuthFooterLink } from "@/components/auth/auth-footer-link";
+import { GoogleButton } from "@/components/auth/google-button";
 import { RegisterSchema, type RegisterInput } from "@/schemas/auth";
 import { getAuthErrorMessage } from "@/services/auth.service";
 import { useRegister } from "@/hooks/use-auth";
@@ -152,6 +153,8 @@ export default function RegisterPage() {
             Continue
           </Button>
         </form>
+
+        <GoogleButton disabled={isPending} />
 
         <AuthFooterLink
           text="Already have an account?"

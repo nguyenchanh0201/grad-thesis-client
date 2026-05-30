@@ -8,6 +8,15 @@ import {
 import type { LoginInput, RegisterInput } from "@/schemas/auth";
 import { AuthUser } from "@/schemas/user";
 import { apiClient, refreshClient } from "@/lib/api/api-client";
+import {
+  appendGoogleOAuthState,
+  consumeGoogleOAuthState,
+  createGoogleOAuthState,
+  getGoogleRedirectUri,
+  storeGoogleOAuthState,
+  toRedirectQueryParams,
+} from "@/lib/auth/google-oauth";
+import { resolvePostAuthRedirect } from "@/lib/auth/redirect";
 import { getIdentityMe } from "@/services/identity.service";
 import { isAxiosError } from "axios";
 
@@ -38,6 +47,24 @@ type SuperTokensAuthResponse =
   | { status: "FIELD_ERROR"; formFields?: Array<{ id: string; error: string }> }
   | { status: "SIGN_IN_NOT_ALLOWED"; reason?: string }
   | { status: "SIGN_UP_NOT_ALLOWED"; reason?: string }
+  | { status: "GENERAL_ERROR"; message?: string };
+
+type SuperTokensAuthorisationUrlResponse =
+  | {
+      status: "OK";
+      urlWithQueryParams: string;
+      pkceCodeVerifier?: string;
+    }
+  | { status: "GENERAL_ERROR"; message?: string };
+
+type SuperTokensThirdPartyAuthResponse =
+  | {
+      status: "OK";
+      createdNewRecipeUser?: boolean;
+      user: SuperTokensUser;
+    }
+  | { status: "NO_EMAIL_GIVEN_BY_PROVIDER" }
+  | { status: "SIGN_IN_UP_NOT_ALLOWED"; reason?: string }
   | { status: "GENERAL_ERROR"; message?: string };
 
 function toFormFields(
@@ -178,6 +205,101 @@ export async function register(
   data: Pick<RegisterInput, "email" | "password">,
 ): Promise<AuthResult> {
   return authenticate("/auth/signup", data);
+}
+
+export async function getGoogleAuthorisationUrl(
+  redirect: string | null | undefined,
+): Promise<string> {
+  try {
+    const redirectTo = resolvePostAuthRedirect(redirect);
+    const redirectURIOnProviderDashboard = getGoogleRedirectUri();
+    const response =
+      await refreshClient.get<SuperTokensAuthorisationUrlResponse>(
+        "/auth/authorisationurl",
+        {
+          params: {
+            thirdPartyId: "google",
+            redirectURIOnProviderDashboard,
+          },
+          headers: { rid: "thirdparty", "st-auth-mode": "cookie" },
+        },
+      );
+    const result = response.data;
+
+    if (result.status !== "OK") {
+      throw new ApiError(
+        result.message ?? "Google sign-in is not available.",
+        400,
+        "GOOGLE_AUTH_UNAVAILABLE",
+      );
+    }
+
+    const state = createGoogleOAuthState();
+    storeGoogleOAuthState({
+      state,
+      redirectTo,
+      pkceCodeVerifier: result.pkceCodeVerifier,
+    });
+
+    return appendGoogleOAuthState(result.urlWithQueryParams, state);
+  } catch (error) {
+    normalizeAuthError(error);
+  }
+}
+
+export async function completeGoogleSignIn(
+  searchParams: URLSearchParams,
+): Promise<AuthResult & { redirectTo: string }> {
+  const storedState = consumeGoogleOAuthState(searchParams.get("state"));
+  if (!storedState) {
+    throw new UnauthorizedError("Invalid Google sign-in state.");
+  }
+
+  try {
+    const response =
+      await refreshClient.post<SuperTokensThirdPartyAuthResponse>(
+        "/auth/signinup",
+        {
+          thirdPartyId: "google",
+          redirectURIInfo: {
+            redirectURIOnProviderDashboard: getGoogleRedirectUri(),
+            redirectURIQueryParams: toRedirectQueryParams(searchParams),
+            pkceCodeVerifier: storedState.pkceCodeVerifier,
+          },
+        },
+        { headers: { rid: "thirdparty", "st-auth-mode": "cookie" } },
+      );
+    const result = response.data;
+
+    if (result.status === "OK") {
+      const fallback = toAuthUser(result.user);
+      return {
+        user: await getCurrentAuthUser(fallback),
+        accessToken: null,
+        redirectTo: storedState.redirectTo,
+      };
+    }
+
+    if (result.status === "NO_EMAIL_GIVEN_BY_PROVIDER") {
+      throw new UnauthorizedError(
+        "Google did not provide an email address for this account.",
+      );
+    }
+
+    if (result.status === "SIGN_IN_UP_NOT_ALLOWED") {
+      throw new UnauthorizedError(
+        result.reason ?? "This Google account is not allowed to sign in.",
+      );
+    }
+
+    throw new ApiError(
+      result.message ?? "Google sign-in failed.",
+      400,
+      "GOOGLE_AUTH_FAILED",
+    );
+  } catch (error) {
+    normalizeAuthError(error);
+  }
 }
 
 export async function logout(): Promise<void> {

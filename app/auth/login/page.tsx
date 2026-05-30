@@ -25,7 +25,9 @@ export default function LoginPage() {
     ? getAuthErrorMessage(error)
     : callbackError === "google_not_enabled"
       ? "Google sign-in is not enabled on the backend. Please use email and password."
-      : null;
+      : callbackError === "google_failed"
+        ? "Google sign-in could not be completed. Please try again or use email and password."
+        : null;
 
   const {
     register,
