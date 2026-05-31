@@ -54,6 +54,20 @@ function handleUnauthorized(reason?: unknown): UnauthorizedError {
   return new UnauthorizedError("Session expired. Please log in again.", reason);
 }
 
+function getRequestPath(url: string | undefined): string {
+  if (!url) return "";
+  try {
+    return new URL(url, API_CONFIG.BASE_URL).pathname;
+  } catch {
+    return url;
+  }
+}
+
+function preservesAuthOnUnauthorized(url: string | undefined): boolean {
+  const path = getRequestPath(url);
+  return path.endsWith("/identity/me") || path.endsWith("/tickets/heartbeat");
+}
+
 apiClient.interceptors.request.use((config) => {
   const correlationId = uuidv4();
   config.headers = config.headers ?? {};
@@ -106,7 +120,6 @@ const SKIP_REFRESH_PATHS = [
   "/auth/logout",
   "/auth/signout",
   "/auth/google",
-  "/tickets/heartbeat",
 ];
 
 type RetryableConfig = AxiosRequestConfig & { _retry?: boolean };
@@ -159,6 +172,14 @@ apiClient.interceptors.response.use(
         })
         .catch((refreshError) => {
           flushQueue(refreshError);
+          if (preservesAuthOnUnauthorized(config.url)) {
+            return Promise.reject(
+              new UnauthorizedError(
+                "Session check failed. Please try again.",
+                refreshError,
+              ),
+            );
+          }
           return Promise.reject(handleUnauthorized(refreshError));
         })
         .finally(() => {
@@ -178,8 +199,10 @@ apiClient.interceptors.response.use(
     }
 
     if (status === 401) {
-      useAuthStore.getState().clearAuth();
-      redirectToLoginForUnauthorized();
+      if (!preservesAuthOnUnauthorized(config?.url)) {
+        useAuthStore.getState().clearAuth();
+        redirectToLoginForUnauthorized();
+      }
       return Promise.reject(new UnauthorizedError(originalErrorMessage, error));
     }
 

@@ -2,12 +2,18 @@
 
 import { useEffect } from "react";
 
-import { useAuthStore } from "@/lib/store/auth.store";
+import { readPersistedUser, useAuthStore } from "@/lib/store/auth.store";
 import { getIdentityMe } from "@/services/identity.service";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const { clearAuth, setAuth, setInitialized } = useAuthStore.getState();
+    const persistedUser = readPersistedUser();
+    if (persistedUser) {
+      setAuth(null, persistedUser);
+    }
+
+    const hydrationUser = useAuthStore.getState().user;
 
     // Hydrate from the backend session. The API client refresh interceptor
     // handles an expired SuperTokens access cookie before this resolves.
@@ -19,7 +25,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           role: res.data.user.role,
         });
       })
-      .catch(() => clearAuth())
+      .catch(() => {
+        if (useAuthStore.getState().user === hydrationUser) {
+          clearAuth();
+        }
+      })
       .finally(() => setInitialized());
   }, []);
 
