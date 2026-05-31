@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 
+import { UnauthorizedError } from "@/core/error";
 import { readPersistedUser, useAuthStore } from "@/lib/store/auth.store";
 import { getIdentityMe } from "@/services/identity.service";
 
@@ -25,8 +26,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           role: res.data.user.role,
         });
       })
-      .catch(() => {
-        if (useAuthStore.getState().user === hydrationUser) {
+      .catch((error) => {
+        if (
+          error instanceof UnauthorizedError &&
+          useAuthStore.getState().user === hydrationUser
+        ) {
           clearAuth();
         }
       })

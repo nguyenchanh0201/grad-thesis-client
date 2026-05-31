@@ -101,7 +101,7 @@ async function getCurrentAuthUser(fallback: AuthUser): Promise<AuthUser> {
       phone: me.data.user.phone ?? fallback.phone,
     };
   } catch {
-    return fallback;
+    throw new UnauthorizedError("Authentication failed. Please try again.");
   }
 }
 
