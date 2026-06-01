@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { cancelReservation } from "@/services/reservation.service";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -51,10 +53,22 @@ function formatDateTime(value?: string | null): string | null {
 }
 
 export function OrderDetailDialog({ open, onOpenChange, reservation }: Props) {
+  //  1. Khai báo tất cả các Hook ở trên cùng của Component
+  const queryClient = useQueryClient();
+  const cancelMutation = useMutation({
+    mutationFn: () => cancelReservation(reservation?.id ?? ""),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["reservations"] });
+      onOpenChange(false);
+    },
+  });
+
+  //  2. Kiểm tra điều kiện render sớm ở đây (Sau khi các Hook đã đăng ký)
   if (!reservation) {
     return null;
   }
 
+  //  3. Tính toán logic dựa trên dữ liệu chắc chắn đã tồn tại
   const status = STATUS_CONFIG[reservation.status];
   const event = reservation.event;
   const items = reservation.items ?? [];
@@ -199,7 +213,25 @@ export function OrderDetailDialog({ open, onOpenChange, reservation }: Props) {
         </div>
 
         {canPay && (
-          <DialogFooter>
+          <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+            <Button
+              variant="destructive"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={cancelMutation.isPending}
+              onClick={() => {
+                if (
+                  confirm(
+                    "Are you sure you want to cancel this reservation? This will release your locked seats/tickets.",
+                  )
+                ) {
+                  cancelMutation.mutate();
+                }
+              }}
+            >
+              {cancelMutation.isPending
+                ? "Cancelling..."
+                : "Cancel Reservation"}
+            </Button>
             <Button asChild>
               <Link href={`/buy/${reservation.eventSlug}/info`}>
                 Complete Payment

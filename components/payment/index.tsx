@@ -40,6 +40,7 @@ export function Payment({ slug }: Props) {
     paymentMethodId,
     setPaymentMethodId,
     setDiscountCode,
+    reset,
   } = useBookingStore();
 
   useEffect(() => {

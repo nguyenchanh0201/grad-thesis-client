@@ -32,6 +32,7 @@ export function PaymentMethodGroup({ methods, value, onChange }: Props) {
           key={method.id}
           method={method}
           selected={value === method.id}
+          onSelect={onChange}
         />
       ))}
     </RadioGroup>
@@ -41,17 +42,20 @@ export function PaymentMethodGroup({ methods, value, onChange }: Props) {
 type CardProps = {
   method: PaymentMethod;
   selected: boolean;
+  onSelect: (value: PaymentMethodId) => void;
 };
 
-function PaymentMethodCard({ method, selected }: CardProps) {
+function PaymentMethodCard({ method, selected, onSelect }: CardProps) {
   const Icon = ICONS[method.id] ?? CreditCard;
 
   return (
-    <Label
-      htmlFor={method.id}
+    <div
+      onClick={() => onSelect(method.id)}
       className={cn(
-        "group flex w-full cursor-pointer items-start gap-3 rounded-xl bg-gray-50 p-4 transition-colors sm:items-center",
-        selected ? "bg-gray-100" : "bg-gray-50 hover:bg-gray-100",
+        "group flex w-full cursor-pointer items-start gap-3 rounded-xl p-4 transition-colors sm:items-center",
+        selected
+          ? "bg-gray-100 animate-pulse-subtle"
+          : "bg-gray-50 hover:bg-gray-100",
       )}
     >
       <div
@@ -86,7 +90,10 @@ function PaymentMethodCard({ method, selected }: CardProps) {
         value={method.id}
         id={method.id}
         className="mt-0.5 shrink-0"
+        onClick={(e) => {
+          e.stopPropagation();
+        }}
       />
-    </Label>
+    </div>
   );
 }
