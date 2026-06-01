@@ -825,8 +825,8 @@ export function PaymentConfirmation({ slug }: Props) {
             Waiting for payment
           </div>
           <p className="mt-2 line-clamp-none text-sm leading-relaxed text-muted-foreground">
-            Complete payment in the checkout tab. This page will update
-            automatically.
+            Complete payment in the checkout window. This page will update
+            automatically after you return.
           </p>
           <Button
             variant="ghost"
