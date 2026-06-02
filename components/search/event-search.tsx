@@ -22,7 +22,7 @@ import {
   SelectTrigger,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { getLocations, slugToVenueCity } from "@/lib/locations/vi-cities";
+import { getLocations } from "@/lib/locations/vi-cities";
 import { fmtShort, localDateToIso, localDateToEndOfDayIso } from "@/lib/date";
 import { DatePicker } from "@/components/date/date-picker";
 import { useEvents } from "@/hooks/use-events";
@@ -61,7 +61,7 @@ function EventSearchInner() {
   const searchParams = useSearchParams();
 
   const [location, setLocation] = useState(
-    () => searchParams.get("venue") ?? "",
+    () => searchParams.get("location") ?? "",
   );
   const [startDate, setStartDate] = useState<Date | null>(() => {
     const v = searchParams.get("dateFrom");
@@ -115,7 +115,7 @@ function EventSearchInner() {
   const { data: dropdownResult, isLoading: dropdownLoading } = useEvents(
     {
       q: debouncedQuery,
-      venueCity: location ? slugToVenueCity(location) : undefined,
+      location: location || undefined,
       eventDateFrom: startDate ? localDateToIso(startDate) : undefined,
       eventDateTo: startDate
         ? localDateToEndOfDayIso(endDate ?? startDate)
@@ -129,14 +129,13 @@ function EventSearchInner() {
     () => dropdownResult?.data?.map(eventToEventItem).slice(0, 8) ?? [],
     [dropdownResult],
   );
-  const dropdownTotal = dropdownResult?.meta?.totalItems ?? 0;
   const showResults = showDropdown && searchEnabled;
 
   function handleSearch() {
     const params = new URLSearchParams();
     const q = inputValue.trim();
     if (q) params.set("q", q);
-    if (location) params.set("venue", location);
+    if (location) params.set("location", location);
     if (startDate) {
       params.set("dateFrom", localDateToIso(startDate));
       params.set("dateTo", localDateToEndOfDayIso(endDate ?? startDate));
@@ -212,7 +211,16 @@ function EventSearchInner() {
     onClose: () => setDatePickerOpen(false),
   };
 
-  const viewAllHref = `/events?q=${encodeURIComponent(debouncedQuery)}`;
+  const viewAllHref = useMemo(() => {
+    const params = new URLSearchParams();
+    if (debouncedQuery) params.set("q", debouncedQuery);
+    if (location) params.set("location", location);
+    if (startDate) {
+      params.set("dateFrom", localDateToIso(startDate));
+      params.set("dateTo", localDateToEndOfDayIso(endDate ?? startDate));
+    }
+    return `/events?${params.toString()}`;
+  }, [debouncedQuery, endDate, location, startDate]);
 
   const dropdown = showResults ? (
     <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-lg border border-border bg-background shadow-xl">

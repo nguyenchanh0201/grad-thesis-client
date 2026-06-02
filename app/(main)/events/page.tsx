@@ -2,23 +2,21 @@
 
 import { Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { useEvents } from "@/hooks/use-events";
 import { useCategories } from "@/hooks/use-taxonomy";
 import { eventToEventItem } from "@/lib/event/adapters";
 import { fmtShort } from "@/lib/date";
-import { getLocations, slugToVenueCity } from "@/lib/locations/vi-cities";
+import { getLocations } from "@/lib/locations/vi-cities";
 import { EventStatus } from "@/schemas/event";
 import { EventListing } from "@/components/event/event-listing";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { Chip } from "@/components/shared/chip";
 import { Category } from "@/schemas/category";
 
 const ALL_LOCATIONS = getLocations().flatMap((g) => g.locations);
 
-function venueLabel(value: string): string {
+function locationLabel(value: string): string {
   return ALL_LOCATIONS.find((l) => l.value === value)?.label ?? value;
 }
 
@@ -27,7 +25,7 @@ function EventsContent() {
   const router = useRouter();
 
   const q = searchParams.get("q") ?? undefined;
-  const venue = searchParams.get("venue") ?? undefined;
+  const location = searchParams.get("location") ?? undefined;
   const dateFrom = searchParams.get("dateFrom") ?? undefined;
   const dateTo = searchParams.get("dateTo") ?? undefined;
   const categoryId = searchParams.get("categoryId") ?? undefined;
@@ -36,7 +34,7 @@ function EventsContent() {
   const { data: result, isLoading } = useEvents({
     q,
     categoryId,
-    venueCity: venue ? slugToVenueCity(venue) : undefined,
+    location,
     eventDateFrom: dateFrom,
     eventDateTo: dateTo,
     status: EventStatus.ON_SALE,
@@ -71,7 +69,7 @@ function EventsContent() {
 
   const activeFilters = [
     q ? { key: "q", label: `"${q}"` } : null,
-    venue ? { key: "venue", label: venueLabel(venue) } : null,
+    location ? { key: "location", label: locationLabel(location) } : null,
     dateFrom
       ? { key: "dateFrom", label: `From ${fmtShort(new Date(dateFrom))}` }
       : null,
@@ -130,7 +128,7 @@ function EventsContent() {
               onClick={() =>
                 updateParams({
                   q: undefined,
-                  venue: undefined,
+                  location: undefined,
                   dateFrom: undefined,
                   dateTo: undefined,
                 })

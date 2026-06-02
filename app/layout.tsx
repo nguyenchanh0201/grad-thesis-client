@@ -52,6 +52,7 @@ export default async function RootLayout({
     <html
       lang={initialLanguage.code}
       className={cn("font-sans", geist.variable)}
+      suppressHydrationWarning
     >
       <body className={`${geist.variable} ${fontMono.variable} antialiased`}>
         <NextTopLoader color="var(--primary)" showSpinner={false} height={3} />
