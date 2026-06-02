@@ -14,6 +14,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { fmt } from "@/lib/strings/money";
 import type { Reservation, ReservationStatus } from "@/schemas/reservation";
+import { getReservationPaymentAction } from "./reservation-actions";
 
 const STATUS_CONFIG: Record<
   ReservationStatus,
@@ -64,10 +65,11 @@ export function OrderDetailDialog({ open, onOpenChange, reservation }: Props) {
   const eventDate = formatDateTime(event?.eventDate);
   const createdAt = formatDateTime(reservation.createdAt);
   const expiresAt = formatDateTime(reservation.expiresAt);
-  const canPay =
-    (reservation.status === "PENDING" ||
-      reservation.status === "PAYMENT_LOCKED") &&
-    reservation.eventSlug;
+  const paymentAction = getReservationPaymentAction({
+    status: reservation.status,
+    eventSlug: reservation.eventSlug,
+    reservationId: reservation.id,
+  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -198,12 +200,10 @@ export function OrderDetailDialog({ open, onOpenChange, reservation }: Props) {
           )}
         </div>
 
-        {canPay && (
+        {paymentAction && (
           <DialogFooter>
             <Button asChild>
-              <Link href={`/buy/${reservation.eventSlug}/info`}>
-                Complete Payment
-              </Link>
+              <Link href={paymentAction.href}>{paymentAction.label}</Link>
             </Button>
           </DialogFooter>
         )}

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { fmt } from "@/lib/strings/money";
 import { Reservation, ReservationStatus } from "@/schemas/reservation";
 import { isSvgImageSource } from "@/lib/image/is-svg-image-source";
+import { getReservationPaymentAction } from "./reservation-actions";
 
 const STATUS_CONFIG: Record<
   ReservationStatus,
@@ -38,8 +39,12 @@ export function ReservationCard({
 }: Props) {
   const { status, totalAmount, currency, event, eventSlug } = reservation;
   const { label: statusLabel, variant: statusVariant } = STATUS_CONFIG[status];
-  const canPay = status === "PENDING" || status === "PAYMENT_LOCKED";
-  const canCancel = canPay;
+  const paymentAction = getReservationPaymentAction({
+    status,
+    eventSlug,
+    reservationId: reservation.id,
+  });
+  const canCancel = status === "PENDING" || status === "PAYMENT_LOCKED";
 
   const eventDt = event?.eventDate ? new Date(event.eventDate) : null;
   const dateStr = eventDt
@@ -136,14 +141,14 @@ export function ReservationCard({
                 {isCanceling ? "Canceling..." : "Cancel"}
               </Button>
             )}
-            {canPay && eventSlug && (
+            {paymentAction && (
               <Button
                 asChild
                 variant="default"
                 size="sm"
                 className="pointer-events-auto relative z-30"
               >
-                <Link href={`/buy/${eventSlug}/info`}>Complete</Link>
+                <Link href={paymentAction.href}>{paymentAction.label}</Link>
               </Button>
             )}
           </div>
