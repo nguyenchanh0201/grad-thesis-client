@@ -8,6 +8,7 @@ import { useSearchParams } from "next/navigation";
 import { AuthCard } from "@/components/auth/auth-card";
 import { InputField } from "@/components/auth/input-field";
 import { AuthFooterLink } from "@/components/auth/auth-footer-link";
+import { AuthSocialActions } from "@/components/auth/auth-social-actions";
 import { LoginSchema, type LoginInput } from "@/schemas/auth";
 import { getAuthErrorMessage } from "@/services/auth.service";
 import { useLogin } from "@/hooks/use-auth";
@@ -121,6 +122,8 @@ export default function LoginPage() {
             Login
           </Button>
         </form>
+
+        <AuthSocialActions disabled={isPending} />
 
         <AuthFooterLink
           text="Don't have an account?"
