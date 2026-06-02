@@ -13,6 +13,7 @@ import {
   consumeGoogleOAuthState,
   createGoogleOAuthState,
   getGoogleRedirectUri,
+  getGoogleOAuthState,
   storeGoogleOAuthState,
   toRedirectQueryParams,
 } from "@/lib/auth/google-oauth";
@@ -234,7 +235,10 @@ export async function getGoogleAuthorisationUrl(
       );
     }
 
-    const state = createGoogleOAuthState();
+    const state =
+      getGoogleOAuthState(result.urlWithQueryParams) ??
+      createGoogleOAuthState();
+
     storeGoogleOAuthState({
       state,
       redirectTo,

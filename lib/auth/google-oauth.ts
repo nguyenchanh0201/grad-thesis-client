@@ -7,11 +7,22 @@ export type GoogleOAuthState = {
 };
 
 export function getGoogleRedirectUri(): string {
+  const configuredRedirectUri =
+    process.env.NEXT_PUBLIC_GOOGLE_REDIRECT_URI?.trim();
+
+  if (configuredRedirectUri) {
+    return configuredRedirectUri;
+  }
+
   return `${window.location.origin}/auth/callback/google`;
 }
 
 export function createGoogleOAuthState(): string {
-  return crypto.randomUUID();
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
 export function storeGoogleOAuthState(payload: GoogleOAuthState): void {
@@ -36,8 +47,14 @@ export function consumeGoogleOAuthState(
 
 export function appendGoogleOAuthState(url: string, state: string): string {
   const authUrl = new URL(url);
-  authUrl.searchParams.set("state", state);
+  if (!authUrl.searchParams.has("state")) {
+    authUrl.searchParams.set("state", state);
+  }
   return authUrl.toString();
+}
+
+export function getGoogleOAuthState(url: string): string | null {
+  return new URL(url).searchParams.get("state");
 }
 
 export function toRedirectQueryParams(

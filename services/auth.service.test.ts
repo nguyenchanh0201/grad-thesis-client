@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { UnauthorizedError } from "@/core/error";
-import { login } from "@/services/auth.service";
+import { getGoogleAuthorisationUrl, login } from "@/services/auth.service";
 import { getIdentityMe } from "@/services/identity.service";
 import { refreshClient } from "@/lib/api/api-client";
 
@@ -20,11 +20,14 @@ vi.mock("@/lib/api/api-client", () => ({
 }));
 
 const mockedRefreshPost = vi.mocked(refreshClient.post);
+const mockedRefreshGet = vi.mocked(refreshClient.get);
 const mockedGetIdentityMe = vi.mocked(getIdentityMe);
 
 describe("auth service session verification", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    sessionStorage.clear();
+    delete process.env.NEXT_PUBLIC_GOOGLE_REDIRECT_URI;
   });
 
   it("hydrates the logged-in user from /identity/me after SuperTokens sign-in", async () => {
@@ -74,5 +77,31 @@ describe("auth service session verification", () => {
     await expect(
       login({ email: "user@example.test", password: "Password@123" }),
     ).rejects.toThrow("Authentication failed. Please try again.");
+  });
+
+  it("adds a local oauth state when the SuperTokens Google authorisation URL omits one", async () => {
+    mockedRefreshGet.mockResolvedValueOnce({
+      data: {
+        status: "OK",
+        urlWithQueryParams:
+          "https://accounts.google.com/o/oauth2/v2/auth?client_id=google-client-id",
+        pkceCodeVerifier: "verifier-1",
+      },
+    });
+
+    const url = await getGoogleAuthorisationUrl("/events");
+    const state = new URL(url).searchParams.get("state");
+
+    expect(state).toEqual(expect.any(String));
+    expect(state).not.toHaveLength(0);
+    expect(mockedRefreshGet).toHaveBeenCalledWith(
+      "/auth/authorisationurl",
+      expect.objectContaining({
+        params: expect.objectContaining({
+          thirdPartyId: "google",
+          redirectURIOnProviderDashboard: `${window.location.origin}/auth/callback/google`,
+        }),
+      }),
+    );
   });
 });
