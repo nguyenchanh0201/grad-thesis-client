@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AlertDialog } from "@/components/ui/alert-dialog";
 import {
   InputGroup,
   InputGroupAddon,
@@ -20,7 +21,7 @@ import {
   useMyTickets,
   useMyVouchers,
 } from "@/hooks/use-tickets";
-import { useReservation } from "@/hooks/use-booking";
+import { useCancelReservation, useReservation } from "@/hooks/use-booking";
 import { AvailableVoucher, Reservation } from "@/schemas/reservation";
 import { BackendTicket, BackendTicketStatus } from "@/schemas/ticket";
 import { TicketGroupCard } from "./ticket-group-card";
@@ -99,6 +100,8 @@ export function TicketAndVoucher() {
     useState<AvailableVoucher | null>(null);
   const [selectedReservation, setSelectedReservation] =
     useState<Reservation | null>(null);
+  const [reservationToCancel, setReservationToCancel] =
+    useState<Reservation | null>(null);
   const [selectedTicketGroup, setSelectedTicketGroup] = useState<
     BackendTicket[] | null
   >(null);
@@ -124,6 +127,7 @@ export function TicketAndVoucher() {
     data: highlightedReservationResult,
     isFetching: isHighlightedReservationFetching,
   } = useReservation(highlightId ?? undefined);
+  const cancelReservationMutation = useCancelReservation();
 
   useEffect(() => {
     if (!highlightId) {
@@ -197,6 +201,19 @@ export function TicketAndVoucher() {
           (v.description ?? "").toLowerCase().includes(q),
       )
     : vouchers;
+
+  const handleConfirmCancelReservation = async () => {
+    if (!reservationToCancel) return;
+    try {
+      await cancelReservationMutation.mutateAsync(reservationToCancel.id);
+      if (selectedReservation?.id === reservationToCancel.id) {
+        setSelectedReservation(null);
+      }
+      setReservationToCancel(null);
+    } catch {
+      // Keep the dialog open so the user can retry or keep the reservation.
+    }
+  };
 
   return (
     <main className="page-container py-10">
@@ -284,6 +301,11 @@ export function TicketAndVoucher() {
                     key={reservation.id}
                     reservation={reservation}
                     onOpenDetails={setSelectedReservation}
+                    onCancel={setReservationToCancel}
+                    isCanceling={
+                      cancelReservationMutation.isPending &&
+                      reservationToCancel?.id === reservation.id
+                    }
                   />
                 ))}
               </div>
@@ -415,6 +437,22 @@ export function TicketAndVoucher() {
         onOpenChange={(open) => {
           if (!open) setSelectedTicketGroup(null);
         }}
+      />
+      <AlertDialog
+        open={reservationToCancel !== null}
+        onOpenChange={(open) => {
+          if (!open && !cancelReservationMutation.isPending) {
+            setReservationToCancel(null);
+          }
+        }}
+        title="Cancel this reservation?"
+        description="This will release your reserved tickets and void any pending payment attempt for this order."
+        confirmLabel={
+          cancelReservationMutation.isPending ? "Canceling..." : "Cancel order"
+        }
+        cancelLabel="Keep reservation"
+        confirmVariant="destructive"
+        onConfirm={() => void handleConfirmCancelReservation()}
       />
     </main>
   );

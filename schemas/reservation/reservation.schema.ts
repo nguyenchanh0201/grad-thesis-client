@@ -115,6 +115,33 @@ export const ReservationListResultSchema =
   PagedResponseSchema(ReservationSchema);
 export type ReservationListResult = z.infer<typeof ReservationListResultSchema>;
 
+export const ActiveCheckoutReservationSchema = z.object({
+  id: BigIntIdSchema,
+  eventSlug: z.string(),
+  eventName: z.string(),
+  eventDate: z.iso.datetime(),
+  featuredImageUrl: z.string().nullable(),
+  status: z.enum(["PENDING", "PAYMENT_LOCKED"]),
+  totalAmount: AmountSchema,
+  currency: z.literal("VND"),
+  expiresAt: z.iso.datetime(),
+  effectiveExpiresAt: z.iso.datetime(),
+  waitRoomToken: z.string().nullable().optional(),
+  sessionExpiresAt: z.iso.datetime().nullable().optional(),
+});
+
+export const ActiveCheckoutSchema = z.object({
+  hasActiveReservation: z.boolean(),
+  reservation: ActiveCheckoutReservationSchema.nullable(),
+});
+
+export const ActiveCheckoutResultSchema =
+  BaseResponseSchema(ActiveCheckoutSchema);
+export type ActiveCheckoutResult = z.infer<typeof ActiveCheckoutResultSchema>;
+export type ActiveCheckoutReservation = z.infer<
+  typeof ActiveCheckoutReservationSchema
+>;
+
 // Shape returned by POST /reservations/ga and POST /reservations/seated
 export const CreateReservationResponseSchema = z.object({
   status: z.boolean(),

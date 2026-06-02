@@ -6,6 +6,8 @@ import {
   AvailableVoucherListResultSchema,
   ApplyReservationVoucherResult,
   ApplyReservationVoucherResultSchema,
+  ActiveCheckoutResult,
+  ActiveCheckoutResultSchema,
   CreateReservationResponseSchema,
   ReservationListResult,
   ReservationListResultSchema,
@@ -89,6 +91,15 @@ export const getReservation = async (
 ): Promise<ReservationResult> => {
   const response = await apiClient.get(`/reservations/${id}`);
   return parseOrThrow(ReservationResultSchema, response);
+};
+
+export const getActiveCheckout = async (
+  targetEventSlug: string,
+): Promise<ActiveCheckoutResult> => {
+  const response = await apiClient.get("/reservations/active-checkout", {
+    params: { targetEventSlug },
+  });
+  return parseOrThrow(ActiveCheckoutResultSchema, response);
 };
 
 export const updateReservationRecipient = async (

@@ -26,12 +26,20 @@ const STATUS_CONFIG: Record<
 type Props = {
   reservation: Reservation;
   onOpenDetails: (reservation: Reservation) => void;
+  onCancel?: (reservation: Reservation) => void;
+  isCanceling?: boolean;
 };
 
-export function ReservationCard({ reservation, onOpenDetails }: Props) {
+export function ReservationCard({
+  reservation,
+  onOpenDetails,
+  onCancel,
+  isCanceling = false,
+}: Props) {
   const { status, totalAmount, currency, event, eventSlug } = reservation;
   const { label: statusLabel, variant: statusVariant } = STATUS_CONFIG[status];
   const canPay = status === "PENDING" || status === "PAYMENT_LOCKED";
+  const canCancel = canPay;
 
   const eventDt = event?.eventDate ? new Date(event.eventDate) : null;
   const dateStr = eventDt
@@ -115,16 +123,30 @@ export function ReservationCard({ reservation, onOpenDetails }: Props) {
           <span className="text-base font-bold text-primary">
             {fmt(totalAmount)} {currency ?? "VND"}
           </span>
-          {canPay && eventSlug && (
-            <Button
-              asChild
-              variant="default"
-              size="sm"
-              className="pointer-events-auto relative z-30"
-            >
-              <Link href={`/buy/${eventSlug}/info`}>Complete Payment</Link>
-            </Button>
-          )}
+          <div className="flex shrink-0 items-center gap-2">
+            {canCancel && onCancel && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="pointer-events-auto relative z-30"
+                disabled={isCanceling}
+                onClick={() => onCancel(reservation)}
+              >
+                {isCanceling ? "Canceling..." : "Cancel"}
+              </Button>
+            )}
+            {canPay && eventSlug && (
+              <Button
+                asChild
+                variant="default"
+                size="sm"
+                className="pointer-events-auto relative z-30"
+              >
+                <Link href={`/buy/${eventSlug}/info`}>Complete</Link>
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </article>

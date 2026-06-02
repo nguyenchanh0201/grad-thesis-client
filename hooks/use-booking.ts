@@ -7,6 +7,7 @@ import {
   cancelReservation,
   createGAReservation,
   createSeatedReservation,
+  getActiveCheckout,
   getReservation,
   type CreateGAReservationPayload,
   type CreateSeatedReservationPayload,
@@ -22,6 +23,8 @@ const UNAVAILABLE_RESERVATION_CODES = new Set([
 export const reservationKeys = {
   all: ["reservations"] as const,
   detail: (id: string) => [...reservationKeys.all, id] as const,
+  activeCheckout: (targetEventSlug: string) =>
+    [...reservationKeys.all, "active-checkout", targetEventSlug] as const,
 };
 
 export function useReservation(id: string | undefined) {
@@ -33,6 +36,17 @@ export function useReservation(id: string | undefined) {
     staleTime: 0,
     refetchOnMount: "always",
     refetchInterval: RESERVATION_POLL_INTERVAL_MS,
+  });
+}
+
+export function useActiveCheckout(targetEventSlug: string | undefined) {
+  return useQuery({
+    queryKey: reservationKeys.activeCheckout(targetEventSlug ?? ""),
+    queryFn: () => getActiveCheckout(targetEventSlug!),
+    enabled: !!targetEventSlug,
+    retry: false,
+    staleTime: 0,
+    refetchOnWindowFocus: false,
   });
 }
 
