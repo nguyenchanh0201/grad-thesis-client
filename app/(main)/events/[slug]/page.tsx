@@ -8,13 +8,9 @@ import { eventToEventDetail } from "@/lib/event/adapters";
 import { EventDetailView } from "@/components/event/detail/event-detail-view";
 import { EventDetailSections } from "@/components/event/detail/event-detail-sections";
 
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://ticketgo.vn";
 type Props = { params: Promise<{ slug: string }> };
-
-export async function generateStaticParams() {
-  return [];
-}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;

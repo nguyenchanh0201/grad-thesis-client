@@ -175,7 +175,8 @@ export function Payment({ slug }: Props) {
         onSuccess: (result) => {
           if (typeof window === "undefined") return;
           if (result.paymentUrl) {
-            window.open(result.paymentUrl, "_blank", "noopener,noreferrer");
+            window.location.assign(result.paymentUrl);
+            return;
           }
           router.replace(`/buy/${slug}/confirmation`);
         },

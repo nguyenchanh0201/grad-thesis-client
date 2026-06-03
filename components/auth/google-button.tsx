@@ -3,6 +3,7 @@
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { getAuthErrorMessage } from "@/services/auth.service";
 import { useLoginWithGoogle } from "@/hooks/use-auth";
 
 interface GoogleButtonProps {
@@ -14,8 +15,8 @@ export function GoogleButton({ disabled }: GoogleButtonProps) {
 
   const handleClick = () => {
     mutate(undefined, {
-      onError: () => {
-        toast.error("Google sign-in is unavailable. Please try email instead.");
+      onError: (error) => {
+        toast.error(getAuthErrorMessage(error));
       },
     });
   };

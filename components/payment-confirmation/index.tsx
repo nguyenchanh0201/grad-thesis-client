@@ -97,6 +97,9 @@ export function PaymentConfirmation({ slug }: Props) {
   const searchParams = useSearchParams();
   const isInvalidChecksum =
     searchParams.get("paymentStatus") === "invalid_checksum";
+  const isFailedFromQuery = searchParams.get("paymentStatus") === "failed";
+  const isCancelledFromQuery =
+    searchParams.get("paymentStatus") === "cancelled";
   const slugFromQuery = searchParams.get("slug");
   const resolvedSlug = slug ?? slugFromQuery ?? null;
 
@@ -124,12 +127,18 @@ export function PaymentConfirmation({ slug }: Props) {
   const { data, error, isLoading } = useQuery({
     queryKey: ["payment-confirmation", reservationId],
     queryFn: () => getPaymentConfirmationStatus(reservationId!),
-    enabled: !!reservationId,
+    enabled:
+      !!reservationId &&
+      !isFailedFromQuery &&
+      !isCancelledFromQuery &&
+      !isInvalidChecksum,
     retry: false,
     refetchInterval: 5000,
   });
 
   const state = useMemo(() => {
+    if (isFailedFromQuery) return "failed";
+    if (isCancelledFromQuery) return "cancelled";
     if (!data) return null;
     if (data.reservationStatus === RESERVATION_STATUS.PAID) return "success";
     if (data.reservationStatus === RESERVATION_STATUS.CANCELLED)
@@ -137,7 +146,7 @@ export function PaymentConfirmation({ slug }: Props) {
     if (data.reservationStatus === RESERVATION_STATUS.EXPIRED) return "expired";
     if (data.payment?.status === "FAILED") return "failed";
     return "pending";
-  }, [data]);
+  }, [data, isFailedFromQuery, isCancelledFromQuery]);
 
   // Event detail — use eventSlug from payment response, fall back to route slug
   const eventSlug = data?.eventSlug ?? resolvedSlug;
@@ -205,6 +214,65 @@ export function PaymentConfirmation({ slug }: Props) {
           <p className="mt-2 line-clamp-none text-sm leading-relaxed text-muted-foreground">
             We could not verify the payment callback. Please check your orders
             before trying again.
+          </p>
+          <Button
+            className="mt-7 w-full"
+            onClick={() => {
+              handleExitFlow();
+              router.replace(eventRoute);
+            }}
+          >
+            {backLabel}
+          </Button>
+        </SimpleCard>
+      </Shell>
+    );
+  }
+
+  if (isFailedFromQuery || isCancelledFromQuery) {
+    const title = isCancelledFromQuery
+      ? "Reservation cancelled"
+      : "Payment failed";
+    const statusLabel = isCancelledFromQuery ? "Cancelled" : "Failed";
+    const description = isCancelledFromQuery
+      ? "This reservation was cancelled."
+      : "The payment was not completed. You can start a new booking if you'd like to try again.";
+
+    return (
+      <Shell>
+        <SimpleCard>
+          <div className="mb-5 inline-flex text-destructive">
+            <svg width="52" height="52" viewBox="0 0 52 52" fill="none">
+              <circle
+                cx="26"
+                cy="26"
+                r="24"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                opacity=".4"
+              />
+              <path
+                className="tc-xa"
+                d="M18 18L34 34"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              />
+              <path
+                className="tc-xb"
+                d="M34 18L18 34"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              />
+            </svg>
+          </div>
+          <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-destructive">
+            {statusLabel}
+          </div>
+          <div className="text-xl font-bold text-foreground">{title}</div>
+          <p className="mt-2 line-clamp-none text-sm leading-relaxed text-muted-foreground">
+            {description}
           </p>
           <Button
             className="mt-7 w-full"
@@ -757,8 +825,8 @@ export function PaymentConfirmation({ slug }: Props) {
             Waiting for payment
           </div>
           <p className="mt-2 line-clamp-none text-sm leading-relaxed text-muted-foreground">
-            Complete payment in the checkout tab. This page will update
-            automatically.
+            Complete payment in the checkout window. This page will update
+            automatically after you return.
           </p>
           <Button
             variant="ghost"
