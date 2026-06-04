@@ -169,16 +169,39 @@ export function Payment({ slug }: Props) {
       return;
     }
 
+    const currentReservationId = reservationId;
+    const confirmationHref = `/buy/${slug}/confirmation?reservationId=${encodeURIComponent(
+      currentReservationId,
+    )}`;
+    const paymentWindow =
+      typeof window === "undefined" ? null : window.open("", "_blank");
+    if (paymentWindow) {
+      paymentWindow.opener = null;
+    }
+
     createPaymentMutation.mutate(
-      { reservationId, waitRoomToken, methodId: paymentMethodId },
+      {
+        reservationId: currentReservationId,
+        waitRoomToken,
+        methodId: paymentMethodId,
+      },
       {
         onSuccess: (result) => {
           if (typeof window === "undefined") return;
           if (result.paymentUrl) {
-            window.location.assign(result.paymentUrl);
+            if (paymentWindow) {
+              paymentWindow.location.href = result.paymentUrl;
+            } else {
+              window.open(result.paymentUrl, "_blank", "noopener,noreferrer");
+            }
+            router.replace(confirmationHref);
             return;
           }
-          router.replace(`/buy/${slug}/confirmation`);
+          paymentWindow?.close();
+          router.replace(confirmationHref);
+        },
+        onError: () => {
+          paymentWindow?.close();
         },
       },
     );
