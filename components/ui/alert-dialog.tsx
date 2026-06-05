@@ -81,18 +81,18 @@ export function AlertDialog({
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
-        <DialogFooter className="-mx-4 -mb-4 mt-2 sm:justify-end">
+        <DialogFooter>
           <Button
             variant={cancelVariant}
             onClick={handleCancel}
-            disabled={cancelDisabled || cancelLoading}
+            disabled={cancelDisabled || cancelLoading || confirmLoading}
           >
             {cancelLoading ? cancelLoadingLabel : cancelLabel}
           </Button>
           <Button
             variant={confirmVariant}
             onClick={onConfirm}
-            disabled={confirmDisabled || confirmLoading}
+            disabled={confirmDisabled || confirmLoading || cancelLoading}
           >
             {confirmLoading ? confirmLoadingLabel : confirmLabel}
           </Button>

@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { cancelReservation } from "@/services/reservation.service";
+import { AlertDialog } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -54,22 +56,21 @@ function formatDateTime(value?: string | null): string | null {
 }
 
 export function OrderDetailDialog({ open, onOpenChange, reservation }: Props) {
-  //  1. Khai báo tất cả các Hook ở trên cùng của Component
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const queryClient = useQueryClient();
   const cancelMutation = useMutation({
     mutationFn: () => cancelReservation(reservation?.id ?? ""),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["reservations"] });
+      setIsCancelDialogOpen(false);
       onOpenChange(false);
     },
   });
 
-  //  2. Kiểm tra điều kiện render sớm ở đây (Sau khi các Hook đã đăng ký)
   if (!reservation) {
     return null;
   }
 
-  //  3. Tính toán logic dựa trên dữ liệu chắc chắn đã tồn tại
   const status = STATUS_CONFIG[reservation.status];
   const event = reservation.event;
   const items = reservation.items ?? [];
@@ -88,165 +89,179 @@ export function OrderDetailDialog({ open, onOpenChange, reservation }: Props) {
     reservation.status === "PENDING" || reservation.status === "PAYMENT_LOCKED";
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
-        <DialogHeader className="space-y-3">
-          <div className="flex items-start justify-between gap-3 pr-8">
-            <div className="min-w-0 space-y-1">
-              <DialogTitle className="line-clamp-2">
-                {event?.eventName ?? "Order details"}
-              </DialogTitle>
-              <DialogDescription className="font-mono text-xs">
-                Reservation #{reservation.id}
-              </DialogDescription>
-            </div>
-            <Badge variant={status.variant} className="shrink-0">
-              {status.label}
-            </Badge>
-          </div>
-        </DialogHeader>
-
-        <div className="space-y-5 text-sm">
-          <section className="space-y-2">
-            {eventDate && <DetailRow label="Event time" value={eventDate} />}
-            {(event?.venueName || event?.city) && (
-              <DetailRow
-                label="Venue"
-                value={[event?.venueName, event?.city]
-                  .filter(Boolean)
-                  .join(", ")}
-              />
-            )}
-            {createdAt && <DetailRow label="Created" value={createdAt} />}
-            {expiresAt && <DetailRow label="Expires" value={expiresAt} />}
-          </section>
-
-          <Separator />
-
-          <section className="space-y-3">
-            <p className="text-xs font-medium uppercase text-muted-foreground">
-              Tickets
-            </p>
-            {items.length > 0 ? (
-              <div className="space-y-2">
-                {items.map((item) => {
-                  const seat =
-                    item.seatLabel ??
-                    (item.row && item.column
-                      ? `Row ${item.row}, Seat ${item.column}`
-                      : null);
-
-                  return (
-                    <div
-                      key={item.id}
-                      className="flex items-start justify-between gap-3 rounded-sm border border-border p-3"
-                    >
-                      <div className="min-w-0">
-                        <p className="font-medium">{item.ticketTypeName}</p>
-                        {seat && (
-                          <p className="text-xs text-muted-foreground">
-                            {seat}
-                          </p>
-                        )}
-                        <p className="text-xs text-muted-foreground">
-                          Quantity {item.quantity}
-                        </p>
-                      </div>
-                      <span className="shrink-0 font-medium">
-                        {fmt(item.unitPrice * item.quantity)} {currency}
-                      </span>
-                    </div>
-                  );
-                })}
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader className="space-y-3">
+            <div className="flex items-start justify-between gap-3 pr-8">
+              <div className="min-w-0 space-y-1">
+                <DialogTitle className="line-clamp-2">
+                  {event?.eventName ?? "Order details"}
+                </DialogTitle>
+                <DialogDescription className="font-mono text-xs">
+                  Reservation #{reservation.id}
+                </DialogDescription>
               </div>
-            ) : (
-              <p className="text-muted-foreground">
-                Ticket item details are not available for this order.
-              </p>
-            )}
-          </section>
+              <Badge variant={status.variant} className="shrink-0">
+                {status.label}
+              </Badge>
+            </div>
+          </DialogHeader>
 
-          <Separator />
-
-          <section className="space-y-2">
-            <DetailRow
-              label="Subtotal"
-              value={`${fmt(subtotal)} ${currency}`}
-            />
-            {reservation.voucher && (
-              <>
-                <DetailRow label="Voucher" value={reservation.voucher.code} />
+          <div className="space-y-5 text-sm">
+            <section className="space-y-2">
+              {eventDate && <DetailRow label="Event time" value={eventDate} />}
+              {(event?.venueName || event?.city) && (
                 <DetailRow
-                  label="Discount"
-                  value={`-${fmt(discount)} ${currency}`}
+                  label="Venue"
+                  value={[event?.venueName, event?.city]
+                    .filter(Boolean)
+                    .join(", ")}
                 />
+              )}
+              {createdAt && <DetailRow label="Created" value={createdAt} />}
+              {expiresAt && <DetailRow label="Expires" value={expiresAt} />}
+            </section>
+
+            <Separator />
+
+            <section className="space-y-3">
+              <p className="text-xs font-medium uppercase text-muted-foreground">
+                Tickets
+              </p>
+              {items.length > 0 ? (
+                <div className="space-y-2">
+                  {items.map((item) => {
+                    const seat =
+                      item.seatLabel ??
+                      (item.row && item.column
+                        ? `Row ${item.row}, Seat ${item.column}`
+                        : null);
+
+                    return (
+                      <div
+                        key={item.id}
+                        className="flex items-start justify-between gap-3 rounded-sm border border-border p-3"
+                      >
+                        <div className="min-w-0">
+                          <p className="font-medium">{item.ticketTypeName}</p>
+                          {seat && (
+                            <p className="text-xs text-muted-foreground">
+                              {seat}
+                            </p>
+                          )}
+                          <p className="text-xs text-muted-foreground">
+                            Quantity {item.quantity}
+                          </p>
+                        </div>
+                        <span className="shrink-0 font-medium">
+                          {fmt(item.unitPrice * item.quantity)} {currency}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-muted-foreground">
+                  Ticket item details are not available for this order.
+                </p>
+              )}
+            </section>
+
+            <Separator />
+
+            <section className="space-y-2">
+              <DetailRow
+                label="Subtotal"
+                value={`${fmt(subtotal)} ${currency}`}
+              />
+              {reservation.voucher && (
+                <>
+                  <DetailRow label="Voucher" value={reservation.voucher.code} />
+                  <DetailRow
+                    label="Discount"
+                    value={`-${fmt(discount)} ${currency}`}
+                  />
+                </>
+              )}
+              <DetailRow
+                label="Total"
+                value={`${fmt(reservation.totalAmount)} ${currency}`}
+                strong
+              />
+            </section>
+
+            {reservation.recipient && (
+              <>
+                <Separator />
+                <section className="space-y-2">
+                  <p className="text-xs font-medium uppercase text-muted-foreground">
+                    Recipient
+                  </p>
+                  <DetailRow
+                    label="Name"
+                    value={reservation.recipient.fullName}
+                  />
+                  <DetailRow
+                    label="Email"
+                    value={reservation.recipient.email}
+                  />
+                  <DetailRow
+                    label="Phone"
+                    value={`${reservation.recipient.phoneCountryCode} ${reservation.recipient.phoneNumber}`}
+                  />
+                  {reservation.recipient.idPassport && (
+                    <DetailRow
+                      label="ID / Passport"
+                      value={reservation.recipient.idPassport}
+                    />
+                  )}
+                </section>
               </>
             )}
-            <DetailRow
-              label="Total"
-              value={`${fmt(reservation.totalAmount)} ${currency}`}
-              strong
-            />
-          </section>
+          </div>
 
-          {reservation.recipient && (
-            <>
-              <Separator />
-              <section className="space-y-2">
-                <p className="text-xs font-medium uppercase text-muted-foreground">
-                  Recipient
-                </p>
-                <DetailRow
-                  label="Name"
-                  value={reservation.recipient.fullName}
-                />
-                <DetailRow label="Email" value={reservation.recipient.email} />
-                <DetailRow
-                  label="Phone"
-                  value={`${reservation.recipient.phoneCountryCode} ${reservation.recipient.phoneNumber}`}
-                />
-                {reservation.recipient.idPassport && (
-                  <DetailRow
-                    label="ID / Passport"
-                    value={reservation.recipient.idPassport}
-                  />
-                )}
-              </section>
-            </>
+          {(canCancel || paymentAction) && (
+            <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+              {canCancel && (
+                <Button
+                  variant="destructive"
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  disabled={cancelMutation.isPending}
+                  onClick={() => setIsCancelDialogOpen(true)}
+                >
+                  {cancelMutation.isPending
+                    ? "Cancelling..."
+                    : "Cancel Reservation"}
+                </Button>
+              )}
+              {paymentAction && (
+                <Button asChild>
+                  <Link href={paymentAction.href}>{paymentAction.label}</Link>
+                </Button>
+              )}
+            </DialogFooter>
           )}
-        </div>
-
-        {(canCancel || paymentAction) && (
-          <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-            {canCancel && (
-              <Button
-                variant="destructive"
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                disabled={cancelMutation.isPending}
-                onClick={() => {
-                  if (
-                    confirm(
-                      "Are you sure you want to cancel this reservation? This will release your locked seats/tickets.",
-                    )
-                  ) {
-                    cancelMutation.mutate();
-                  }
-                }}
-              >
-                {cancelMutation.isPending
-                  ? "Cancelling..."
-                  : "Cancel Reservation"}
-              </Button>
-            )}
-            {paymentAction && (
-              <Button asChild>
-                <Link href={paymentAction.href}>{paymentAction.label}</Link>
-              </Button>
-            )}
-          </DialogFooter>
-        )}
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+      <AlertDialog
+        open={isCancelDialogOpen}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen && !cancelMutation.isPending) {
+            setIsCancelDialogOpen(false);
+          }
+        }}
+        title="Cancel this reservation?"
+        description="This will release your reserved tickets and void any pending payment attempt."
+        confirmLabel="Cancel reservation"
+        confirmLoading={cancelMutation.isPending}
+        confirmLoadingLabel="Canceling..."
+        cancelLabel="Keep reservation"
+        cancelDisabled={cancelMutation.isPending}
+        confirmVariant="destructive"
+        onConfirm={() => cancelMutation.mutate()}
+      />
+    </>
   );
 }
 

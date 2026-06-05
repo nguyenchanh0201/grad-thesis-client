@@ -13,7 +13,6 @@ type ActiveCheckoutAlertProps = {
 
 export function ActiveCheckoutAlert({
   open,
-  checkout,
   isCanceling = false,
   onContinue,
   onCancelAndStartNew,
@@ -22,14 +21,12 @@ export function ActiveCheckoutAlert({
     <AlertDialog
       open={open}
       onOpenChange={() => {}}
-      title="Continue your pending checkout?"
-      description={`You still have an active checkout for ${
-        checkout?.eventName ?? "another event"
-      }. Continue that checkout, or cancel it before starting a new one.`}
-      cancelLabel="Cancel and start new"
+      title="Active checkout found"
+      description="You have an unfinished checkout. Continue it or cancel it to start a new one."
+      cancelLabel="Cancel checkout"
       cancelLoading={isCanceling}
       cancelLoadingLabel="Canceling..."
-      confirmLabel="Continue checkout"
+      confirmLabel="Continue"
       cancelVariant="destructive"
       confirmDisabled={isCanceling}
       blocking

@@ -447,9 +447,10 @@ export function TicketAndVoucher() {
         }}
         title="Cancel this reservation?"
         description="This will release your reserved tickets and void any pending payment attempt for this order."
-        confirmLabel={
-          cancelReservationMutation.isPending ? "Canceling..." : "Cancel order"
-        }
+        confirmLabel="Cancel order"
+        confirmLoading={cancelReservationMutation.isPending}
+        confirmLoadingLabel="Canceling..."
+        cancelDisabled={cancelReservationMutation.isPending}
         cancelLabel="Keep reservation"
         confirmVariant="destructive"
         onConfirm={() => void handleConfirmCancelReservation()}
