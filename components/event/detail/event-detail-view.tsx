@@ -78,7 +78,12 @@ export function EventDetailView({ event, detail }: EventDetailViewProps) {
       beginBuySession,
     });
     if (result.destination === "provider") {
-      window.location.assign(result.href);
+      window.open(result.href, "_blank", "noopener,noreferrer");
+      router.push(
+        `/buy/${activeCheckout.eventSlug}/confirmation?reservationId=${encodeURIComponent(
+          activeCheckout.id,
+        )}`,
+      );
       return;
     }
     router.push(result.href);

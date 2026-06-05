@@ -180,7 +180,12 @@ function QueuePageContent() {
       restoreBuySession: setBuySession,
     });
     if (result.destination === "provider") {
-      window.location.assign(result.href);
+      window.open(result.href, "_blank", "noopener,noreferrer");
+      router.replace(
+        `/buy/${activeCheckout.eventSlug}/confirmation?reservationId=${encodeURIComponent(
+          activeCheckout.id,
+        )}`,
+      );
       return;
     }
     router.replace(result.href);
