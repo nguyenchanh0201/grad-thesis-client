@@ -128,6 +128,7 @@ export const ActiveCheckoutReservationSchema = z.object({
   effectiveExpiresAt: z.iso.datetime(),
   waitRoomToken: z.string().nullable().optional(),
   sessionExpiresAt: z.iso.datetime().nullable().optional(),
+  paymentUrl: z.string().nullable().optional(),
 });
 
 export const ActiveCheckoutSchema = z.object({

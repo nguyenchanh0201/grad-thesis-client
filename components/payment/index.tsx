@@ -104,6 +104,10 @@ export function Payment({ slug }: Props) {
   const isHostedGateway =
     selectedMethod?.checkoutConfig?.type === "hosted_gateway";
   const reservationStatus = confirmation?.reservationStatus;
+  const activePaymentUrl =
+    confirmation?.payment?.status === "INITIATED"
+      ? (confirmation.payment.paymentUrl ?? null)
+      : null;
   const isReservationTerminal =
     reservationStatus === RESERVATION_STATUS.PAID ||
     reservationStatus === RESERVATION_STATUS.CANCELLED ||
@@ -111,6 +115,25 @@ export function Payment({ slug }: Props) {
   const canPayReservation =
     reservationStatus === RESERVATION_STATUS.PENDING ||
     reservationStatus === RESERVATION_STATUS.PAYMENT_LOCKED;
+  const canStartNewHostedPayment =
+    hasSelectedEligibleMethod &&
+    isHostedGateway &&
+    reservationStatus === RESERVATION_STATUS.PENDING &&
+    !!waitRoomToken;
+  const canRegenerateHostedPayment =
+    hasSelectedEligibleMethod &&
+    isHostedGateway &&
+    reservationStatus === RESERVATION_STATUS.PAYMENT_LOCKED &&
+    !activePaymentUrl;
+  const canContinuePayment =
+    !!reservationId &&
+    !!reservation &&
+    canPayReservation &&
+    !isReservationTerminal &&
+    !isConfirmationLoading &&
+    (!!activePaymentUrl ||
+      canStartNewHostedPayment ||
+      canRegenerateHostedPayment);
   const createPaymentMutation = useMutation({
     mutationFn: preparePayment,
     retry: false,
@@ -159,11 +182,7 @@ export function Payment({ slug }: Props) {
   }, [discountCode, reservation?.voucher, setDiscountCode]);
 
   const handleContinue = () => {
-    if (!reservationId || !reservation || !paymentMethodId) return;
-    if (!waitRoomToken) {
-      router.replace(`/buy/${slug}/queue`);
-      return;
-    }
+    if (!reservationId || !reservation) return;
     if (!canPayReservation) {
       router.replace(`/buy/${slug}/confirmation`);
       return;
@@ -179,11 +198,37 @@ export function Payment({ slug }: Props) {
       paymentWindow.opener = null;
     }
 
+    if (activePaymentUrl) {
+      if (paymentWindow) {
+        paymentWindow.location.href = activePaymentUrl;
+      } else if (typeof window !== "undefined") {
+        window.open(activePaymentUrl, "_blank", "noopener,noreferrer");
+      }
+      router.replace(confirmationHref);
+      return;
+    }
+
+    if (!paymentMethodId) {
+      paymentWindow?.close();
+      return;
+    }
+
+    const shouldRefreshPaymentUrl =
+      reservationStatus === RESERVATION_STATUS.PAYMENT_LOCKED &&
+      !activePaymentUrl;
+
+    if (!waitRoomToken && !shouldRefreshPaymentUrl) {
+      paymentWindow?.close();
+      router.replace(`/buy/${slug}/queue`);
+      return;
+    }
+
     createPaymentMutation.mutate(
       {
         reservationId: currentReservationId,
-        waitRoomToken,
+        waitRoomToken: waitRoomToken ?? undefined,
         methodId: paymentMethodId,
+        refreshExpiredPaymentUrl: shouldRefreshPaymentUrl,
       },
       {
         onSuccess: (result) => {
@@ -304,6 +349,12 @@ export function Payment({ slug }: Props) {
                 Could not start checkout. Please refresh and try again.
               </p>
             ) : null}
+            {canRegenerateHostedPayment ? (
+              <p className="text-xs text-muted-foreground">
+                The previous payment link is no longer reusable. Generate a new
+                payment link to continue this reservation.
+              </p>
+            ) : null}
 
             <DiscountCodeInput
               reservationId={reservationId}
@@ -326,18 +377,16 @@ export function Payment({ slug }: Props) {
       </main>
 
       <PaymentStickyBar
-        canContinue={
-          !!reservationId &&
-          !!reservation &&
-          hasSelectedEligibleMethod &&
-          isHostedGateway &&
-          canPayReservation &&
-          !isReservationTerminal &&
-          !isConfirmationLoading
-        }
+        canContinue={canContinuePayment}
         onBack={handleBack}
         onContinue={handleContinue}
-        continueLabel="Buy"
+        continueLabel={
+          activePaymentUrl
+            ? "Continue payment"
+            : canRegenerateHostedPayment
+              ? "Generate new payment link"
+              : "Buy"
+        }
         continueBusyLabel="Proceeding..."
         isContinuing={createPaymentMutation.isPending}
       />

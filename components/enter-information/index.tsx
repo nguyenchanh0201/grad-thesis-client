@@ -17,6 +17,7 @@ import {
   cancelReservation,
   updateReservationRecipient,
 } from "@/services/reservation.service";
+import { RESERVATION_STATUS } from "@/schemas/reservation";
 import { fmtIsoDate, fmtIsoTime } from "@/lib/date/utils";
 import { EventBanner } from "@/components/ticket-selection/event-banner";
 import { useBuyProcess } from "@/components/buy-process/buy-process-shell";
@@ -83,6 +84,13 @@ export function EnterInformation({ slug }: Props) {
   const { data: reservationResult } = useReservation(
     reservationId ?? undefined,
   );
+  const reservationStatus = reservationResult?.data?.status;
+
+  useEffect(() => {
+    if (reservationStatus !== RESERVATION_STATUS.PAYMENT_LOCKED) return;
+    if (!reservationId) return;
+    router.replace(`/buy/${slug}/payment`);
+  }, [reservationId, reservationStatus, router, slug]);
 
   const { data: identityResult } = useQuery({
     queryKey: ["current-user"],
@@ -160,6 +168,13 @@ export function EnterInformation({ slug }: Props) {
   const currency = reservationResult?.data?.currency ?? "VND";
 
   const handleContinue = async () => {
+    if (reservationStatus === RESERVATION_STATUS.PAYMENT_LOCKED) {
+      if (reservationId) {
+        router.replace(`/buy/${slug}/payment`);
+      }
+      return;
+    }
+
     const valid = await formRef.current?.triggerValidation();
     if (!valid || !reservationId) return;
     setIsSubmitting(true);

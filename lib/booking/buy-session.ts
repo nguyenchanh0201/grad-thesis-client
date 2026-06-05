@@ -13,6 +13,13 @@ function clearBuySessionStorage(slug: string) {
   useBuySessionTimerStore.getState().clear(slug);
 }
 
+function hasCookie(name: string) {
+  return document.cookie
+    .split(";")
+    .map((cookie) => cookie.trim())
+    .some((cookie) => cookie === `${name}=1` || cookie.startsWith(`${name}=`));
+}
+
 export function buySessionStorageKey(slug: string) {
   return cookieName(slug);
 }
@@ -40,6 +47,32 @@ export function setBuySession(
   document.cookie = `${name}=1; path=/; max-age=${remainingSeconds}; SameSite=Strict`;
   localStorage.setItem(name, String(expiresAtMs));
   useBuySessionTimerStore.getState().setExpiryMs(slug, expiresAtMs);
+
+  return true;
+}
+
+/**
+ * Replaces the frontend checkout gate with the backend-authoritative deadline.
+ * Used when checkout moves from reservation expiry into payment grace.
+ */
+export function refreshBuySessionDeadline(
+  slug: string,
+  checkoutExpiresAt: string,
+): boolean {
+  const name = cookieName(slug);
+  const expiresAtMs = new Date(checkoutExpiresAt).getTime();
+  const remainingSeconds = Number.isFinite(expiresAtMs)
+    ? Math.ceil((expiresAtMs - Date.now()) / 1000)
+    : 0;
+
+  if (remainingSeconds <= 0) {
+    clearBuySessionStorage(slug);
+    return false;
+  }
+
+  document.cookie = `${name}=1; path=/; max-age=${remainingSeconds}; SameSite=Strict`;
+  localStorage.setItem(name, String(expiresAtMs));
+  useBuySessionTimerStore.getState().replaceExpiryMs(slug, expiresAtMs);
 
   return true;
 }
@@ -72,8 +105,17 @@ export function getBuySessionDeadline(slug: string): Date | null {
 export function hasBuySession(slug: string): boolean {
   try {
     const name = cookieName(slug);
+    if (!hasCookie(name)) {
+      clearBuySessionStorage(slug);
+      return false;
+    }
+
     const raw = localStorage.getItem(name);
-    if (!raw) return false;
+    if (!raw) {
+      clearBuySessionStorage(slug);
+      return false;
+    }
+
     const expiryMs = parseInt(raw, 10);
     if (!Number.isFinite(expiryMs) || expiryMs <= Date.now()) {
       clearBuySessionStorage(slug);

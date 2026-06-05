@@ -9,7 +9,6 @@ import {
   type ReactNode,
 } from "react";
 import { useParams, usePathname } from "next/navigation";
-import { clearBuySession } from "@/lib/booking/buy-session";
 import { useBuyProcessSession } from "@/hooks/use-buy-process-session";
 import { ProgressSteps } from "@/components/ticket-selection/progress-steps";
 import { TimeoutModal } from "@/components/ticket-selection/timeout-modal";
@@ -102,8 +101,10 @@ function ActiveBuyProcessShell({
     : undefined;
 
   const handleExitPurchaseFlow = () => {
-    clearBuySession(slug);
-    session.exitPurchaseFlow();
+    void session.exitPurchaseFlow({
+      cancelActiveReservation: true,
+      clearSession: true,
+    });
   };
 
   return (

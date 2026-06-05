@@ -11,6 +11,11 @@ type BuySessionTimerState = {
   bySlug: Record<string, TimerEntry | undefined>;
   hydrate: (slug: string) => void;
   syncToExpiry: (slug: string, isoDatetime: string) => void;
+  replaceWithAuthoritativeExpiry: (
+    slug: string,
+    isoDatetime: string,
+  ) => boolean;
+  replaceExpiryMs: (slug: string, expiryMs: number) => boolean;
   setExpiryMs: (slug: string, expiryMs: number) => void;
   clear: (slug: string) => void;
   getExpiryMs: (slug: string) => number | undefined;
@@ -87,6 +92,27 @@ export const useBuySessionTimerStore = create<BuySessionTimerState>()(
           },
         };
       });
+    },
+
+    replaceWithAuthoritativeExpiry: (slug, isoDatetime) => {
+      const parsedExpiryMs = new Date(isoDatetime).getTime();
+      return get().replaceExpiryMs(slug, parsedExpiryMs);
+    },
+
+    replaceExpiryMs: (slug, expiryMs) => {
+      if (!Number.isFinite(expiryMs) || expiryMs <= Date.now()) {
+        get().clear(slug);
+        return false;
+      }
+
+      writeBackendExpiryMs(slug, expiryMs);
+      set((state) => ({
+        bySlug: {
+          ...state.bySlug,
+          [slug]: { expiryMs },
+        },
+      }));
+      return true;
     },
 
     setExpiryMs: (slug, expiryMs) => {

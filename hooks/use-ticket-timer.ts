@@ -12,6 +12,9 @@ export function useTicketTimer(slug?: string) {
   const hydrate = useBuySessionTimerStore((state) => state.hydrate);
   const clear = useBuySessionTimerStore((state) => state.clear);
   const sync = useBuySessionTimerStore((state) => state.syncToExpiry);
+  const replace = useBuySessionTimerStore(
+    (state) => state.replaceWithAuthoritativeExpiry,
+  );
   const expiryMs = useBuySessionTimerStore((state) =>
     slug ? state.bySlug[slug]?.expiryMs : undefined,
   );
@@ -74,6 +77,16 @@ export function useTicketTimer(slug?: string) {
     [slug, sync],
   );
 
+  const replaceWithAuthoritativeExpiry = useCallback(
+    (isoDatetime: string) => {
+      if (!slug) return false;
+      const updated = replace(slug, isoDatetime);
+      setNow(Date.now());
+      return updated;
+    },
+    [replace, slug],
+  );
+
   const reset = useCallback(() => {
     if (!slug) return;
     clear(slug);
@@ -90,5 +103,6 @@ export function useTicketTimer(slug?: string) {
     formatted: computed.hasSyncedExpiry ? `${mm}:${ss}` : "--:--",
     reset,
     syncToExpiry,
+    replaceWithAuthoritativeExpiry,
   };
 }

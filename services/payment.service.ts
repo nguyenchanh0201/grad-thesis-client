@@ -14,6 +14,7 @@ export type PreparePaymentPayload = {
   reservationId: string;
   waitRoomToken?: string;
   methodId: PaymentMethodId;
+  refreshExpiredPaymentUrl?: boolean;
 };
 
 export const preparePayment = async (

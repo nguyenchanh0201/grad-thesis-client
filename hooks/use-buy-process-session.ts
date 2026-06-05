@@ -14,6 +14,9 @@ import {
 import { useBuySessionSync } from "@/hooks/use-buy-session-sync";
 import { useTicketTimer } from "@/hooks/use-ticket-timer";
 import { sendHeartbeat } from "@/services/queue.service";
+import { cancelReservation } from "@/services/reservation.service";
+import { toast } from "sonner";
+import { performBuyProcessExit } from "@/components/buy-process/exit-purchase-flow";
 
 const BUY_HEARTBEAT_INTERVAL_MS = 10_000;
 
@@ -21,6 +24,11 @@ type UseBuyProcessSessionOptions = {
   autoRedirectOnTimeout?: boolean;
   timeoutRedirectDelayMs?: number;
   skipReservationSync?: boolean;
+};
+
+type ExitPurchaseFlowOptions = {
+  cancelActiveReservation?: boolean;
+  clearSession?: boolean;
 };
 
 export function useBuyProcessSession(
@@ -43,28 +51,44 @@ export function useBuyProcessSession(
     skipReservationSync ? undefined : (reservationId ?? undefined),
   );
 
-  const exitPurchaseFlow = useCallback(() => {
-    if (isExitingRef.current) return;
-    isExitingRef.current = true;
-    reset();
-    storeReset();
-    clearQueueIntent(slug);
-    router.replace(`/events/${slug}`);
-  }, [reset, router, slug, storeReset]);
+  const exitPurchaseFlow = useCallback(
+    async (options: ExitPurchaseFlowOptions = {}) => {
+      if (isExitingRef.current) return;
+      isExitingRef.current = true;
+      try {
+        await performBuyProcessExit({
+          slug,
+          reservationId,
+          cancelActiveReservation: options.cancelActiveReservation,
+          clearSession: options.clearSession,
+          cancelReservation,
+          resetTimer: reset,
+          resetBookingStore: storeReset,
+          clearBuySessionState: clearBuySession,
+          clearQueueIntentState: clearQueueIntent,
+          redirectToEvent: (eventSlug) =>
+            router.replace(`/events/${eventSlug}`),
+        });
+      } catch {
+        isExitingRef.current = false;
+        toast.error("Could not cancel your reservation. Please try again.");
+      }
+    },
+    [reservationId, reset, router, slug, storeReset],
+  );
 
   useBuySessionSync(slug, exitPurchaseFlow);
 
   useEffect(() => {
     if (!hasBuySession(slug)) {
-      exitPurchaseFlow();
+      void exitPurchaseFlow();
     }
   }, [exitPurchaseFlow, slug]);
 
   useEffect(() => {
     if (!autoRedirectOnTimeout || !timedOut) return;
     const timeoutId = window.setTimeout(() => {
-      clearBuySession(slug);
-      exitPurchaseFlow();
+      void exitPurchaseFlow({ clearSession: true });
     }, timeoutRedirectDelayMs);
 
     return () => window.clearTimeout(timeoutId);
@@ -113,7 +137,7 @@ export function useBuyProcessSession(
           !stopped
         ) {
           clearBuySession(slug);
-          exitPurchaseFlow();
+          void exitPurchaseFlow();
         }
       } finally {
         syncing = false;

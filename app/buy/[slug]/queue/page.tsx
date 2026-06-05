@@ -11,15 +11,7 @@ import { QueueInstructions } from "@/components/queue/queue-instructions";
 import { QueueStatusMessage } from "@/components/queue/queue-status-message";
 import { RedirectButton } from "@/components/queue/redirect-button";
 import { AuthGuard } from "@/components/auth/auth-guard";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { ActiveCheckoutAlert } from "@/components/booking/active-checkout-alert";
 import { useQueuePolling } from "@/hooks/use-queue-polling";
 import { useActiveCheckout, useCancelReservation } from "@/hooks/use-booking";
 import { useAuthStore } from "@/lib/store/auth.store";
@@ -37,6 +29,7 @@ import {
   hasQueueIntent,
   setQueueIntent,
 } from "@/lib/booking/queue-intent";
+import { continueActiveCheckout } from "@/lib/booking/active-checkout-actions";
 import type { FrontendQueueStatus } from "@/schemas/queue";
 
 const REDIRECT_COUNTDOWN_SECONDS = 8;
@@ -181,27 +174,16 @@ function QueuePageContent() {
   const handleContinueActiveCheckout = () => {
     if (!activeCheckout) return;
     clearQueueIntent(slug);
-    setReservationId(activeCheckout.id);
-
-    if (activeCheckout.status === "PAYMENT_LOCKED") {
-      router.replace(
-        `/buy/${activeCheckout.eventSlug}/confirmation?reservationId=${activeCheckout.id}`,
-      );
+    const result = continueActiveCheckout(activeCheckout, {
+      setReservationId,
+      beginBuySession,
+      restoreBuySession: setBuySession,
+    });
+    if (result.destination === "provider") {
+      window.location.assign(result.href);
       return;
     }
-
-    const restored = setBuySession(
-      activeCheckout.eventSlug,
-      activeCheckout.sessionExpiresAt ?? activeCheckout.effectiveExpiresAt,
-    );
-    if (restored) {
-      beginBuySession(activeCheckout.eventSlug, activeCheckout.waitRoomToken);
-      setReservationId(activeCheckout.id);
-      router.replace(`/buy/${activeCheckout.eventSlug}/payment`);
-      return;
-    }
-
-    router.replace(`/events/${activeCheckout.eventSlug}`);
+    router.replace(result.href);
   };
 
   const handleCancelAndStartNew = async () => {
@@ -209,18 +191,13 @@ function QueuePageContent() {
     try {
       await cancelReservationMutation.mutateAsync(activeCheckout.id);
       clearBuySession(activeCheckout.eventSlug);
+      if (activeCheckout.eventSlug !== slug) clearBuySession(slug);
       clearQueueIntent(activeCheckout.eventSlug);
       resetBooking();
       setDismissedActiveCheckoutId(activeCheckout.id);
       setAllowedAfterCancelSlug(slug);
     } catch {
       setDismissedActiveCheckoutId(null);
-    }
-  };
-
-  const handleStayWithActiveCheckout = () => {
-    if (activeCheckout) {
-      setDismissedActiveCheckoutId(activeCheckout.id);
     }
   };
 
@@ -254,40 +231,13 @@ function QueuePageContent() {
           </p>
         )}
       </div>
-      <Dialog open={isActiveCheckoutDialogOpen} onOpenChange={() => {}}>
-        <DialogContent
-          showCloseButton={false}
-          onEscapeKeyDown={(event) => event.preventDefault()}
-          onPointerDownOutside={(event) => event.preventDefault()}
-          onInteractOutside={(event) => event.preventDefault()}
-        >
-          <DialogHeader>
-            <DialogTitle>Continue your pending checkout?</DialogTitle>
-            <DialogDescription>
-              You still have an active checkout for{" "}
-              {activeCheckout?.eventName ?? "another event"}. Continue that
-              checkout, or cancel it before joining this queue.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="-mx-4 -mb-4 mt-2 sm:justify-end">
-            <Button variant="outline" onClick={handleStayWithActiveCheckout}>
-              Stay here
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleCancelAndStartNew}
-              disabled={queueGateState === "canceling"}
-            >
-              {queueGateState === "canceling"
-                ? "Canceling..."
-                : "Cancel and start new"}
-            </Button>
-            <Button onClick={handleContinueActiveCheckout}>
-              Continue checkout
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ActiveCheckoutAlert
+        open={isActiveCheckoutDialogOpen}
+        checkout={activeCheckout}
+        isCanceling={queueGateState === "canceling"}
+        onContinue={handleContinueActiveCheckout}
+        onCancelAndStartNew={handleCancelAndStartNew}
+      />
     </QueueCard>
   );
 }

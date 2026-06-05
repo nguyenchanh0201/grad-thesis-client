@@ -16,9 +16,10 @@ import { setQueueIntent } from "@/lib/booking/queue-intent";
 
 interface Props {
   event: EventDetail;
+  onBuy?: () => void;
 }
 
-export function EventDetailSections({ event }: Props) {
+export function EventDetailSections({ event, onBuy }: Props) {
   const router = useRouter();
 
   const tabs = useMemo(() => {
@@ -40,6 +41,10 @@ export function EventDetailSections({ event }: Props) {
   const isLoggedIn = !!user;
 
   const handleBuy = () => {
+    if (onBuy) {
+      onBuy();
+      return;
+    }
     if (!isInitialized) return;
     if (isInitialized && !isLoggedIn) {
       const redirect = `/buy/${event.slug}/queue?intent=1`;

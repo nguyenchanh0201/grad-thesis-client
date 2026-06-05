@@ -5,7 +5,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { isAppError } from "@/core/error";
 import { RESERVATION_POLL_INTERVAL_MS } from "@/lib/booking/config";
 import { useBookingStore } from "@/lib/store/booking";
-import { clearBuySession } from "@/lib/booking/buy-session";
+import { refreshBuySessionDeadline } from "@/lib/booking/buy-session";
 import {
   getPaymentConfirmationStatus,
   getPaymentMethodsByEventSlug,
@@ -28,6 +28,10 @@ import { PaymentPanel } from "./payment-pannel";
 import { OrderSummarySidebar } from "./order-summary-sidebar";
 import { GatewayFooter } from "./gateway-footer";
 import { Button } from "@/components/ui/button";
+import {
+  hasActiveInitiatedPaymentForMethod,
+  shouldPreparePayment,
+} from "./payment-session";
 
 function buildLineItems(
   tickets: SelectedTicket[],
@@ -82,7 +86,8 @@ export function PaymentGateway({ slug }: Props) {
     mapType,
     discountCode,
   } = useBookingStore();
-  const { syncToExpiry, exitPurchaseFlow } = useBuyProcess();
+  const { syncToExpiry, replaceWithAuthoritativeExpiry, exitPurchaseFlow } =
+    useBuyProcess();
   const {
     data: confirmation,
     error: confirmationError,
@@ -182,10 +187,13 @@ export function PaymentGateway({ slug }: Props) {
     retry: false,
   });
   const preparedPayment = preparePaymentMutation.data;
-  const activePaymentUrl =
-    confirmation?.payment?.status === "INITIATED"
-      ? confirmation.payment.paymentUrl
-      : null;
+  const hasActivePayment = hasActiveInitiatedPaymentForMethod(
+    confirmation?.payment ?? null,
+    effectiveMethodId,
+  );
+  const activePaymentUrl = hasActivePayment
+    ? (confirmation?.payment?.paymentUrl ?? null)
+    : null;
   const hostedGatewayUrl =
     preparedPayment?.paymentUrl ?? activePaymentUrl ?? null;
   const resolvedTransferDetails = preparedPayment?.transfer ?? transferDetails;
@@ -206,9 +214,8 @@ export function PaymentGateway({ slug }: Props) {
 
   useEffect(() => {
     if (reservationId) return;
-    clearBuySession(slug);
-    exitPurchaseFlow();
-  }, [exitPurchaseFlow, reservationId, slug]);
+    void exitPurchaseFlow({ clearSession: true });
+  }, [exitPurchaseFlow, reservationId]);
 
   useEffect(() => {
     if (!confirmationError || !isAppError(confirmationError)) return;
@@ -219,15 +226,40 @@ export function PaymentGateway({ slug }: Props) {
 
   useEffect(() => {
     if (!reservationExpiresAt) return;
+    if (
+      confirmation?.reservationStatus === RESERVATION_STATUS.PAYMENT_LOCKED &&
+      confirmation.effectiveExpiresAt
+    ) {
+      refreshBuySessionDeadline(slug, confirmation.effectiveExpiresAt);
+      replaceWithAuthoritativeExpiry(confirmation.effectiveExpiresAt);
+      return;
+    }
+
     syncToExpiry(reservationExpiresAt);
-  }, [reservationExpiresAt, syncToExpiry]);
+  }, [
+    confirmation?.effectiveExpiresAt,
+    confirmation?.reservationStatus,
+    replaceWithAuthoritativeExpiry,
+    reservationExpiresAt,
+    slug,
+    syncToExpiry,
+  ]);
 
   useEffect(() => {
     if (!reservationId || !effectiveMethodId) return;
-    if (isPaymentSuccess || isPaymentFailed) return;
-    if (preparePaymentMutation.isPending) return;
-    if (preparePaymentMutation.isError) return;
-    if (preparedPayment?.methodId === effectiveMethodId) return;
+    if (
+      !shouldPreparePayment({
+        reservationId,
+        methodId: effectiveMethodId,
+        reservationStatus,
+        payment: confirmation?.payment ?? null,
+        preparedMethodId: preparedPayment?.methodId,
+        isPreparing: preparePaymentMutation.isPending,
+        prepareFailed: preparePaymentMutation.isError,
+      })
+    ) {
+      return;
+    }
 
     preparePaymentMutation.mutate({
       reservationId,
@@ -236,12 +268,13 @@ export function PaymentGateway({ slug }: Props) {
     });
   }, [
     effectiveMethodId,
-    isPaymentFailed,
-    isPaymentSuccess,
+    confirmation?.payment,
     preparePaymentMutation,
     preparePaymentMutation.isError,
+    preparePaymentMutation.isPending,
     preparedPayment?.methodId,
     reservationId,
+    reservationStatus,
     waitRoomToken,
   ]);
 

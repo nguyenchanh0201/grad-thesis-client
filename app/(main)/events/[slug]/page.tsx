@@ -6,7 +6,6 @@ import { buildEventJsonLd, buildBreadcrumbJsonLd } from "@/lib/seo";
 import { getEventBySlug } from "@/services/event.service";
 import { eventToEventDetail } from "@/lib/event/adapters";
 import { EventDetailView } from "@/components/event/detail/event-detail-view";
-import { EventDetailSections } from "@/components/event/detail/event-detail-sections";
 
 export const dynamic = "force-dynamic";
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://ticketgo.vn";
@@ -80,7 +79,6 @@ export default async function EventDetailPage({ params }: Props) {
 
       <main className="page-container pt-5 pb-20 space-y-5">
         <EventDetailView event={event} detail={detail} />
-        <EventDetailSections event={detail} />
       </main>
     </>
   );
