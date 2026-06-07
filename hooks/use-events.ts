@@ -29,6 +29,7 @@ export function useEvents(
     queryKey: eventKeys.list(params),
     queryFn: () => searchEvents(params as SearchEventsParams),
     enabled,
+    staleTime: 60_000,
   });
 }
 
