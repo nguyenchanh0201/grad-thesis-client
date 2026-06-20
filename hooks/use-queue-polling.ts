@@ -5,17 +5,22 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getQueueStatus,
   requestAccess,
+  sendQueuePresence,
   sendHeartbeat,
 } from "@/services/queue.service";
 import { useBookingStore } from "@/lib/store/booking";
+import { useUserActivity } from "@/lib/booking/user-activity";
+import { connectSse } from "@/lib/api/sse-client";
 import { ApiError } from "@/core/error";
 import type {
   BackendQueueStatus,
   FrontendQueueStatus,
   WaitRoomResponse,
 } from "@/schemas/queue";
+import { QueueStreamPayloadSchema } from "@/schemas/queue";
 
 const POLL_INTERVAL_MS = 25_000;
+const STREAM_PRESENCE_INTERVAL_MS = 25_000;
 
 function toFrontendStatus(
   backend: BackendQueueStatus,
@@ -44,6 +49,8 @@ export type UseQueuePollingResult = {
   sessionExpiresAt: string | null;
   isLoading: boolean;
   isError: boolean;
+  isIdle: boolean;
+  lastActivityAt: string;
 };
 
 export function useQueuePolling(
@@ -54,16 +61,19 @@ export function useQueuePolling(
   const queryClient = useQueryClient();
   const tokenRef = useRef<string | null>(null);
   const heartbeatTokenRef = useRef<string | null>(null);
+  const { isIdle, lastActivityAt } = useUserActivity();
   const [heartbeatSessionExpiresAt, setHeartbeatSessionExpiresAt] = useState<
     string | null
   >(null);
+  const [streamData, setStreamData] = useState<WaitRoomResponse | null>(null);
+  const [isStreamConnected, setIsStreamConnected] = useState(false);
 
   // Phase 1: Join queue — fires once on mount
   const accessQuery = useQuery<WaitRoomResponse>({
     queryKey: ["queue", "access", slug, userId],
     queryFn: async () => {
       try {
-        return await requestAccess({ slug: slug! });
+        return await requestAccess({ slug: slug!, lastActivityAt });
       } catch (err) {
         if (err instanceof ApiError && err.status === 403) {
           return { status: "NOT_OPEN" } satisfies WaitRoomResponse;
@@ -71,7 +81,7 @@ export function useQueuePolling(
         throw err;
       }
     },
-    enabled: !!slug && !!userId,
+    enabled: !!slug && !!userId && !isIdle,
     staleTime: Infinity,
     gcTime: 0,
     retry: false,
@@ -84,7 +94,7 @@ export function useQueuePolling(
     queryKey: ["queue", "status", slug, userId],
     queryFn: async () => {
       try {
-        return await getQueueStatus({ slug: slug! });
+        return await getQueueStatus({ slug: slug!, lastActivityAt });
       } catch (err) {
         if (err instanceof ApiError && err.status === 403) {
           return { status: "NOT_OPEN" } satisfies WaitRoomResponse;
@@ -92,14 +102,111 @@ export function useQueuePolling(
         throw err;
       }
     },
-    enabled: !!accessQuery.data && !isTerminal(accessQuery.data.status),
+    enabled:
+      !!accessQuery.data &&
+      !isTerminal(accessQuery.data.status) &&
+      !isIdle &&
+      !isStreamConnected,
     gcTime: 0,
     refetchInterval: (query) =>
       isTerminal(query.state.data?.status) ? false : POLL_INTERVAL_MS,
     refetchOnWindowFocus: false,
   });
 
-  const currentData = statusQuery.data ?? accessQuery.data;
+  useEffect(() => {
+    if (
+      !slug ||
+      !userId ||
+      isIdle ||
+      !accessQuery.data ||
+      isTerminal(accessQuery.data.status)
+    ) {
+      return;
+    }
+
+    const controller = new AbortController();
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let stopped = false;
+    let attempt = 0;
+
+    const connect = () => {
+      void connectSse<unknown>(
+        `/tickets/queue-stream?slug=${encodeURIComponent(slug)}`,
+        {
+          signal: controller.signal,
+          onOpen: () => {
+            attempt = 0;
+            setIsStreamConnected(true);
+          },
+          onMessage: (_event, rawPayload) => {
+            const payload = QueueStreamPayloadSchema.safeParse(rawPayload);
+            if (!payload.success) return;
+
+            if (payload.data.type === "admitted") {
+              setStreamData({
+                status: "ADMITTED",
+                token: payload.data.token,
+                sessionExpiresAt: payload.data.sessionExpiresAt,
+              });
+              return;
+            }
+
+            if (payload.data.type === "lost-session") {
+              setStreamData({ status: "LOST_SESSION" });
+              return;
+            }
+
+            if (payload.data.type === "queue-status") {
+              setStreamData({
+                status: payload.data.status ?? "QUEUEING",
+                position: payload.data.position,
+                token: payload.data.token,
+                sessionExpiresAt: payload.data.sessionExpiresAt,
+              });
+            }
+          },
+          onError: () => setIsStreamConnected(false),
+          onClose: () => {
+            setIsStreamConnected(false);
+            if (stopped || controller.signal.aborted) return;
+            const delay = Math.min(30_000, 1000 * 2 ** attempt);
+            attempt += 1;
+            reconnectTimer = setTimeout(connect, delay);
+          },
+        },
+      );
+    };
+
+    connect();
+
+    return () => {
+      stopped = true;
+      setIsStreamConnected(false);
+      setStreamData(null);
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      controller.abort();
+    };
+  }, [accessQuery.data, isIdle, slug, userId]);
+
+  const currentData = streamData ?? statusQuery.data ?? accessQuery.data;
+
+  useEffect(() => {
+    if (!slug || !userId || !isStreamConnected || isIdle) return;
+    if (currentData?.status !== "QUEUEING") return;
+
+    const intervalId = window.setInterval(() => {
+      sendQueuePresence({ slug, lastActivityAt }).catch(() => {});
+    }, STREAM_PRESENCE_INTERVAL_MS);
+
+    return () => window.clearInterval(intervalId);
+  }, [
+    currentData?.status,
+    isIdle,
+    isStreamConnected,
+    lastActivityAt,
+    slug,
+    userId,
+  ]);
 
   // Sync session token into ref + booking store when ADMITTED
   useEffect(() => {
@@ -124,14 +231,14 @@ export function useQueuePolling(
     }
 
     heartbeatTokenRef.current = currentData.token;
-    sendHeartbeat({ slug, token: currentData.token })
+    sendHeartbeat({ slug, token: currentData.token, lastActivityAt })
       .then((heartbeat) => {
         if (heartbeat.sessionExpiresAt) {
           setHeartbeatSessionExpiresAt(heartbeat.sessionExpiresAt);
         }
       })
       .catch(() => {});
-  }, [currentData?.status, currentData?.token, slug, userId]);
+  }, [currentData?.status, currentData?.token, lastActivityAt, slug, userId]);
 
   // Auto-rejoin: when session expires, clear stale state and re-run requestAccess
   useEffect(() => {
@@ -148,14 +255,14 @@ export function useQueuePolling(
     const { status } = statusQuery.data;
     if (status !== "QUEUEING" && status !== "ADMITTED") return;
 
-    sendHeartbeat({ slug, token: tokenRef.current })
+    sendHeartbeat({ slug, token: tokenRef.current, lastActivityAt })
       .then((heartbeat) => {
         if (heartbeat.sessionExpiresAt) {
           setHeartbeatSessionExpiresAt(heartbeat.sessionExpiresAt);
         }
       })
       .catch(() => {});
-  }, [statusQuery.data, slug, userId]);
+  }, [lastActivityAt, statusQuery.data, slug, userId]);
 
   const isLoading = accessQuery.isPending;
   const isError = accessQuery.isError || statusQuery.isError;
@@ -171,6 +278,22 @@ export function useQueuePolling(
       sessionExpiresAt: null,
       isLoading: true,
       isError: false,
+      isIdle,
+      lastActivityAt,
+    };
+  }
+
+  if (isIdle) {
+    return {
+      status: "expired",
+      token: null,
+      position: null,
+      queueSize: null,
+      sessionExpiresAt: null,
+      isLoading: false,
+      isError: false,
+      isIdle,
+      lastActivityAt,
     };
   }
 
@@ -183,6 +306,8 @@ export function useQueuePolling(
       sessionExpiresAt: null,
       isLoading,
       isError,
+      isIdle,
+      lastActivityAt,
     };
   }
 
@@ -194,5 +319,7 @@ export function useQueuePolling(
     sessionExpiresAt: currentData.sessionExpiresAt ?? heartbeatSessionExpiresAt,
     isLoading: false,
     isError: false,
+    isIdle,
+    lastActivityAt,
   };
 }

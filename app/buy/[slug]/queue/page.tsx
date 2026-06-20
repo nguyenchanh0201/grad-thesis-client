@@ -86,6 +86,8 @@ function QueuePageContent() {
     position,
     queueSize,
     sessionExpiresAt,
+    isIdle,
+    lastActivityAt,
   } = useQueuePolling(
     isQueueIntentValid && queueGateState === "allowed" ? slug : null,
     userId,
@@ -115,12 +117,19 @@ function QueuePageContent() {
     if (sessionExpiresAt) return sessionExpiresAt;
     if (!slug || !token) return null;
     try {
-      const heartbeat = await sendHeartbeat({ slug, token });
+      const heartbeat = await sendHeartbeat({ slug, token, lastActivityAt });
       return heartbeat.sessionExpiresAt ?? null;
     } catch {
       return null;
     }
-  }, [sessionExpiresAt, slug, token]);
+  }, [lastActivityAt, sessionExpiresAt, slug, token]);
+
+  useEffect(() => {
+    if (!isIdle) return;
+    clearBuySession(slug);
+    clearQueueIntent(slug);
+    resetBooking();
+  }, [isIdle, resetBooking, slug]);
 
   useEffect(() => {
     if (polledStatus !== "ready" || hasRedirectedRef.current) return;

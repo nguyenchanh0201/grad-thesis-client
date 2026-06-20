@@ -63,8 +63,10 @@ function MockCheckout() {
   const params = useSearchParams();
   const txnRef = params.get("txnRef") ?? "";
   const amount = params.get("amount") ?? "";
+  const returnTo = params.get("returnTo");
   const [loading, setLoading] = useState(false);
   const [activeKey, setActiveKey] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const amountDisplay = amount
     ? new Intl.NumberFormat("vi-VN", {
@@ -77,14 +79,40 @@ function MockCheckout() {
     if (loading || !txnRef) return;
     setLoading(true);
     setActiveKey(outcome);
+    setError(null);
     try {
-      await fetch("/api/payment/mock/simulate", {
+      const response = await fetch("/api/payment/mock/simulate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ txnRef, amount, outcome }),
       });
-    } finally {
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        const baseMessage =
+          typeof payload?.error === "string"
+            ? payload.error
+            : "Could not process mock payment.";
+        const details =
+          typeof payload?.details === "string" && payload.details.trim()
+            ? payload.details.trim()
+            : null;
+        const message = details ? `${baseMessage}: ${details}` : baseMessage;
+        setError(message);
+        return;
+      }
+
+      if (returnTo) {
+        window.location.assign(returnTo);
+        return;
+      }
+
       window.close();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Mock payment failed.");
+    } finally {
+      setLoading(false);
+      setActiveKey(null);
     }
   }
 
@@ -101,10 +129,10 @@ function MockCheckout() {
         style={{ background: "#f0f2f5" }}
       >
         {/* Card — no border, very light shadow */}
-        <div className="w-full max-w-md bg-white rounded-3xl overflow-hidden"
+        <div
+          className="w-full max-w-md bg-white rounded-3xl overflow-hidden"
           style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.07)" }}
         >
-
           {/* Header */}
           <div className="flex items-center justify-between px-6 pt-6 pb-4">
             <div className="flex items-center gap-2">
@@ -114,7 +142,9 @@ function MockCheckout() {
               >
                 <Lock className="w-4 h-4 text-white" />
               </div>
-              <span className="text-[15px] font-bold text-slate-800 tracking-tight">MockPay</span>
+              <span className="text-[15px] font-bold text-slate-800 tracking-tight">
+                MockPay
+              </span>
             </div>
             <span className="text-[10px] font-semibold tracking-widest uppercase text-amber-600 bg-amber-50 rounded-full px-3 py-1">
               Simulation
@@ -145,45 +175,70 @@ function MockCheckout() {
               Choose an outcome
             </p>
 
-            {OUTCOMES.map(({ key, label, sublabel, code, icon: Icon, cls, iconCls, codeCls, hero }) => {
-              const isActive = activeKey === key && loading;
-              return (
-                <button
-                  key={key}
-                  onClick={() => simulate(key)}
-                  disabled={loading || !txnRef}
-                  className={[
-                    "w-full text-left rounded-2xl px-4 transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed",
-                    hero ? "py-4" : "py-3",
-                    cls,
-                  ].join(" ")}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="shrink-0">
-                      {isActive ? (
-                        <Loader2 className={`w-5 h-5 ${iconCls} animate-spin`} />
-                      ) : (
-                        <Icon className={`w-5 h-5 ${iconCls}`} />
-                      )}
+            {OUTCOMES.map(
+              ({
+                key,
+                label,
+                sublabel,
+                code,
+                icon: Icon,
+                cls,
+                iconCls,
+                codeCls,
+                hero,
+              }) => {
+                const isActive = activeKey === key && loading;
+                return (
+                  <button
+                    key={key}
+                    onClick={() => simulate(key)}
+                    disabled={loading || !txnRef}
+                    className={[
+                      "w-full text-left rounded-2xl px-4 transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed",
+                      hero ? "py-4" : "py-3",
+                      cls,
+                    ].join(" ")}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="shrink-0">
+                        {isActive ? (
+                          <Loader2
+                            className={`w-5 h-5 ${iconCls} animate-spin`}
+                          />
+                        ) : (
+                          <Icon className={`w-5 h-5 ${iconCls}`} />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p
+                          className={`font-semibold leading-none ${hero ? "text-[15px]" : "text-sm"}`}
+                        >
+                          {label}
+                        </p>
+                        <p className="text-[11px] opacity-60 mt-1 leading-none">
+                          {sublabel}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span
+                          className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md ${codeCls}`}
+                        >
+                          {code}
+                        </span>
+                        {!isActive && (
+                          <ChevronRight className="w-3.5 h-3.5 opacity-30" />
+                        )}
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className={`font-semibold leading-none ${hero ? "text-[15px]" : "text-sm"}`}>
-                        {label}
-                      </p>
-                      <p className="text-[11px] opacity-60 mt-1 leading-none">{sublabel}</p>
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md ${codeCls}`}>
-                        {code}
-                      </span>
-                      {!isActive && (
-                        <ChevronRight className="w-3.5 h-3.5 opacity-30" />
-                      )}
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
+                  </button>
+                );
+              },
+            )}
+            {error ? (
+              <p className="rounded-xl bg-red-50 px-3 py-2 text-xs font-medium text-red-700">
+                {error}
+              </p>
+            ) : null}
           </div>
 
           {/* Footer */}

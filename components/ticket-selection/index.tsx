@@ -21,6 +21,8 @@ import {
   getEventBySlug,
   getEventSeatsByEventCode,
 } from "@/services/event.service";
+import { eventKeys } from "@/hooks/use-events";
+import { useSeatAvailabilityStream } from "@/hooks/use-seat-availability-stream";
 import { SectionAvailability } from "@/schemas/seat";
 import { SeatMapCanvasSchema } from "@/schemas/seat-map";
 import type { TicketType } from "@/schemas/ticket-type";
@@ -110,13 +112,17 @@ export function TicketSelection({ slug }: Props) {
   const requiresSeatMap = isSeated;
   const isSeatMapAvailable = !!canvas;
 
-  // Poll seat availability every 10s
+  const { isConnected: isSeatStreamConnected } = useSeatAvailabilityStream(
+    eventCode,
+    !!eventCode && isSeated,
+  );
+
   const { data: seatsResult } = useQuery({
-    queryKey: ["seatMap", "availability", eventCode],
+    queryKey: eventKeys.seats(eventCode ?? ""),
     queryFn: () => getEventSeatsByEventCode(eventCode!),
     enabled: !!eventCode && isSeated,
-    refetchInterval: 10_000,
-    staleTime: 5_000,
+    refetchInterval: isSeatStreamConnected ? false : 30_000,
+    staleTime: isSeatStreamConnected ? Infinity : 15_000,
   });
   const availability: SectionAvailability[] =
     seatsResult?.data ?? EMPTY_AVAILABILITY;

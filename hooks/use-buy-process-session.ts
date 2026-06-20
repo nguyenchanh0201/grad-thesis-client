@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { clearBuySession, hasBuySession } from "@/lib/booking/buy-session";
 import { clearQueueIntent } from "@/lib/booking/queue-intent";
+import { useUserActivity } from "@/lib/booking/user-activity";
 import { isAppError } from "@/core/error";
 import { TIMEOUT_REDIRECT_DELAY_MS } from "@/lib/booking/config";
 import { useBookingStore } from "@/lib/store/booking";
@@ -46,6 +47,7 @@ export function useBuyProcessSession(
   const reservationId = useBookingStore((state) => state.reservationId);
   const waitRoomToken = useBookingStore((state) => state.waitRoomToken);
   const waitRoomSlug = useBookingStore((state) => state.waitRoomSlug);
+  const { isIdle, lastActivityAt } = useUserActivity();
   const isExitingRef = useRef(false);
   const { data: reservationResult, error: reservationError } = useReservation(
     skipReservationSync ? undefined : (reservationId ?? undefined),
@@ -84,6 +86,14 @@ export function useBuyProcessSession(
       void exitPurchaseFlow();
     }
   }, [exitPurchaseFlow, slug]);
+
+  useEffect(() => {
+    if (!hasBuySession(slug) || !isIdle) return;
+    void exitPurchaseFlow({
+      cancelActiveReservation: !!reservationId,
+      clearSession: true,
+    });
+  }, [exitPurchaseFlow, isIdle, reservationId, slug]);
 
   useEffect(() => {
     if (!autoRedirectOnTimeout || !timedOut) return;
@@ -126,7 +136,11 @@ export function useBuyProcessSession(
       if (stopped || syncing) return;
       syncing = true;
       try {
-        const heartbeat = await sendHeartbeat({ slug, token: waitRoomToken });
+        const heartbeat = await sendHeartbeat({
+          slug,
+          token: waitRoomToken,
+          lastActivityAt,
+        });
         if (heartbeat.sessionExpiresAt && !reservationId) {
           syncToExpiry(heartbeat.sessionExpiresAt);
         }
@@ -159,6 +173,7 @@ export function useBuyProcessSession(
     reservationId,
     slug,
     syncToExpiry,
+    lastActivityAt,
     waitRoomSlug,
     waitRoomToken,
   ]);

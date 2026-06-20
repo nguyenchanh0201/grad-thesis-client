@@ -35,3 +35,17 @@ export type FrontendQueueStatus =
   | "ready"
   | "redirecting"
   | "expired";
+
+export const QueueStreamPayloadSchema = z.object({
+  type: z.enum(["queue-status", "admitted", "lost-session", "keepalive"]),
+  status: BackendQueueStatusSchema.optional(),
+  token: z.string().optional(),
+  sessionExpiresAt: z.iso.datetime().optional(),
+  position: z
+    .object({
+      position: z.number().int().positive(),
+      size: z.number().int().nonnegative(),
+    })
+    .optional(),
+});
+export type QueueStreamPayload = z.infer<typeof QueueStreamPayloadSchema>;
