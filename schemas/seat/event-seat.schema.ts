@@ -70,3 +70,25 @@ export type EventSeatsData = z.infer<typeof EventSeatsDataSchema>;
 
 export const EventSeatsResultSchema = BaseResponseSchema(EventSeatsDataSchema);
 export type EventSeatsResult = z.infer<typeof EventSeatsResultSchema>;
+
+export const SeatStatusChangeSchema = z.object({
+  ticketTypeId: z.string(),
+  seatIndex: z.number().int().nonnegative(),
+  status: z.enum(["available", "locked", "sold"]),
+});
+export type SeatStatusChange = z.infer<typeof SeatStatusChangeSchema>;
+
+export const SeatStreamPayloadSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("snapshot"),
+    data: EventSeatsDataSchema,
+  }),
+  z.object({
+    type: z.literal("seat-status"),
+    changes: z.array(SeatStatusChangeSchema),
+  }),
+  z.object({
+    type: z.literal("resync"),
+  }),
+]);
+export type SeatStreamPayload = z.infer<typeof SeatStreamPayloadSchema>;

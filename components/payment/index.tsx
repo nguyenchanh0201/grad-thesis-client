@@ -24,6 +24,28 @@ import { RESERVATION_STATUS } from "@/schemas/reservation/reservation.schema";
 
 type Props = { slug: string };
 
+function withMockCheckoutReturnTo(
+  paymentUrl: string,
+  returnTo: string,
+): string {
+  if (typeof window === "undefined") return paymentUrl;
+
+  try {
+    const url = new URL(paymentUrl, window.location.href);
+    if (
+      url.origin === window.location.origin &&
+      url.pathname === "/mock-checkout"
+    ) {
+      url.searchParams.set("returnTo", returnTo);
+      return url.toString();
+    }
+  } catch {
+    return paymentUrl;
+  }
+
+  return paymentUrl;
+}
+
 export function Payment({ slug }: Props) {
   const router = useRouter();
   const { exitPurchaseFlow } = useBuyProcess();
@@ -192,24 +214,17 @@ export function Payment({ slug }: Props) {
     const confirmationHref = `/buy/${slug}/confirmation?reservationId=${encodeURIComponent(
       currentReservationId,
     )}`;
-    const paymentWindow =
-      typeof window === "undefined" ? null : window.open("", "_blank");
-    if (paymentWindow) {
-      paymentWindow.opener = null;
-    }
 
     if (activePaymentUrl) {
-      if (paymentWindow) {
-        paymentWindow.location.href = activePaymentUrl;
-      } else if (typeof window !== "undefined") {
-        window.open(activePaymentUrl, "_blank", "noopener,noreferrer");
+      if (typeof window !== "undefined") {
+        window.location.assign(
+          withMockCheckoutReturnTo(activePaymentUrl, confirmationHref),
+        );
       }
-      router.replace(confirmationHref);
       return;
     }
 
     if (!paymentMethodId) {
-      paymentWindow?.close();
       return;
     }
 
@@ -218,7 +233,6 @@ export function Payment({ slug }: Props) {
       !activePaymentUrl;
 
     if (!waitRoomToken && !shouldRefreshPaymentUrl) {
-      paymentWindow?.close();
       router.replace(`/buy/${slug}/queue`);
       return;
     }
@@ -234,19 +248,12 @@ export function Payment({ slug }: Props) {
         onSuccess: (result) => {
           if (typeof window === "undefined") return;
           if (result.paymentUrl) {
-            if (paymentWindow) {
-              paymentWindow.location.href = result.paymentUrl;
-            } else {
-              window.open(result.paymentUrl, "_blank", "noopener,noreferrer");
-            }
-            router.replace(confirmationHref);
+            window.location.assign(
+              withMockCheckoutReturnTo(result.paymentUrl, confirmationHref),
+            );
             return;
           }
-          paymentWindow?.close();
           router.replace(confirmationHref);
-        },
-        onError: () => {
-          paymentWindow?.close();
         },
       },
     );

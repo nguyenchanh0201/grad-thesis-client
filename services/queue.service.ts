@@ -9,15 +9,20 @@ import {
 
 export type RequestAccessPayload = {
   slug: string;
+  lastActivityAt?: string;
 };
 
 export type QueueStatusParams = {
   slug: string;
+  lastActivityAt?: string;
 };
+
+export type QueuePresencePayload = QueueStatusParams;
 
 export type HeartbeatPayload = {
   slug: string;
   token: string;
+  lastActivityAt: string;
 };
 
 export const requestAccess = async (
@@ -31,6 +36,13 @@ export const getQueueStatus = async (
   params: QueueStatusParams,
 ): Promise<WaitRoomResponse> => {
   const response = await apiClient.get("/tickets/queue-status", { params });
+  return parseOrThrow(WaitRoomResponseSchema, response);
+};
+
+export const sendQueuePresence = async (
+  payload: QueuePresencePayload,
+): Promise<WaitRoomResponse> => {
+  const response = await apiClient.post("/tickets/queue-presence", payload);
   return parseOrThrow(WaitRoomResponseSchema, response);
 };
 

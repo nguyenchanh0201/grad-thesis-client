@@ -86,9 +86,9 @@ export default function MainLayout({
   children: React.ReactNode;
 }) {
   return (
-    <>
+    <div className="flex min-h-dvh flex-col">
       <Header />
-      {children}
+      <div className="flex-1">{children}</div>
       <Footer
         socialLinks={socialLinks}
         linkGroups={linkGroups}
@@ -106,6 +106,6 @@ export default function MainLayout({
           { label: "Accessibility", href: "/accessibility" },
         ]}
       />
-    </>
+    </div>
   );
 }
