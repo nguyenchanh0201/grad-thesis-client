@@ -30,6 +30,13 @@ type Props = {
   selectedSeats: SelectedSeat[];
   mapType: MapType;
   recipient: RecipientInfo;
+  reservationRecipient?: {
+    fullName?: string;
+    email?: string;
+    phoneCountryCode?: string;
+    phoneNumber?: string;
+    idPassport?: string | null;
+  } | null;
   reservationItems?: ReservationItem[];
   reservationTotalAmount?: number;
   reservationSubtotalAmount?: number;
@@ -134,6 +141,7 @@ export function OrderSummaryPanel({
   selectedSeats,
   mapType,
   recipient,
+  reservationRecipient,
   reservationItems,
   reservationTotalAmount,
   reservationSubtotalAmount,
@@ -151,6 +159,17 @@ export function OrderSummaryPanel({
   const total =
     reservationTotalAmount ??
     (discount?.amount ? Math.max(0, subtotal - discount.amount) : subtotal);
+  const receiptRecipient = {
+    fullName: recipient.fullName || reservationRecipient?.fullName || "",
+    email: recipient.email || reservationRecipient?.email || "",
+    phoneCountryCode:
+      recipient.phoneCountryCode ||
+      reservationRecipient?.phoneCountryCode ||
+      "",
+    phoneNumber:
+      recipient.phoneNumber || reservationRecipient?.phoneNumber || "",
+    idPassport: recipient.idPassport || reservationRecipient?.idPassport || "",
+  };
 
   return (
     <div className="flex flex-col">
@@ -186,10 +205,14 @@ export function OrderSummaryPanel({
               </CardTitle>
               <Badge
                 variant={
-                  recipient.fullName && recipient.email ? "success" : "outline"
+                  receiptRecipient.fullName && receiptRecipient.email
+                    ? "success"
+                    : "outline"
                 }
               >
-                {recipient.fullName && recipient.email ? "Ready" : "Missing"}
+                {receiptRecipient.fullName && receiptRecipient.email
+                  ? "Ready"
+                  : "Missing"}
               </Badge>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -197,22 +220,26 @@ export function OrderSummaryPanel({
                 <DetailRow
                   icon={User}
                   label="Name"
-                  value={recipient.fullName}
+                  value={receiptRecipient.fullName}
                 />
-                <DetailRow icon={Mail} label="Email" value={recipient.email} />
+                <DetailRow
+                  icon={Mail}
+                  label="Email"
+                  value={receiptRecipient.email}
+                />
                 <DetailRow
                   icon={Phone}
                   label="Phone"
                   value={
-                    recipient.phoneNumber
-                      ? `${recipient.phoneCountryCode} ${recipient.phoneNumber}`
+                    receiptRecipient.phoneNumber
+                      ? `${receiptRecipient.phoneCountryCode} ${receiptRecipient.phoneNumber}`
                       : undefined
                   }
                 />
                 <DetailRow
                   icon={IdCard}
                   label="ID"
-                  value={recipient.idPassport}
+                  value={receiptRecipient.idPassport}
                 />
               </div>
               <Separator />

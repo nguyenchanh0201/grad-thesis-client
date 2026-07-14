@@ -7,7 +7,10 @@ import { EventDetailSections } from "./event-detail-sections";
 import { ActiveCheckoutAlert } from "@/components/booking/active-checkout-alert";
 import { clearQueueIntent, setQueueIntent } from "@/lib/booking/queue-intent";
 import { clearBuySession } from "@/lib/booking/buy-session";
-import { continueActiveCheckout } from "@/lib/booking/active-checkout-actions";
+import {
+  continueActiveCheckout,
+  isActiveCheckoutRestorable,
+} from "@/lib/booking/active-checkout-actions";
 import { useCancelReservation } from "@/hooks/use-booking";
 import { useAuthStore } from "@/lib/store/auth.store";
 import { useBookingStore } from "@/lib/store/booking";
@@ -62,6 +65,12 @@ export function EventDetailView({ event, detail }: EventDetailViewProps) {
         return;
       }
 
+      if (!isActiveCheckoutRestorable(checkout)) {
+        clearBuySession(checkout.eventSlug);
+        startNewQueue();
+        return;
+      }
+
       setActiveCheckout(checkout);
     } catch {
       return;
@@ -77,6 +86,12 @@ export function EventDetailView({ event, detail }: EventDetailViewProps) {
       setReservationId,
       beginBuySession,
     });
+    if (!result.restoredSession) {
+      clearBuySession(activeCheckout.eventSlug);
+      setActiveCheckout(null);
+      startNewQueue();
+      return;
+    }
     if (result.destination === "provider") {
       window.open(result.href, "_blank", "noopener,noreferrer");
       router.push(

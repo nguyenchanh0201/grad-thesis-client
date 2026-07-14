@@ -30,6 +30,7 @@ type UseBuyProcessSessionOptions = {
 type ExitPurchaseFlowOptions = {
   cancelActiveReservation?: boolean;
   clearSession?: boolean;
+  redirectTo?: string;
 };
 
 export function useBuyProcessSession(
@@ -70,6 +71,8 @@ export function useBuyProcessSession(
           clearQueueIntentState: clearQueueIntent,
           redirectToEvent: (eventSlug) =>
             router.replace(`/events/${eventSlug}`),
+          redirectToHref: (href) => router.replace(href),
+          redirectTo: options.redirectTo,
         });
       } catch {
         isExitingRef.current = false;
@@ -127,6 +130,7 @@ export function useBuyProcessSession(
 
   useEffect(() => {
     if (!hasBuySession(slug) || !waitRoomToken) return;
+    if (reservationId) return;
     if (waitRoomSlug && waitRoomSlug !== slug) return;
 
     let stopped = false;

@@ -67,6 +67,7 @@ function ActiveBuyProcessShell({
     skipReservationSync: step.skipReservationSync ?? false,
   });
   const [isLeaveDialogOpen, setIsLeaveDialogOpen] = useState(false);
+  const [pendingLeaveHref, setPendingLeaveHref] = useState<string | null>(null);
   const { formatted, timeRemaining, timedOut, hasSyncedExpiry } = session;
   const isWarning = timeRemaining <= 60;
 
@@ -83,11 +84,43 @@ function ActiveBuyProcessShell({
     window.history.pushState({ buyFlowGuard: true }, "");
     const onPopState = () => {
       window.history.pushState({ buyFlowGuard: true }, "");
+      setPendingLeaveHref(null);
       setIsLeaveDialogOpen(true);
     };
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
+
+  useEffect(() => {
+    const onDocumentClick = (event: MouseEvent) => {
+      if (event.defaultPrevented || event.button !== 0) return;
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+        return;
+      }
+
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const anchor = target.closest<HTMLAnchorElement>("a[href]");
+      if (!anchor) return;
+      if (anchor.target && anchor.target !== "_self") return;
+      if (anchor.hasAttribute("download")) return;
+
+      const nextUrl = new URL(anchor.href, window.location.href);
+      if (nextUrl.origin !== window.location.origin) return;
+
+      const currentHref = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+      const nextHref = `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`;
+      if (nextHref === currentHref) return;
+      if (nextUrl.pathname.startsWith(`/buy/${slug}/`)) return;
+
+      event.preventDefault();
+      setPendingLeaveHref(nextHref);
+      setIsLeaveDialogOpen(true);
+    };
+
+    document.addEventListener("click", onDocumentClick, true);
+    return () => document.removeEventListener("click", onDocumentClick, true);
+  }, [slug]);
 
   const backHref = useMemo(() => {
     if (step.backHref) return step.backHref;
@@ -97,13 +130,17 @@ function ActiveBuyProcessShell({
   }, [slug, step.backHref, step.currentStep]);
 
   const handleStepBack = step.confirmBack
-    ? () => setIsLeaveDialogOpen(true)
+    ? () => {
+        setPendingLeaveHref(null);
+        setIsLeaveDialogOpen(true);
+      }
     : undefined;
 
   const handleExitPurchaseFlow = () => {
     void session.exitPurchaseFlow({
       cancelActiveReservation: true,
       clearSession: true,
+      redirectTo: pendingLeaveHref ?? undefined,
     });
   };
 
@@ -122,7 +159,10 @@ function ActiveBuyProcessShell({
 
       <AlertDialog
         open={isLeaveDialogOpen}
-        onOpenChange={setIsLeaveDialogOpen}
+        onOpenChange={(open) => {
+          setIsLeaveDialogOpen(open);
+          if (!open) setPendingLeaveHref(null);
+        }}
         title="Leave ticket selection?"
         description="If you leave now, your booking session will be cleared and you may need to rejoin the queue."
         confirmLabel="Leave"

@@ -60,6 +60,7 @@ export function Payment({ slug }: Props) {
     recipient,
     discountCode,
     paymentMethodId,
+    hydrateFromReservation,
     setPaymentMethodId,
     setDiscountCode,
   } = useBookingStore();
@@ -76,6 +77,10 @@ export function Payment({ slug }: Props) {
     reservationId ?? undefined,
   );
   const reservation = reservationResult?.data;
+
+  useEffect(() => {
+    if (reservation) hydrateFromReservation(reservation);
+  }, [hydrateFromReservation, reservation]);
   const {
     data: confirmation,
     isLoading: isConfirmationLoading,
@@ -289,6 +294,7 @@ export function Payment({ slug }: Props) {
             selectedSeats={selectedSeats}
             mapType={mapType}
             recipient={recipient}
+            reservationRecipient={reservation?.recipient}
             reservationItems={reservation?.items}
             reservationTotalAmount={reservation?.totalAmount}
             reservationSubtotalAmount={reservation?.subtotalAmount}
