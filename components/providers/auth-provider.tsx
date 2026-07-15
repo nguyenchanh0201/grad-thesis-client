@@ -1,0 +1,41 @@
+"use client";
+
+import { useEffect } from "react";
+
+import { UnauthorizedError } from "@/core/error";
+import { readPersistedUser, useAuthStore } from "@/lib/store/auth.store";
+import { getIdentityMe } from "@/services/identity.service";
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    const { clearAuth, setAuth, setInitialized } = useAuthStore.getState();
+    const persistedUser = readPersistedUser();
+    if (persistedUser) {
+      setAuth(null, persistedUser);
+    }
+
+    const hydrationUser = useAuthStore.getState().user;
+
+    // Hydrate from the backend session. The API client refresh interceptor
+    // handles an expired SuperTokens access cookie before this resolves.
+    getIdentityMe()
+      .then((res) => {
+        setAuth(null, {
+          id: res.data.user.id,
+          email: res.data.user.email,
+          role: res.data.user.role,
+        });
+      })
+      .catch((error) => {
+        if (
+          error instanceof UnauthorizedError &&
+          useAuthStore.getState().user === hydrationUser
+        ) {
+          clearAuth();
+        }
+      })
+      .finally(() => setInitialized());
+  }, []);
+
+  return <>{children}</>;
+}
