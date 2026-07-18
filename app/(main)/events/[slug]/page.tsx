@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { stripHtml } from "@/lib/html";
+import { stripHtml } from "@/lib/html/strip";
 import { isAppError } from "@/core/error";
 import { buildEventJsonLd, buildBreadcrumbJsonLd } from "@/lib/seo";
 import { getEventBySlug } from "@/services/event.service";

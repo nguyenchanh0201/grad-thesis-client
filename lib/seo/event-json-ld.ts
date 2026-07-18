@@ -1,5 +1,5 @@
 import type { EventDetail } from "@/schemas/event";
-import { stripHtml } from "@/lib/html";
+import { stripHtml } from "@/lib/html/strip";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://ticketgo.vn";
 
