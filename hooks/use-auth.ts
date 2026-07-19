@@ -20,6 +20,13 @@ function getRedirectTarget() {
   return resolvePostAuthRedirect(redirect);
 }
 
+export function getCurrentAuthPath() {
+  if (typeof window === "undefined") return "/auth/login";
+  return window.location.pathname === "/auth/register"
+    ? "/auth/register"
+    : "/auth/login";
+}
+
 export function useLogin() {
   const { setAuth } = useAuthStore();
   const queryClient = useQueryClient();
@@ -66,13 +73,16 @@ export function useLogout() {
   });
 }
 
-export function useLoginWithGoogle() {
+export function useLoginWithGoogle(authPath?: string) {
   return useMutation({
     mutationFn: async () => {
       const redirect = new URLSearchParams(window.location.search).get(
         "redirect",
       );
-      window.location.href = await getGoogleAuthorisationUrl(redirect);
+      window.location.href = await getGoogleAuthorisationUrl(
+        redirect,
+        authPath ?? getCurrentAuthPath(),
+      );
     },
   });
 }

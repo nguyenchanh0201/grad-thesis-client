@@ -21,7 +21,14 @@ export default function RegisterPage() {
   const { mutate: registerUser, isPending, error } = useRegister();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect");
-  const authError = error ? getAuthErrorMessage(error) : null;
+  const callbackError = searchParams.get("error");
+  const authError = error
+    ? getAuthErrorMessage(error)
+    : callbackError === "google_not_enabled"
+      ? "Google sign-in is not enabled on the backend. Please use email and password."
+      : callbackError === "google_failed"
+        ? "Google sign-in could not be completed. Please try again or use email and password."
+        : null;
 
   const {
     register,
@@ -154,7 +161,7 @@ export default function RegisterPage() {
           </Button>
         </form>
 
-        <AuthSocialActions disabled={isPending} />
+        <AuthSocialActions authPath="/auth/register" disabled={isPending} />
 
         <AuthFooterLink
           text="Already have an account?"

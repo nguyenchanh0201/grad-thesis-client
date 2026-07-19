@@ -1,19 +1,35 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
 
 import { useCompleteGoogleSignIn } from "@/hooks/use-auth";
+import { consumeGoogleOAuthRetry } from "@/lib/auth/google-oauth";
+import { withRedirectQuery } from "@/lib/auth/redirect";
+
+export function buildGoogleCallbackFailureHref() {
+  const retry = consumeGoogleOAuthRetry();
+  const authPath = retry?.authPath ?? "/auth/login";
+  return withRedirectQuery(
+    `${authPath}?error=google_failed`,
+    retry?.redirectTo,
+  );
+}
 
 export default function GoogleCallbackPage() {
   const { mutate, isPending, isError } = useCompleteGoogleSignIn();
   const startedRef = useRef(false);
+  const [failureHref, setFailureHref] = useState(
+    "/auth/login?error=google_failed",
+  );
 
   useEffect(() => {
     if (startedRef.current) return;
     startedRef.current = true;
-    mutate(new URLSearchParams(window.location.search));
+    mutate(new URLSearchParams(window.location.search), {
+      onError: () => setFailureHref(buildGoogleCallbackFailureHref()),
+    });
   }, [mutate]);
 
   return (
@@ -34,7 +50,7 @@ export default function GoogleCallbackPage() {
               Google sign-in could not be completed.
             </p>
             <Link
-              href="/auth/login?error=google_failed"
+              href={failureHref}
               className="text-sm text-primary underline underline-offset-4"
             >
               Back to login

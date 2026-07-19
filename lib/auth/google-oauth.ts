@@ -1,10 +1,25 @@
 const STATE_KEY = "APP_NAME_V1_google_oauth_state";
+const RETRY_KEY = "APP_NAME_V1_google_oauth_retry";
 
 export type GoogleOAuthState = {
   state: string;
   redirectTo: string;
+  authPath?: GoogleAuthPath;
   pkceCodeVerifier?: string;
 };
+
+export type GoogleAuthPath = "/auth/login" | "/auth/register";
+
+export type GoogleOAuthRetry = {
+  redirectTo: string;
+  authPath: GoogleAuthPath;
+};
+
+export function resolveGoogleAuthPath(
+  path: string | null | undefined,
+): GoogleAuthPath {
+  return path === "/auth/register" ? "/auth/register" : "/auth/login";
+}
 
 export function getGoogleRedirectUri(): string {
   const configuredRedirectUri =
@@ -26,7 +41,12 @@ export function createGoogleOAuthState(): string {
 }
 
 export function storeGoogleOAuthState(payload: GoogleOAuthState): void {
-  sessionStorage.setItem(STATE_KEY, JSON.stringify(payload));
+  const authPath = resolveGoogleAuthPath(payload.authPath);
+  sessionStorage.setItem(STATE_KEY, JSON.stringify({ ...payload, authPath }));
+  sessionStorage.setItem(
+    RETRY_KEY,
+    JSON.stringify({ redirectTo: payload.redirectTo, authPath }),
+  );
 }
 
 export function consumeGoogleOAuthState(
@@ -43,6 +63,32 @@ export function consumeGoogleOAuthState(
   } catch {
     return null;
   }
+}
+
+export function peekGoogleOAuthRetry(): GoogleOAuthRetry | null {
+  const saved = sessionStorage.getItem(RETRY_KEY);
+  if (!saved) return null;
+
+  try {
+    const parsed = JSON.parse(saved) as Partial<GoogleOAuthRetry>;
+    if (typeof parsed.redirectTo !== "string") return null;
+    return {
+      redirectTo: parsed.redirectTo,
+      authPath: resolveGoogleAuthPath(parsed.authPath),
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function consumeGoogleOAuthRetry(): GoogleOAuthRetry | null {
+  const retry = peekGoogleOAuthRetry();
+  sessionStorage.removeItem(RETRY_KEY);
+  return retry;
+}
+
+export function clearGoogleOAuthRetry(): void {
+  sessionStorage.removeItem(RETRY_KEY);
 }
 
 export function appendGoogleOAuthState(url: string, state: string): string {

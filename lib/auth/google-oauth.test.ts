@@ -2,15 +2,20 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import {
   appendGoogleOAuthState,
+  clearGoogleOAuthRetry,
   consumeGoogleOAuthState,
+  consumeGoogleOAuthRetry,
   createGoogleOAuthState,
   getGoogleOAuthState,
   getGoogleRedirectUri,
+  peekGoogleOAuthRetry,
+  resolveGoogleAuthPath,
   storeGoogleOAuthState,
   toRedirectQueryParams,
 } from "@/lib/auth/google-oauth";
 
 const STATE_KEY = "APP_NAME_V1_google_oauth_state";
+const RETRY_KEY = "APP_NAME_V1_google_oauth_retry";
 
 describe("google oauth helpers", () => {
   beforeEach(() => {
@@ -38,15 +43,66 @@ describe("google oauth helpers", () => {
     storeGoogleOAuthState({
       state: "state-1",
       redirectTo: "/events",
+      authPath: "/auth/register",
       pkceCodeVerifier: "verifier-1",
     });
 
     expect(consumeGoogleOAuthState("state-1")).toEqual({
       state: "state-1",
       redirectTo: "/events",
+      authPath: "/auth/register",
       pkceCodeVerifier: "verifier-1",
     });
     expect(consumeGoogleOAuthState("state-1")).toBeNull();
+  });
+
+  it("stores retry destination separately from one-time oauth state", () => {
+    storeGoogleOAuthState({
+      state: "state-1",
+      redirectTo: "/buy/music-night/queue?intent=1",
+      authPath: "/auth/register",
+    });
+
+    expect(peekGoogleOAuthRetry()).toEqual({
+      redirectTo: "/buy/music-night/queue?intent=1",
+      authPath: "/auth/register",
+    });
+    expect(consumeGoogleOAuthState("state-1")?.redirectTo).toBe(
+      "/buy/music-night/queue?intent=1",
+    );
+    expect(peekGoogleOAuthRetry()).toEqual({
+      redirectTo: "/buy/music-night/queue?intent=1",
+      authPath: "/auth/register",
+    });
+  });
+
+  it("consumes retry destination exactly once for callback failure recovery", () => {
+    storeGoogleOAuthState({
+      state: "state-1",
+      redirectTo: "/buy/music-night/queue?intent=1",
+      authPath: "/auth/login",
+    });
+
+    expect(consumeGoogleOAuthRetry()).toEqual({
+      redirectTo: "/buy/music-night/queue?intent=1",
+      authPath: "/auth/login",
+    });
+    expect(consumeGoogleOAuthRetry()).toBeNull();
+  });
+
+  it("clears retry destination after successful auth completion", () => {
+    storeGoogleOAuthState({ state: "state-1", redirectTo: "/" });
+
+    clearGoogleOAuthRetry();
+
+    expect(sessionStorage.getItem(RETRY_KEY)).toBeNull();
+  });
+
+  it("defaults unknown auth paths to login", () => {
+    expect(resolveGoogleAuthPath("/auth/register")).toBe("/auth/register");
+    expect(resolveGoogleAuthPath("/auth/login")).toBe("/auth/login");
+    expect(resolveGoogleAuthPath("/events")).toBe("/auth/login");
+    expect(resolveGoogleAuthPath(undefined)).toBe("/auth/login");
   });
 
   it("creates a non-empty oauth state value", () => {
@@ -59,6 +115,24 @@ describe("google oauth helpers", () => {
 
     expect(consumeGoogleOAuthState("state-2")).toBeNull();
     expect(sessionStorage.getItem(STATE_KEY)).toBeNull();
+    expect(peekGoogleOAuthRetry()).toEqual({
+      redirectTo: "/",
+      authPath: "/auth/login",
+    });
+  });
+
+  it("preserves retry context when a callback is cancelled without returned state", () => {
+    storeGoogleOAuthState({
+      state: "state-1",
+      redirectTo: "/buy/music-night/queue?intent=1",
+      authPath: "/auth/login",
+    });
+
+    expect(consumeGoogleOAuthState(null)).toBeNull();
+    expect(peekGoogleOAuthRetry()).toEqual({
+      redirectTo: "/buy/music-night/queue?intent=1",
+      authPath: "/auth/login",
+    });
   });
 
   it("rejects malformed stored oauth state", () => {

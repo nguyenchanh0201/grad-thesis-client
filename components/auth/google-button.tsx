@@ -7,11 +7,12 @@ import { getAuthErrorMessage } from "@/services/auth.service";
 import { useLoginWithGoogle } from "@/hooks/use-auth";
 
 interface GoogleButtonProps {
+  authPath?: string;
   disabled?: boolean;
 }
 
-export function GoogleButton({ disabled }: GoogleButtonProps) {
-  const { mutate, isPending } = useLoginWithGoogle();
+export function GoogleButton({ authPath, disabled }: GoogleButtonProps) {
+  const { mutate, isPending } = useLoginWithGoogle(authPath);
 
   const handleClick = () => {
     mutate(undefined, {

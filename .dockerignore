@@ -2,4 +2,8 @@ node_modules
 .next
 out
 .git
-.env.local
+Dockerfile*
+.dockerignore
+*.log*
+.env*
+coverage

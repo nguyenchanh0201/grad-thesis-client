@@ -10,10 +10,12 @@ import { AuthUser } from "@/schemas/user";
 import { apiClient, refreshClient } from "@/lib/api/api-client";
 import {
   appendGoogleOAuthState,
+  clearGoogleOAuthRetry,
   consumeGoogleOAuthState,
   createGoogleOAuthState,
   getGoogleRedirectUri,
   getGoogleOAuthState,
+  resolveGoogleAuthPath,
   storeGoogleOAuthState,
   toRedirectQueryParams,
 } from "@/lib/auth/google-oauth";
@@ -210,6 +212,7 @@ export async function register(
 
 export async function getGoogleAuthorisationUrl(
   redirect: string | null | undefined,
+  authPath?: string | null,
 ): Promise<string> {
   try {
     const redirectTo = resolvePostAuthRedirect(redirect);
@@ -242,6 +245,7 @@ export async function getGoogleAuthorisationUrl(
     storeGoogleOAuthState({
       state,
       redirectTo,
+      authPath: resolveGoogleAuthPath(authPath),
       pkceCodeVerifier: result.pkceCodeVerifier,
     });
 
@@ -277,6 +281,7 @@ export async function completeGoogleSignIn(
 
     if (result.status === "OK") {
       const fallback = toAuthUser(result.user);
+      clearGoogleOAuthRetry();
       return {
         user: await getCurrentAuthUser(fallback),
         accessToken: null,

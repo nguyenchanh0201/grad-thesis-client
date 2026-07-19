@@ -123,7 +123,7 @@ export default function LoginPage() {
           </Button>
         </form>
 
-        <AuthSocialActions disabled={isPending} />
+        <AuthSocialActions authPath="/auth/login" disabled={isPending} />
 
         <AuthFooterLink
           text="Don't have an account?"
