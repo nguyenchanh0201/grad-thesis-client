@@ -131,7 +131,9 @@ export function TicketPanel({
               const availableForZoneMode =
                 tt.quantity != null && tt.soldCount != null
                   ? Math.max(0, tt.quantity - tt.soldCount)
-                  : null;
+                  : tt.quantity === 0
+                    ? 0
+                    : null;
               const isSoldOut =
                 mode === "seat"
                   ? availableSeatsForTicketType !== null &&

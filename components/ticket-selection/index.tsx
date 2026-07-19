@@ -341,15 +341,13 @@ export function TicketSelection({ slug }: Props) {
             (ticketType) => ticketType.id === ticket.ticketTypeId,
           );
           if (!latestTicketType) return true;
+          if (latestTicketType.quantity === 0) return true;
+          if (latestTicketType.soldCount == null) return false;
 
-          const availableQuantity =
-            latestTicketType.quantity != null &&
-            latestTicketType.soldCount != null
-              ? Math.max(
-                  0,
-                  latestTicketType.quantity - latestTicketType.soldCount,
-                )
-              : (latestTicketType.quantity ?? 0);
+          const availableQuantity = Math.max(
+            0,
+            (latestTicketType.quantity ?? 0) - latestTicketType.soldCount,
+          );
 
           return availableQuantity <= 0 || ticket.quantity > availableQuantity;
         });
@@ -451,14 +449,16 @@ export function TicketSelection({ slug }: Props) {
               deleteTicket(ticket.ticketTypeId);
               continue;
             }
-            const availableQuantity =
-              latestTicketType.quantity != null &&
-              latestTicketType.soldCount != null
-                ? Math.max(
-                    0,
-                    latestTicketType.quantity - latestTicketType.soldCount,
-                  )
-                : (latestTicketType.quantity ?? 0);
+            if (latestTicketType.quantity === 0) {
+              deleteTicket(ticket.ticketTypeId);
+              continue;
+            }
+            if (latestTicketType.soldCount == null) continue;
+
+            const availableQuantity = Math.max(
+              0,
+              (latestTicketType.quantity ?? 0) - latestTicketType.soldCount,
+            );
             if (availableQuantity <= 0) {
               deleteTicket(ticket.ticketTypeId);
               continue;
