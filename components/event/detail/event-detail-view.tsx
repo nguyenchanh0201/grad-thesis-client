@@ -50,7 +50,7 @@ export function EventDetailView({ event, detail }: EventDetailViewProps) {
     if (isCheckingActiveCheckout) return;
     if (!isInitialized) return;
     if (!user) {
-      const redirect = `/buy/${event.slug}/queue?intent=1`;
+      const redirect = `/events/${event.slug}`;
       router.push(`/auth/login?redirect=${encodeURIComponent(redirect)}`);
       return;
     }
