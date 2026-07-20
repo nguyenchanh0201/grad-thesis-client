@@ -90,10 +90,29 @@ export function EnterInformation({ slug }: Props) {
   const reservationStatus = reservationResult?.data?.status;
 
   useEffect(() => {
-    if (reservationStatus !== RESERVATION_STATUS.PAYMENT_LOCKED) return;
     if (!reservationId) return;
-    router.replace(`/buy/${slug}/payment`);
-  }, [reservationId, reservationStatus, router, slug]);
+
+    if (reservationStatus === RESERVATION_STATUS.PAYMENT_LOCKED) {
+      router.replace(`/buy/${slug}/payment`);
+      return;
+    }
+
+    if (
+      reservationStatus === RESERVATION_STATUS.CANCELLED ||
+      reservationStatus === RESERVATION_STATUS.EXPIRED
+    ) {
+      void exitPurchaseFlow({ clearSession: true });
+      return;
+    }
+
+    if (reservationStatus === RESERVATION_STATUS.PAID) {
+      router.replace(
+        `/buy/${slug}/confirmation?reservationId=${encodeURIComponent(
+          reservationId,
+        )}`,
+      );
+    }
+  }, [exitPurchaseFlow, reservationId, reservationStatus, router, slug]);
 
   const { data: identityResult } = useQuery({
     queryKey: ["current-user"],

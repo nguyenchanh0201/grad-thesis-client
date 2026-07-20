@@ -135,6 +135,27 @@ export function Payment({ slug }: Props) {
     confirmation?.payment?.status === "INITIATED"
       ? (confirmation.payment.paymentUrl ?? null)
       : null;
+
+  useEffect(() => {
+    if (!reservationId) return;
+
+    if (
+      reservationStatus === RESERVATION_STATUS.CANCELLED ||
+      reservationStatus === RESERVATION_STATUS.EXPIRED
+    ) {
+      void exitPurchaseFlow({ clearSession: true });
+      return;
+    }
+
+    if (reservationStatus === RESERVATION_STATUS.PAID) {
+      router.replace(
+        `/buy/${slug}/confirmation?reservationId=${encodeURIComponent(
+          reservationId,
+        )}`,
+      );
+    }
+  }, [exitPurchaseFlow, reservationId, reservationStatus, router, slug]);
+
   const isReservationTerminal =
     reservationStatus === RESERVATION_STATUS.PAID ||
     reservationStatus === RESERVATION_STATUS.CANCELLED ||
