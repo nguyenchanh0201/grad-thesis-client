@@ -10,7 +10,7 @@ type Props = {
 export function QueueInstructions({
   status,
   bookingMinutes = 10,
-  paymentMinutes = 5,
+  paymentMinutes = 10,
 }: Props) {
   const hidden = status === "expired" || status === "not_open";
 

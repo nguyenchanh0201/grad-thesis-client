@@ -21,6 +21,7 @@ export type CreateSeatedReservationPayload = {
   eventSlug: string;
   seatIndices: number[];
   waitRoomToken?: string;
+  idempotencyKey: string;
 };
 
 export type GAReservationItem = {
@@ -32,6 +33,7 @@ export type CreateGAReservationPayload = {
   eventSlug: string;
   items: GAReservationItem[];
   waitRoomToken?: string;
+  idempotencyKey: string;
 };
 
 export type UpdateReservationRecipientPayload = {
@@ -54,7 +56,10 @@ async function fetchReservationDetail(id: string): Promise<ReservationResult> {
 export const createSeatedReservation = async (
   payload: CreateSeatedReservationPayload,
 ): Promise<ReservationResult> => {
-  const createResponse = await apiClient.post("/reservations/seated", payload);
+  const { idempotencyKey, ...body } = payload;
+  const createResponse = await apiClient.post("/reservations/seated", body, {
+    headers: { "Idempotency-Key": idempotencyKey },
+  });
   const { reservationId } = parseOrThrow(
     CreateReservationResponseSchema,
     createResponse,
@@ -65,7 +70,10 @@ export const createSeatedReservation = async (
 export const createGAReservation = async (
   payload: CreateGAReservationPayload,
 ): Promise<ReservationResult> => {
-  const createResponse = await apiClient.post("/reservations/ga", payload);
+  const { idempotencyKey, ...body } = payload;
+  const createResponse = await apiClient.post("/reservations/ga", body, {
+    headers: { "Idempotency-Key": idempotencyKey },
+  });
   const { reservationId } = parseOrThrow(
     CreateReservationResponseSchema,
     createResponse,

@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { v4 as uuidv4 } from "uuid";
 import { clearBuySession, hasBuySession } from "@/lib/booking/buy-session";
 import { isAppError } from "@/core/error";
 import { useBookingStore } from "@/lib/store/booking";
@@ -35,6 +36,13 @@ const EMPTY_AVAILABILITY: SectionAvailability[] = [];
 
 type Props = { slug: string };
 
+function createReservationAttemptKey() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return uuidv4();
+}
+
 export function TicketSelection({ slug }: Props) {
   const router = useRouter();
   const { syncToExpiry, exitPurchaseFlow } = useBuyProcess();
@@ -64,6 +72,10 @@ export function TicketSelection({ slug }: Props) {
   );
   const [authorized, setAuthorized] = useState<boolean | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const reservationAttemptRef = useRef<{
+    fingerprint: string;
+    key: string;
+  } | null>(null);
 
   const gaReservationMutation = useCreateGAReservation();
   const seatedReservationMutation = useCreateSeatedReservation();
@@ -128,6 +140,56 @@ export function TicketSelection({ slug }: Props) {
     seatsResult?.data ?? EMPTY_AVAILABILITY;
 
   const maxTicketsPerOrder = event?.maxTicketsPerOrder ?? MAX_SEATS;
+
+  const reservationAttemptFingerprint = useMemo(() => {
+    if (isSeated) {
+      const seatIndices = selectedSeats
+        .map((seat) => seat.seatIndex)
+        .filter((seatIndex) => Number.isInteger(seatIndex) && seatIndex >= 0)
+        .sort((a, b) => a - b);
+      return JSON.stringify({
+        eventSlug: slug,
+        kind: "seated",
+        seatIndices,
+      });
+    }
+
+    const items = tickets
+      .filter((ticket) => ticket.quantity > 0)
+      .map((ticket) => ({
+        ticketTypeId: ticket.ticketTypeId,
+        quantity: ticket.quantity,
+      }))
+      .sort((a, b) => a.ticketTypeId.localeCompare(b.ticketTypeId));
+    return JSON.stringify({
+      eventSlug: slug,
+      kind: "ga",
+      items,
+    });
+  }, [isSeated, selectedSeats, slug, tickets]);
+
+  const getReservationAttemptKey = useCallback(() => {
+    if (
+      !reservationAttemptRef.current ||
+      reservationAttemptRef.current.fingerprint !==
+        reservationAttemptFingerprint
+    ) {
+      reservationAttemptRef.current = {
+        fingerprint: reservationAttemptFingerprint,
+        key: createReservationAttemptKey(),
+      };
+    }
+    return reservationAttemptRef.current.key;
+  }, [reservationAttemptFingerprint]);
+
+  useEffect(() => {
+    if (
+      reservationAttemptRef.current?.fingerprint !==
+      reservationAttemptFingerprint
+    ) {
+      reservationAttemptRef.current = null;
+    }
+  }, [reservationAttemptFingerprint]);
 
   useEffect(() => {
     if (!event) return;
@@ -385,6 +447,7 @@ export function TicketSelection({ slug }: Props) {
           eventSlug: slug,
           seatIndices: validSeatIndices,
           waitRoomToken: waitRoomToken ?? undefined,
+          idempotencyKey: getReservationAttemptKey(),
         });
       } else {
         result = await gaReservationMutation.mutateAsync({
@@ -394,6 +457,7 @@ export function TicketSelection({ slug }: Props) {
             quantity: t.quantity,
           })),
           waitRoomToken: waitRoomToken ?? undefined,
+          idempotencyKey: getReservationAttemptKey(),
         });
       }
       hydrateFromReservation(result.data);
