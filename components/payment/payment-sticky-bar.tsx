@@ -11,6 +11,7 @@ type Props = {
   continueLabel?: string;
   continueBusyLabel?: string;
   isContinuing?: boolean;
+  isBackDisabled?: boolean;
 };
 
 export function PaymentStickyBar({
@@ -20,6 +21,7 @@ export function PaymentStickyBar({
   continueLabel = "Continue",
   continueBusyLabel = "Redirecting...",
   isContinuing = false,
+  isBackDisabled = false,
 }: Props) {
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background/95 backdrop-blur-sm">
@@ -37,7 +39,12 @@ export function PaymentStickyBar({
         </p>
 
         <div className="grid shrink-0 grid-cols-2 gap-2 sm:flex sm:items-center">
-          <Button variant="outline" onClick={onBack} className="min-h-11">
+          <Button
+            variant="outline"
+            onClick={onBack}
+            disabled={isBackDisabled}
+            className="min-h-11"
+          >
             <span className="hidden sm:inline">Select the ticket again</span>
             <span className="sm:hidden">Go back</span>
           </Button>
