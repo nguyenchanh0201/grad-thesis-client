@@ -18,6 +18,22 @@ export type ContinueActiveCheckoutResult =
       restoredSession: false;
     };
 
+export function getActiveCheckoutDeadline(
+  checkout: ActiveCheckoutReservation,
+): string {
+  return checkout.status === "PAYMENT_LOCKED"
+    ? checkout.effectiveExpiresAt
+    : (checkout.sessionExpiresAt ?? checkout.effectiveExpiresAt);
+}
+
+export function isActiveCheckoutRestorable(
+  checkout: ActiveCheckoutReservation,
+  nowMs = Date.now(),
+): boolean {
+  const deadlineMs = new Date(getActiveCheckoutDeadline(checkout)).getTime();
+  return Number.isFinite(deadlineMs) && deadlineMs > nowMs;
+}
+
 export function continueActiveCheckout(
   checkout: ActiveCheckoutReservation,
   deps: {
@@ -31,9 +47,7 @@ export function continueActiveCheckout(
   const restoreBuySession = deps.restoreBuySession ?? setBuySession;
   const restored = restoreBuySession(
     checkout.eventSlug,
-    checkout.status === "PAYMENT_LOCKED"
-      ? checkout.effectiveExpiresAt
-      : (checkout.sessionExpiresAt ?? checkout.effectiveExpiresAt),
+    getActiveCheckoutDeadline(checkout),
   );
 
   if (restored) {

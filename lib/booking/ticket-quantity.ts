@@ -23,7 +23,7 @@ export function getZoneAvailableQuantity(
   }
 
   if (ticketType.quantity != null && Number.isFinite(ticketType.quantity)) {
-    return Math.max(0, ticketType.quantity);
+    return ticketType.quantity === 0 ? 0 : Math.max(1, fallbackMaxPerOrder);
   }
 
   return Math.max(1, fallbackMaxPerOrder);
@@ -37,7 +37,10 @@ export function incrementZoneTickets(payload: {
 }): SelectedTicket[] {
   const { tickets, ticketTypes, ticketTypeId, maxPerOrder } = payload;
   const cappedMaxPerOrder = Math.max(1, maxPerOrder);
-  const totalSelected = tickets.reduce((sum, ticket) => sum + ticket.quantity, 0);
+  const totalSelected = tickets.reduce(
+    (sum, ticket) => sum + ticket.quantity,
+    0,
+  );
   if (totalSelected >= cappedMaxPerOrder) return tickets;
 
   const ticketType = ticketTypes.find((ticket) => ticket.id === ticketTypeId);
@@ -46,7 +49,9 @@ export function incrementZoneTickets(payload: {
   const available = getZoneAvailableQuantity(ticketType, cappedMaxPerOrder);
   if (available <= 0) return tickets;
 
-  const existing = tickets.find((ticket) => ticket.ticketTypeId === ticketTypeId);
+  const existing = tickets.find(
+    (ticket) => ticket.ticketTypeId === ticketTypeId,
+  );
   if (existing) {
     if (
       existing.quantity >= cappedMaxPerOrder ||
@@ -70,7 +75,9 @@ export function decrementZoneTickets(payload: {
   ticketTypeId: string;
 }): SelectedTicket[] {
   const { tickets, ticketTypeId } = payload;
-  const existing = tickets.find((ticket) => ticket.ticketTypeId === ticketTypeId);
+  const existing = tickets.find(
+    (ticket) => ticket.ticketTypeId === ticketTypeId,
+  );
   if (!existing || existing.quantity <= 0) return tickets;
 
   if (existing.quantity === 1) {

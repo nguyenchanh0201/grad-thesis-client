@@ -13,7 +13,7 @@ import { CountryCodeSelect } from "../shared/country-search";
 import { RecipientInfo } from "@/schemas/booking";
 
 export type RecipientFormHandle = {
-  triggerValidation: () => Promise<boolean>;
+  validateAndGetValues: () => Promise<RecipientInfo | null>;
 };
 
 const RECIPIENT_FIELD_KEYS: (keyof RecipientInfo)[] = [
@@ -60,6 +60,7 @@ export const RecipientInfoForm = forwardRef<RecipientFormHandle, object>(
       control,
       reset,
       trigger,
+      getValues,
       formState: { errors },
     } = useForm<RecipientInfo>({
       mode: "onBlur",
@@ -107,7 +108,10 @@ export const RecipientInfoForm = forwardRef<RecipientFormHandle, object>(
     }, [formValues, recipient, updateRecipient]);
 
     useImperativeHandle(ref, () => ({
-      triggerValidation: () => trigger(),
+      validateAndGetValues: async () => {
+        const valid = await trigger();
+        return valid ? normalizeRecipient(getValues()) : null;
+      },
     }));
 
     const errClass = (field: keyof RecipientInfo) =>

@@ -11,13 +11,16 @@ import { isAppError } from "@/core/error";
 import { fmt } from "@/lib/strings/money";
 import { useBookingStore } from "@/lib/store/booking";
 import { useEventBySlug } from "@/hooks/use-events";
-import { useReservation } from "@/hooks/use-booking";
+import { reservationKeys, useReservation } from "@/hooks/use-booking";
 import { getIdentityMe } from "@/services/identity.service";
 import {
   cancelReservation,
   updateReservationRecipient,
 } from "@/services/reservation.service";
-import { RESERVATION_STATUS } from "@/schemas/reservation";
+import {
+  RESERVATION_STATUS,
+  type ReservationResult,
+} from "@/schemas/reservation";
 import { fmtIsoDate, fmtIsoTime } from "@/lib/date/utils";
 import { EventBanner } from "@/components/ticket-selection/event-banner";
 import { useBuyProcess } from "@/components/buy-process/buy-process-shell";
@@ -87,10 +90,29 @@ export function EnterInformation({ slug }: Props) {
   const reservationStatus = reservationResult?.data?.status;
 
   useEffect(() => {
-    if (reservationStatus !== RESERVATION_STATUS.PAYMENT_LOCKED) return;
     if (!reservationId) return;
-    router.replace(`/buy/${slug}/payment`);
-  }, [reservationId, reservationStatus, router, slug]);
+
+    if (reservationStatus === RESERVATION_STATUS.PAYMENT_LOCKED) {
+      router.replace(`/buy/${slug}/payment`);
+      return;
+    }
+
+    if (
+      reservationStatus === RESERVATION_STATUS.CANCELLED ||
+      reservationStatus === RESERVATION_STATUS.EXPIRED
+    ) {
+      void exitPurchaseFlow({ clearSession: true });
+      return;
+    }
+
+    if (reservationStatus === RESERVATION_STATUS.PAID) {
+      router.replace(
+        `/buy/${slug}/confirmation?reservationId=${encodeURIComponent(
+          reservationId,
+        )}`,
+      );
+    }
+  }, [exitPurchaseFlow, reservationId, reservationStatus, router, slug]);
 
   const { data: identityResult } = useQuery({
     queryKey: ["current-user"],
@@ -175,20 +197,43 @@ export function EnterInformation({ slug }: Props) {
       return;
     }
 
-    const valid = await formRef.current?.triggerValidation();
-    if (!valid || !reservationId) return;
+    const formRecipient = await formRef.current?.validateAndGetValues();
+    if (!formRecipient || !reservationId) return;
     setIsSubmitting(true);
     try {
-      await updateReservationRecipient(reservationId, {
-        recipient: {
-          fullName: recipient.fullName,
-          email: recipient.email,
-          phoneCountryCode: recipient.phoneCountryCode,
-          phoneNumber: recipient.phoneNumber,
-          idPassport: recipient.idPassport || null,
+      const updatedReservationResult = await updateReservationRecipient(
+        reservationId,
+        {
+          recipient: {
+            fullName: formRecipient.fullName,
+            email: formRecipient.email,
+            phoneCountryCode: formRecipient.phoneCountryCode,
+            phoneNumber: formRecipient.phoneNumber,
+            idPassport: formRecipient.idPassport || null,
+          },
+          deliveryMethod: AUTO_DELIVERY_METHOD,
         },
-        deliveryMethod: AUTO_DELIVERY_METHOD,
-      });
+      );
+
+      const cachedReservationResult =
+        queryClient.getQueryData<ReservationResult>(
+          reservationKeys.detail(reservationId),
+        ) ?? reservationResult;
+      const mergedReservation = {
+        ...cachedReservationResult?.data,
+        ...updatedReservationResult.data,
+      };
+      const mergedReservationResult: ReservationResult = {
+        ...(cachedReservationResult ?? updatedReservationResult),
+        ...updatedReservationResult,
+        data: mergedReservation,
+      };
+
+      queryClient.setQueryData(
+        reservationKeys.detail(reservationId),
+        mergedReservationResult,
+      );
+      hydrateFromReservation(mergedReservation);
       router.replace(`/buy/${slug}/payment`);
     } catch (err) {
       if (isAppError(err) && err.status === 409) {

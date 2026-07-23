@@ -10,6 +10,7 @@ function makeExitDeps() {
     clearBuySessionState: vi.fn(),
     clearQueueIntentState: vi.fn(),
     redirectToEvent: vi.fn(),
+    redirectToHref: vi.fn(),
   };
 }
 
@@ -84,5 +85,23 @@ describe("performBuyProcessExit", () => {
     expect(deps.cancelReservation).not.toHaveBeenCalled();
     expect(deps.clearBuySessionState).toHaveBeenCalledWith("music-night");
     expect(deps.redirectToEvent).toHaveBeenCalledWith("music-night");
+  });
+
+  it("redirects to the requested href after explicit in-app navigation leave", async () => {
+    const deps = makeExitDeps();
+
+    await performBuyProcessExit({
+      slug: "music-night",
+      reservationId: "42",
+      cancelActiveReservation: true,
+      clearSession: true,
+      redirectTo: "/",
+      ...deps,
+    });
+
+    expect(deps.cancelReservation).toHaveBeenCalledWith("42");
+    expect(deps.clearBuySessionState).toHaveBeenCalledWith("music-night");
+    expect(deps.redirectToHref).toHaveBeenCalledWith("/");
+    expect(deps.redirectToEvent).not.toHaveBeenCalled();
   });
 });

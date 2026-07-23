@@ -1,11 +1,14 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { useBookingStore } from "@/lib/store/booking";
 import { useReservation } from "@/hooks/use-booking";
 import { useEventBySlug } from "@/hooks/use-events";
+import { clearBuySession } from "@/lib/booking/buy-session";
+import { isAppError } from "@/core/error";
 import { fmtIsoDate, fmtIsoTime } from "@/lib/date/utils";
 import { EventBanner } from "@/components/ticket-selection/event-banner";
 import { useBuyProcess } from "@/components/buy-process/buy-process-shell";
@@ -15,7 +18,10 @@ import {
   getPaymentConfirmationStatus,
   getPaymentMethodsByEventSlug,
 } from "@/services/payment.service";
-import { getAvailableVouchers } from "@/services/reservation.service";
+import {
+  cancelReservation,
+  getAvailableVouchers,
+} from "@/services/reservation.service";
 import { PaymentMethodSelector } from "./payment-method-selector";
 import { DiscountCodeInput } from "./discount-code-input";
 import { PaymentStickyBar } from "./payment-sticky-bar";
@@ -48,6 +54,7 @@ function withMockCheckoutReturnTo(
 
 export function Payment({ slug }: Props) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { exitPurchaseFlow } = useBuyProcess();
 
   const {
@@ -60,12 +67,18 @@ export function Payment({ slug }: Props) {
     recipient,
     discountCode,
     paymentMethodId,
+    hydrateFromReservation,
+    setReservationId,
     setPaymentMethodId,
     setDiscountCode,
   } = useBookingStore();
+  const [userSelectedMethodId, setUserSelectedMethodId] =
+    useState<PaymentMethodId | null>(null);
+  const [isReturningToTickets, setIsReturningToTickets] = useState(false);
+  const isReturningToTicketsRef = useRef(false);
 
   useEffect(() => {
-    if (reservationId === null) {
+    if (reservationId === null && !isReturningToTicketsRef.current) {
       exitPurchaseFlow();
     }
   }, [exitPurchaseFlow, reservationId]);
@@ -76,6 +89,10 @@ export function Payment({ slug }: Props) {
     reservationId ?? undefined,
   );
   const reservation = reservationResult?.data;
+
+  useEffect(() => {
+    if (reservation) hydrateFromReservation(reservation);
+  }, [hydrateFromReservation, reservation]);
   const {
     data: confirmation,
     isLoading: isConfirmationLoading,
@@ -110,26 +127,59 @@ export function Payment({ slug }: Props) {
 
   const availableVouchers = vouchersResult?.data ?? [];
 
-  useEffect(() => {
-    const hasSelectedMethod = availableMethods.some(
-      (method) => method.id === paymentMethodId,
-    );
-    if (!hasSelectedMethod && availableMethods.length > 0) {
-      setPaymentMethodId(availableMethods[0].id);
-    }
-  }, [paymentMethodId, availableMethods, setPaymentMethodId]);
-
-  const hasSelectedEligibleMethod = availableMethods.some(
-    (method) => method.id === paymentMethodId,
-  );
-  const selectedMethod = availableMethods.find((m) => m.id === paymentMethodId);
-  const isHostedGateway =
-    selectedMethod?.checkoutConfig?.type === "hosted_gateway";
   const reservationStatus = confirmation?.reservationStatus;
   const activePaymentUrl =
     confirmation?.payment?.status === "INITIATED"
       ? (confirmation.payment.paymentUrl ?? null)
       : null;
+  const activePaymentMethodId = confirmation?.payment?.methodId ?? null;
+  const defaultSelectedMethodId = useMemo(() => {
+    if (
+      paymentMethodId &&
+      availableMethods.some((method) => method.id === paymentMethodId)
+    ) {
+      return paymentMethodId;
+    }
+
+    if (
+      activePaymentMethodId &&
+      availableMethods.some((method) => method.id === activePaymentMethodId)
+    ) {
+      return activePaymentMethodId;
+    }
+
+    return availableMethods[0]?.id ?? null;
+  }, [activePaymentMethodId, availableMethods, paymentMethodId]);
+  const selectedMethodId = userSelectedMethodId ?? defaultSelectedMethodId;
+  const hasSelectedEligibleMethod = availableMethods.some(
+    (method) => method.id === selectedMethodId,
+  );
+  const selectedMethod = availableMethods.find(
+    (m) => m.id === selectedMethodId,
+  );
+  const isHostedGateway =
+    selectedMethod?.checkoutConfig?.type === "hosted_gateway";
+
+  useEffect(() => {
+    if (!reservationId) return;
+
+    if (
+      reservationStatus === RESERVATION_STATUS.CANCELLED ||
+      reservationStatus === RESERVATION_STATUS.EXPIRED
+    ) {
+      void exitPurchaseFlow({ clearSession: true });
+      return;
+    }
+
+    if (reservationStatus === RESERVATION_STATUS.PAID) {
+      router.replace(
+        `/buy/${slug}/confirmation?reservationId=${encodeURIComponent(
+          reservationId,
+        )}`,
+      );
+    }
+  }, [exitPurchaseFlow, reservationId, reservationStatus, router, slug]);
+
   const isReservationTerminal =
     reservationStatus === RESERVATION_STATUS.PAID ||
     reservationStatus === RESERVATION_STATUS.CANCELLED ||
@@ -137,25 +187,19 @@ export function Payment({ slug }: Props) {
   const canPayReservation =
     reservationStatus === RESERVATION_STATUS.PENDING ||
     reservationStatus === RESERVATION_STATUS.PAYMENT_LOCKED;
-  const canStartNewHostedPayment =
-    hasSelectedEligibleMethod &&
-    isHostedGateway &&
-    reservationStatus === RESERVATION_STATUS.PENDING &&
-    !!waitRoomToken;
-  const canRegenerateHostedPayment =
+  const canRefreshExpiredHostedPayment =
     hasSelectedEligibleMethod &&
     isHostedGateway &&
     reservationStatus === RESERVATION_STATUS.PAYMENT_LOCKED &&
-    !activePaymentUrl;
+    !activePaymentUrl &&
+    activePaymentMethodId === selectedMethodId;
   const canContinuePayment =
     !!reservationId &&
     !!reservation &&
     canPayReservation &&
     !isReservationTerminal &&
     !isConfirmationLoading &&
-    (!!activePaymentUrl ||
-      canStartNewHostedPayment ||
-      canRegenerateHostedPayment);
+    hasSelectedEligibleMethod;
   const createPaymentMutation = useMutation({
     mutationFn: preparePayment,
     retry: false,
@@ -215,37 +259,51 @@ export function Payment({ slug }: Props) {
       currentReservationId,
     )}`;
 
-    if (activePaymentUrl) {
-      if (typeof window !== "undefined") {
-        window.location.assign(
-          withMockCheckoutReturnTo(activePaymentUrl, confirmationHref),
-        );
-      }
+    if (!selectedMethodId) {
       return;
     }
 
-    if (!paymentMethodId) {
-      return;
-    }
-
-    const shouldRefreshPaymentUrl =
-      reservationStatus === RESERVATION_STATUS.PAYMENT_LOCKED &&
-      !activePaymentUrl;
-
-    if (!waitRoomToken && !shouldRefreshPaymentUrl) {
-      router.replace(`/buy/${slug}/queue`);
-      return;
-    }
-
+    const methodId = selectedMethodId;
     createPaymentMutation.mutate(
       {
         reservationId: currentReservationId,
         waitRoomToken: waitRoomToken ?? undefined,
-        methodId: paymentMethodId,
-        refreshExpiredPaymentUrl: shouldRefreshPaymentUrl,
+        methodId,
+        refreshExpiredPaymentUrl: canRefreshExpiredHostedPayment,
       },
       {
         onSuccess: (result) => {
+          setPaymentMethodId(result.methodId);
+          queryClient.setQueryData(
+            ["payment-confirmation", currentReservationId],
+            (previous: typeof confirmation) =>
+              previous
+                ? {
+                    ...previous,
+                    reservationStatus: RESERVATION_STATUS.PAYMENT_LOCKED,
+                    effectiveExpiresAt: result.expiresAt,
+                    payment: {
+                      id: result.transactionId,
+                      externalRefId: result.externalRefId,
+                      status: "INITIATED" as const,
+                      providerCode: result.providerCode,
+                      methodId: result.methodId,
+                      paymentUrl: result.paymentUrl ?? null,
+                      initiatedAt: new Date().toISOString(),
+                      completedAt: null,
+                    },
+                    activeMethod:
+                      availableMethods.find(
+                        (method) => method.id === result.methodId,
+                      ) ??
+                      previous.activeMethod ??
+                      null,
+                  }
+                : previous,
+          );
+          void queryClient.invalidateQueries({
+            queryKey: ["payment-confirmation", currentReservationId],
+          });
           if (typeof window === "undefined") return;
           if (result.paymentUrl) {
             window.location.assign(
@@ -259,8 +317,38 @@ export function Payment({ slug }: Props) {
     );
   };
 
-  const handleBack = () => {
-    router.replace(`/buy/${slug}/info`);
+  const handleBack = async () => {
+    if (
+      !reservationId ||
+      createPaymentMutation.isPending ||
+      isReturningToTickets
+    ) {
+      return;
+    }
+
+    setIsReturningToTickets(true);
+    try {
+      await cancelReservation(reservationId);
+      isReturningToTicketsRef.current = true;
+      setReservationId(null);
+      await queryClient.invalidateQueries({
+        queryKey: ["reservations"],
+      });
+      router.replace(`/buy/${slug}/tickets`);
+    } catch (err) {
+      if (isAppError(err) && err.status === 409) {
+        clearBuySession(slug);
+        router.replace(`/events/${slug}`);
+        return;
+      }
+      toast.error(
+        isAppError(err)
+          ? err.message
+          : "Could not release your current selection. Please try again.",
+      );
+    } finally {
+      setIsReturningToTickets(false);
+    }
   };
 
   return (
@@ -289,6 +377,7 @@ export function Payment({ slug }: Props) {
             selectedSeats={selectedSeats}
             mapType={mapType}
             recipient={recipient}
+            reservationRecipient={reservation?.recipient}
             reservationItems={reservation?.items}
             reservationTotalAmount={reservation?.totalAmount}
             reservationSubtotalAmount={reservation?.subtotalAmount}
@@ -312,8 +401,10 @@ export function Payment({ slug }: Props) {
 
             <PaymentMethodSelector
               methods={availableMethods}
-              selectedId={paymentMethodId as PaymentMethodId}
-              onSelect={setPaymentMethodId}
+              selectedId={selectedMethodId ?? undefined}
+              onSelect={(methodId) => {
+                setUserSelectedMethodId(methodId);
+              }}
             />
             {isPaymentMethodsLoading ? (
               <p className="text-xs text-muted-foreground">
@@ -356,7 +447,7 @@ export function Payment({ slug }: Props) {
                 Could not start checkout. Please refresh and try again.
               </p>
             ) : null}
-            {canRegenerateHostedPayment ? (
+            {canRefreshExpiredHostedPayment ? (
               <p className="text-xs text-muted-foreground">
                 The previous payment link is no longer reusable. Generate a new
                 payment link to continue this reservation.
@@ -388,14 +479,11 @@ export function Payment({ slug }: Props) {
         onBack={handleBack}
         onContinue={handleContinue}
         continueLabel={
-          activePaymentUrl
-            ? "Continue payment"
-            : canRegenerateHostedPayment
-              ? "Generate new payment link"
-              : "Buy"
+          canRefreshExpiredHostedPayment ? "Generate new payment link" : "Buy"
         }
         continueBusyLabel="Proceeding..."
         isContinuing={createPaymentMutation.isPending}
+        isBackDisabled={createPaymentMutation.isPending || isReturningToTickets}
       />
     </div>
   );

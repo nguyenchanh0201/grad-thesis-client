@@ -7,13 +7,22 @@ const AmountSchema = z
 
 const BackendTicketTypeSchema = z.object({
   id: BigIntIdSchema,
-  eventId: BigIntIdSchema,
+  eventId: BigIntIdSchema.optional(),
   typeName: z.string(),
   desc: z.string().nullish(),
   price: AmountSchema,
-  currency: z.string(),
+  currency: z.string().optional(),
   totalQuantity: z.number().int().nonnegative(),
-  availableQuantity: z.number().int().nonnegative(),
+  availableQuantity: z.number().int().nonnegative().optional(),
+});
+
+const BuyPageTicketTypeSchema = z.object({
+  id: BigIntIdSchema,
+  zoneId: BigIntIdSchema.optional(),
+  label: z.string(),
+  price: AmountSchema,
+  quantity: z.number().int().nonnegative(),
+  colorKey: z.string().optional(),
 });
 
 const FrontendTicketTypeSchema = z.object({
@@ -28,21 +37,41 @@ const FrontendTicketTypeSchema = z.object({
 });
 
 export const TicketTypeSchema = z
-  .union([FrontendTicketTypeSchema, BackendTicketTypeSchema])
+  .union([
+    FrontendTicketTypeSchema,
+    BackendTicketTypeSchema,
+    BuyPageTicketTypeSchema,
+  ])
   .transform((ticketType) => {
     if ("typeName" in ticketType) {
       return {
         id: ticketType.id,
-        eventId: ticketType.eventId,
+        eventId: ticketType.eventId ?? "",
         name: ticketType.typeName,
         description: ticketType.desc ?? undefined,
         price: ticketType.price,
-        currency: ticketType.currency,
+        currency: ticketType.currency ?? "VND",
         quantity: ticketType.totalQuantity,
-        soldCount: Math.max(
-          0,
-          ticketType.totalQuantity - ticketType.availableQuantity,
-        ),
+        soldCount:
+          ticketType.availableQuantity == null
+            ? undefined
+            : Math.max(
+                0,
+                ticketType.totalQuantity - ticketType.availableQuantity,
+              ),
+      };
+    }
+
+    if ("label" in ticketType) {
+      return {
+        id: ticketType.id,
+        eventId: "",
+        name: ticketType.label,
+        description: undefined,
+        price: ticketType.price,
+        currency: "VND",
+        quantity: ticketType.quantity,
+        soldCount: undefined,
       };
     }
 
