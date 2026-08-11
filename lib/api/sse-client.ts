@@ -18,7 +18,7 @@ function buildHeaders(): HeadersInit {
   };
 
   if (typeof document !== "undefined") {
-    const match = document.cookie.match(/(^|;)\s*sFrontToken\s*=\s*([^;]+)/);
+    const match = document.cookie.match(/(^|;)\s*sAntiCsrf\s*=\s*([^;]+)/);
     if (match) {
       headers["anti-csrf"] = decodeURIComponent(match[2]);
     }

@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAppError } from "@/core/error";
 import { RESERVATION_POLL_INTERVAL_MS } from "@/lib/booking/config";
+import { useAuthStore } from "@/lib/store/auth.store";
 import {
   cancelReservation,
   createGAReservation,
@@ -40,10 +41,13 @@ export function useReservation(id: string | undefined) {
 }
 
 export function useActiveCheckout(targetEventSlug: string | undefined) {
+  const user = useAuthStore((s) => s.user);
+  const isAuthInitialized = useAuthStore((s) => s.isInitialized);
+
   return useQuery({
     queryKey: reservationKeys.activeCheckout(targetEventSlug ?? ""),
     queryFn: () => getActiveCheckout(targetEventSlug!),
-    enabled: !!targetEventSlug,
+    enabled: !!targetEventSlug && isAuthInitialized && !!user,
     retry: false,
     staleTime: 0,
     refetchOnWindowFocus: false,

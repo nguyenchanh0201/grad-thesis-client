@@ -88,7 +88,20 @@ describe("api client auth handling", () => {
     refreshClient.defaults.adapter = originalRefreshAdapter;
   });
 
-  it("preserves the current user when /identity/me refresh fails during session hydration", async () => {
+  it("sends the SuperTokens anti-CSRF cookie value on API requests", async () => {
+    document.cookie = "sFrontToken=front-token";
+    document.cookie = "sAntiCsrf=anti-csrf-token";
+    const requestAdapter = vi.fn(resolveAdapter({ success: true }));
+
+    await apiClient.get("/reservations/my", { adapter: requestAdapter });
+
+    expect(requestAdapter).toHaveBeenCalledTimes(1);
+    const config = requestAdapter.mock
+      .calls[0][0] as InternalAxiosRequestConfig;
+    expect(config.headers["anti-csrf"]).toBe("anti-csrf-token");
+  });
+
+  it("clears the current user when /identity/me refresh fails during session hydration", async () => {
     setLoggedInUser();
     refreshClient.defaults.adapter = rejectAdapter(401);
 
@@ -96,10 +109,10 @@ describe("api client auth handling", () => {
       apiClient.get("/identity/me", { adapter: rejectAdapter(401) }),
     ).rejects.toBeInstanceOf(UnauthorizedError);
 
-    expect(useAuthStore.getState().user).toEqual(authUser);
+    expect(useAuthStore.getState().user).toBeNull();
   });
 
-  it("preserves the current user when a retried /identity/me call still returns 401", async () => {
+  it("clears the current user when a retried /identity/me call still returns 401", async () => {
     setLoggedInUser();
 
     await expect(
@@ -109,7 +122,7 @@ describe("api client auth handling", () => {
       } as never),
     ).rejects.toBeInstanceOf(UnauthorizedError);
 
-    expect(useAuthStore.getState().user).toEqual(authUser);
+    expect(useAuthStore.getState().user).toBeNull();
   });
 
   it("preserves login state when heartbeat reports a lost waitroom session", async () => {

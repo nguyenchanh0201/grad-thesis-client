@@ -63,9 +63,14 @@ function getRequestPath(url: string | undefined): string {
   }
 }
 
-function preservesAuthOnUnauthorized(url: string | undefined): boolean {
+function suppressesUnauthorizedRedirect(url: string | undefined): boolean {
   const path = getRequestPath(url);
   return path.endsWith("/identity/me") || path.endsWith("/tickets/heartbeat");
+}
+
+function preservesAuthOnUnauthorized(url: string | undefined): boolean {
+  const path = getRequestPath(url);
+  return path.endsWith("/tickets/heartbeat");
 }
 
 apiClient.interceptors.request.use((config) => {
@@ -78,7 +83,7 @@ apiClient.interceptors.request.use((config) => {
   config.headers["rid"] = "session";
 
   if (typeof document !== "undefined") {
-    const match = document.cookie.match(/(^|;)\s*sFrontToken\s*=\s*([^;]+)/);
+    const match = document.cookie.match(/(^|;)\s*sAntiCsrf\s*=\s*([^;]+)/);
     if (match) {
       config.headers["anti-csrf"] = decodeURIComponent(match[2]);
     }
@@ -201,7 +206,9 @@ apiClient.interceptors.response.use(
     if (status === 401) {
       if (!preservesAuthOnUnauthorized(config?.url)) {
         useAuthStore.getState().clearAuth();
-        redirectToLoginForUnauthorized();
+        if (!suppressesUnauthorizedRedirect(config?.url)) {
+          redirectToLoginForUnauthorized();
+        }
       }
       return Promise.reject(new UnauthorizedError(originalErrorMessage, error));
     }
