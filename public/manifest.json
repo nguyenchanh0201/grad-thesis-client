@@ -1,5 +1,6 @@
 {
-  "name": "App",
+  "name": "TicketGo",
+  "short_name": "TicketGo",
   "icons": [
     {
       "src": "\/android-icon-36x36.png",
