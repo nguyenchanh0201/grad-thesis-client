@@ -1,16 +1,6 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
-const ACCESS_SESSION_COOKIE = "sAccessToken";
-const REFRESH_SESSION_COOKIE = "sRefreshToken";
-
-const PROTECTED_PATHS = ["/my-tickets", "/account"];
-const GUEST_ONLY_PATHS = ["/auth/login", "/auth/register"];
-
-function matchesAny(pathname: string, paths: string[]) {
-  return paths.some((p) => pathname.startsWith(p));
-}
-
 export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
@@ -23,29 +13,9 @@ export function proxy(req: NextRequest) {
     }
   }
 
-  const hasSession =
-    req.cookies.has(ACCESS_SESSION_COOKIE) ||
-    req.cookies.has(REFRESH_SESSION_COOKIE);
-
-  if (!hasSession && matchesAny(pathname, PROTECTED_PATHS)) {
-    const loginUrl = new URL("/auth/login", req.url);
-    loginUrl.searchParams.set("redirect", pathname);
-    return NextResponse.redirect(loginUrl);
-  }
-
-  if (hasSession && matchesAny(pathname, GUEST_ONLY_PATHS)) {
-    return NextResponse.redirect(new URL("/", req.url));
-  }
-
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: [
-    "/buy/:slug/tickets/:path*",
-    "/my-tickets/:path*",
-    "/account/:path*",
-    "/auth/login",
-    "/auth/register",
-  ],
+  matcher: ["/buy/:slug/tickets/:path*"],
 };
