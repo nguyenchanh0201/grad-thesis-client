@@ -93,12 +93,16 @@ describe("api client auth handling", () => {
     document.cookie = "sAntiCsrf=anti-csrf-token";
     const requestAdapter = vi.fn(resolveAdapter({ success: true }));
 
-    await apiClient.get("/reservations/my", { adapter: requestAdapter });
+    await apiClient.get("/reservations/my", {
+      adapter: requestAdapter,
+      withCredentials: false,
+    });
 
     expect(requestAdapter).toHaveBeenCalledTimes(1);
     const config = requestAdapter.mock
       .calls[0][0] as InternalAxiosRequestConfig;
     expect(config.headers["anti-csrf"]).toBe("anti-csrf-token");
+    expect(config.withCredentials).toBe(true);
   });
 
   it("clears the current user when /identity/me refresh fails during session hydration", async () => {
@@ -135,6 +139,19 @@ describe("api client auth handling", () => {
         { slug: "music-night", token: "expired-token" },
         { adapter: rejectAdapter(401) },
       ),
+    ).rejects.toBeInstanceOf(UnauthorizedError);
+
+    expect(useAuthStore.getState().user).toEqual(authUser);
+  });
+
+  it("preserves login state when active checkout cannot refresh the backend session", async () => {
+    setLoggedInUser();
+    refreshClient.defaults.adapter = rejectAdapter(401);
+
+    await expect(
+      apiClient.get("/reservations/active-checkout", {
+        adapter: rejectAdapter(401),
+      }),
     ).rejects.toBeInstanceOf(UnauthorizedError);
 
     expect(useAuthStore.getState().user).toEqual(authUser);

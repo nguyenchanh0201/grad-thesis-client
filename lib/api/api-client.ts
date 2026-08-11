@@ -65,17 +65,25 @@ function getRequestPath(url: string | undefined): string {
 
 function suppressesUnauthorizedRedirect(url: string | undefined): boolean {
   const path = getRequestPath(url);
-  return path.endsWith("/identity/me") || path.endsWith("/tickets/heartbeat");
+  return (
+    path.endsWith("/identity/me") ||
+    path.endsWith("/reservations/active-checkout") ||
+    path.endsWith("/tickets/heartbeat")
+  );
 }
 
 function preservesAuthOnUnauthorized(url: string | undefined): boolean {
   const path = getRequestPath(url);
-  return path.endsWith("/tickets/heartbeat");
+  return (
+    path.endsWith("/reservations/active-checkout") ||
+    path.endsWith("/tickets/heartbeat")
+  );
 }
 
 apiClient.interceptors.request.use((config) => {
   const correlationId = uuidv4();
   config.headers = config.headers ?? {};
+  config.withCredentials = true;
   config.headers[API_CONFIG.HEADERS.CORRELATION_ID] = correlationId;
   config.headers[API_CONFIG.HEADERS.REQUEST_ID] = correlationId;
 
@@ -169,6 +177,7 @@ apiClient.interceptors.response.use(
 
       return refreshClient
         .post("/auth/session/refresh", undefined, {
+          withCredentials: true,
           headers: { rid: "session", "st-auth-mode": "cookie" },
         })
         .then(() => {
