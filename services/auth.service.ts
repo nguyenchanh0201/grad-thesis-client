@@ -68,6 +68,13 @@ type SuperTokensThirdPartyAuthResponse =
   | { status: "SIGN_IN_UP_NOT_ALLOWED"; reason?: string }
   | { status: "GENERAL_ERROR"; message?: string };
 
+const SESSION_VERIFY_ATTEMPTS = 4;
+const SESSION_VERIFY_RETRY_DELAY_MS = 150;
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function toFormFields(
   data: Pick<LoginInput, "email" | "password">,
 ): SuperTokensFormField[] {
@@ -92,18 +99,28 @@ function toAuthUser(user: SuperTokensUser): AuthUser {
 }
 
 async function getCurrentAuthUser(fallback: AuthUser): Promise<AuthUser> {
-  try {
-    const me = await getIdentityMe();
-    return {
-      id: me.data.user.id,
-      email: me.data.user.email,
-      role: me.data.user.role,
-      name: me.data.user.fullName ?? fallback.name,
-      phone: me.data.user.phone ?? fallback.phone,
-    };
-  } catch {
-    throw new UnauthorizedError("Authentication failed. Please try again.");
+  for (let attempt = 1; attempt <= SESSION_VERIFY_ATTEMPTS; attempt += 1) {
+    try {
+      const me = await getIdentityMe();
+      return {
+        id: me.data.user.id,
+        email: me.data.user.email,
+        role: me.data.user.role,
+        name: me.data.user.fullName ?? fallback.name,
+        phone: me.data.user.phone ?? fallback.phone,
+      };
+    } catch (error) {
+      if (
+        !(error instanceof UnauthorizedError) ||
+        attempt === SESSION_VERIFY_ATTEMPTS
+      ) {
+        throw new UnauthorizedError("Authentication failed. Please try again.");
+      }
+      await delay(SESSION_VERIFY_RETRY_DELAY_MS);
+    }
   }
+
+  throw new UnauthorizedError("Authentication failed. Please try again.");
 }
 
 function normalizeAuthError(error: unknown): never {
@@ -141,7 +158,10 @@ async function authenticate(
     const response = await refreshClient.post<SuperTokensAuthResponse>(
       path,
       { formFields: toFormFields(data) },
-      { headers: { rid: "emailpassword", "st-auth-mode": "cookie" } },
+      {
+        withCredentials: true,
+        headers: { rid: "emailpassword", "st-auth-mode": "cookie" },
+      },
     );
     const result = response.data;
 
@@ -271,7 +291,10 @@ export async function completeGoogleSignIn(
             pkceCodeVerifier: storedState.pkceCodeVerifier,
           },
         },
-        { headers: { rid: "thirdparty", "st-auth-mode": "cookie" } },
+        {
+          withCredentials: true,
+          headers: { rid: "thirdparty", "st-auth-mode": "cookie" },
+        },
       );
     const result = response.data;
 

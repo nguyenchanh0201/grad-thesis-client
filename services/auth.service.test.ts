@@ -79,6 +79,44 @@ describe("auth service session verification", () => {
     ).rejects.toThrow("Authentication failed. Please try again.");
   });
 
+  it("retries session hydration when the first /identity/me check is temporarily unauthorized", async () => {
+    mockedRefreshPost.mockResolvedValueOnce({
+      data: {
+        status: "OK",
+        user: { id: "st-user-1", email: "fallback@example.test" },
+      },
+    });
+    mockedGetIdentityMe
+      .mockRejectedValueOnce(new UnauthorizedError("missing"))
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          msg: "Authenticated user",
+          user: {
+            id: "app-user-1",
+            email: "user@example.test",
+            role: "USER",
+            fullName: null,
+            phone: null,
+          },
+        },
+      });
+
+    await expect(
+      login({ email: "user@example.test", password: "Password@123" }),
+    ).resolves.toEqual({
+      accessToken: null,
+      user: {
+        id: "app-user-1",
+        email: "user@example.test",
+        role: "USER",
+        name: undefined,
+        phone: undefined,
+      },
+    });
+    expect(mockedGetIdentityMe).toHaveBeenCalledTimes(2);
+  });
+
   it("adds a local oauth state when the SuperTokens Google authorisation URL omits one", async () => {
     mockedRefreshGet.mockResolvedValueOnce({
       data: {
