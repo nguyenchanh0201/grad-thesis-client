@@ -31,10 +31,17 @@ export const refreshClient = axios.create({
   withCredentials: true,
 });
 
-function redirectToLoginForUnauthorized() {
+function redirectToLoginForUnauthorized(requestPathname?: string) {
   if (typeof window === "undefined") return;
   const { pathname, search } = window.location;
-  if (pathname.startsWith("/auth")) return;
+  // Use the pathname captured when the request was *issued*, not the current
+  // one: a request started on /auth/callback/google (e.g. AuthProvider's own
+  // hydration check) can still be in flight after a successful sign-in has
+  // already navigated away via router.replace(). Falling back to the live
+  // pathname would then wrongly treat that stale 401 as happening on the
+  // destination page and force a bogus redirect back to login.
+  const originPathname = requestPathname ?? pathname;
+  if (originPathname.startsWith("/auth")) return;
   const shouldRedirect = [
     "/buy/",
     "/ticket-and-voucher",
@@ -48,9 +55,12 @@ function redirectToLoginForUnauthorized() {
   );
 }
 
-function handleUnauthorized(reason?: unknown): UnauthorizedError {
+function handleUnauthorized(
+  reason?: unknown,
+  requestPathname?: string,
+): UnauthorizedError {
   useAuthStore.getState().clearAuth();
-  redirectToLoginForUnauthorized();
+  redirectToLoginForUnauthorized(requestPathname);
   return new UnauthorizedError("Session expired. Please log in again.", reason);
 }
 
@@ -97,6 +107,10 @@ apiClient.interceptors.request.use((config) => {
     }
   }
 
+  if (typeof window !== "undefined") {
+    (config as RetryableConfig)._requestPathname = window.location.pathname;
+  }
+
   return config;
 });
 
@@ -135,7 +149,10 @@ const SKIP_REFRESH_PATHS = [
   "/auth/google",
 ];
 
-type RetryableConfig = AxiosRequestConfig & { _retry?: boolean };
+type RetryableConfig = AxiosRequestConfig & {
+  _retry?: boolean;
+  _requestPathname?: string;
+};
 
 apiClient.interceptors.response.use(
   (response) => {
@@ -194,7 +211,9 @@ apiClient.interceptors.response.use(
               ),
             );
           }
-          return Promise.reject(handleUnauthorized(refreshError));
+          return Promise.reject(
+            handleUnauthorized(refreshError, config._requestPathname),
+          );
         })
         .finally(() => {
           isRefreshing = false;
@@ -216,7 +235,7 @@ apiClient.interceptors.response.use(
       if (!preservesAuthOnUnauthorized(config?.url)) {
         useAuthStore.getState().clearAuth();
         if (!suppressesUnauthorizedRedirect(config?.url)) {
-          redirectToLoginForUnauthorized();
+          redirectToLoginForUnauthorized(config?._requestPathname);
         }
       }
       return Promise.reject(new UnauthorizedError(originalErrorMessage, error));

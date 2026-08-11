@@ -12,6 +12,9 @@ import {
 } from "@/services/auth.service";
 import { resolvePostAuthRedirect } from "@/lib/auth/redirect";
 import { useAuthStore } from "@/lib/store/auth.store";
+import { useBookingStore } from "@/lib/store/booking";
+import { clearBuySession } from "@/lib/booking/buy-session";
+import { clearQueueIntent } from "@/lib/booking/queue-intent";
 import type { LoginInput, RegisterInput } from "@/schemas/auth";
 
 function getRedirectTarget() {
@@ -59,6 +62,12 @@ export function useLogout() {
     mutationFn: () => logout(),
     onSettled: () => {
       clearAuth();
+      const { slug, reset } = useBookingStore.getState();
+      if (slug) {
+        clearBuySession(slug);
+        clearQueueIntent(slug);
+      }
+      reset();
       queryClient.removeQueries({ queryKey: ["current-user"] });
       queryClient.removeQueries({ queryKey: ["tickets"] });
       queryClient.removeQueries({ queryKey: ["reservations"] });
