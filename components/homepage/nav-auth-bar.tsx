@@ -3,7 +3,6 @@
 import { useAuthStore } from "@/lib/store/auth.store";
 import { UserProfile } from "@/components/auth/user-profile";
 import { AuthButtons } from "./auth-buttons";
-import { LangSelector } from "./lang-selector";
 import { NotificationBell } from "./notification-bell";
 
 export function NavAuthBar() {
@@ -22,8 +21,6 @@ export function NavAuthBar() {
           <AuthButtons />
         )
       ) : null}
-      <span className="w-px h-6 bg-border" />
-      <LangSelector />
     </div>
   );
 }

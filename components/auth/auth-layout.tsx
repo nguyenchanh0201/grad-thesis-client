@@ -1,6 +1,5 @@
 "use client";
 
-import { LangSelector } from "../homepage/lang-selector";
 import { Logo } from "../shared/logo";
 
 interface AuthLayoutProps {
@@ -19,7 +18,6 @@ export function AuthLayout({ children }: AuthLayoutProps) {
       <header className="relative z-20">
         <nav className="flex items-center justify-between px-6 py-4 sm:px-8">
           <Logo />
-          <LangSelector />
         </nav>
       </header>
 

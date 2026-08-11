@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 const API_BASE =
   process.env.SERVER_API_URL ??
   process.env.NEXT_PUBLIC_API_URL ??
-  "http://localhost:5000/api/v1";
+  "http://localhost:5001/api/v1";
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const body = await request.json();
