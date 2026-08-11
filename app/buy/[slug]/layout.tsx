@@ -9,7 +9,7 @@ export default function BookingLayout({
 }) {
   return (
     <>
-      <Header hideSearchBar />
+      <Header logoOnly />
       <AuthGuard>
         <BuyProcessShell>{children}</BuyProcessShell>
       </AuthGuard>

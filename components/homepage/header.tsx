@@ -7,9 +7,13 @@ import { useHeaderSize } from "@/hooks/use-header-size";
 
 type HeaderProps = {
   hideSearchBar?: boolean;
+  logoOnly?: boolean;
 };
 
-export function Header({ hideSearchBar = false }: HeaderProps) {
+export function Header({
+  hideSearchBar = false,
+  logoOnly = false,
+}: HeaderProps) {
   const headerRef = useHeaderSize();
 
   return (
@@ -23,16 +27,20 @@ export function Header({ hideSearchBar = false }: HeaderProps) {
           <Logo />
         </div>
 
-        {/* Login/Register Bar */}
-        <div className="order-2 ml-auto flex h-14 items-center px-4 lg:order-3 lg:h-16 lg:px-6">
-          <NavAuthBar />
-        </div>
+        {!logoOnly && (
+          <>
+            {/* Login/Register Bar */}
+            <div className="order-2 ml-auto flex h-14 items-center px-4 lg:order-3 lg:h-16 lg:px-6">
+              <NavAuthBar />
+            </div>
 
-        {/* Search */}
-        {!hideSearchBar && (
-          <div className="order-3 w-full pb-3 lg:order-2 lg:flex-1 lg:pb-0">
-            <EventSearch />
-          </div>
+            {/* Search */}
+            {!hideSearchBar && (
+              <div className="order-3 w-full pb-3 lg:order-2 lg:flex-1 lg:pb-0">
+                <EventSearch />
+              </div>
+            )}
+          </>
         )}
       </div>
     </header>
