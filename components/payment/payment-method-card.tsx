@@ -4,7 +4,6 @@ import { QrCode, CreditCard, Banknote, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { PaymentMethod, PaymentMethodId } from "@/schemas/payment";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "../ui/label";
 
 const ICONS: Record<PaymentMethodId, React.ElementType> = {
   vnpay: QrCode,
@@ -89,6 +88,7 @@ function PaymentMethodCard({ method, selected, onSelect }: CardProps) {
       <RadioGroupItem
         value={method.id}
         id={method.id}
+        aria-label={method.label}
         className="mt-0.5 shrink-0"
         onClick={(e) => {
           e.stopPropagation();

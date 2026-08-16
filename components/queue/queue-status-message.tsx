@@ -12,7 +12,12 @@ const MESSAGE: Record<FrontendQueueStatus, string> = {
 
 export function QueueStatusMessage({ status }: Props) {
   return (
-    <p className="pt-4 text-[13px] font-normal text-muted-foreground line-clamp-none">
+    <p
+      role="status"
+      data-testid="queue-status"
+      data-status={status}
+      className="pt-4 text-[13px] font-normal text-muted-foreground line-clamp-none"
+    >
       {MESSAGE[status]}
     </p>
   );

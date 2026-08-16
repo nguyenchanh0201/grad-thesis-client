@@ -552,7 +552,12 @@ export function PaymentConfirmation({ slug }: Props) {
       voucher && subtotal !== undefined && subtotal !== data!.totalAmount;
 
     return (
-      <div className="min-h-[calc(100vh-var(--header-height))] bg-muted/30 py-8 md:py-12">
+      <div
+        data-testid="payment-confirmation"
+        data-status="PAID"
+        data-reservation-id={reservationId}
+        className="min-h-[calc(100vh-var(--header-height))] bg-muted/30 py-8 md:py-12"
+      >
         <style>{ANIM}</style>
         <div className="page-container">
           <div className="mx-auto max-w-3xl space-y-5">
