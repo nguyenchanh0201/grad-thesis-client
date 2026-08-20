@@ -103,6 +103,11 @@ export function mapContentionRunnerErrorToExitCode(error: unknown) {
 export async function runSeatContention(arguments_: readonly string[]) {
   const options = parseContentionRunnerArguments(arguments_);
   const loaded = await loadContentionProfile(options.profileName);
+  if (loaded.inventoryMode !== "seated") {
+    throw new ContentionProfileValidationError([
+      "E2E_INVENTORY_MODE must be seated for e2e:contention",
+    ]);
+  }
   const profile = applyContentionOverrides(loaded, options);
   const preflight = options.testSuite
     ? null

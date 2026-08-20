@@ -14,6 +14,52 @@ export type ReservationAttemptResult = {
 export class TicketSelectionPage {
   constructor(private readonly page: Page) {}
 
+  async selectConfiguredGaQuantity(profile: {
+    eventSlug: string;
+    ticketTypeName?: string;
+    ticketQuantity: number;
+    navigationTimeoutMs: number;
+  }) {
+    await expect(this.page).toHaveURL(
+      new RegExp(`/buy/${escapeRegExp(profile.eventSlug)}/tickets`),
+    );
+    if (!profile.ticketTypeName) {
+      throw new JourneyFailure(
+        "INVENTORY_UNAVAILABLE",
+        "seat",
+        "The GA ticket type name is missing from the profile.",
+      );
+    }
+
+    const quantityGroup = this.page.getByRole("group", {
+      name: `Quantity for ${profile.ticketTypeName}`,
+      exact: true,
+    });
+    await expect(quantityGroup).toBeVisible({
+      timeout: profile.navigationTimeoutMs,
+    });
+    const increase = quantityGroup.getByRole("button", {
+      name: "Increase quantity",
+      exact: true,
+    });
+    for (let count = 0; count < profile.ticketQuantity; count += 1) {
+      await expect(increase).toBeEnabled();
+      await increase.click();
+    }
+    await expect(
+      this.page.getByRole("button", {
+        name: `Selected tickets (${profile.ticketQuantity})`,
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(
+      this.page.getByText(
+        `${profile.ticketTypeName} x ${profile.ticketQuantity}`,
+        { exact: true },
+      ),
+    ).toBeVisible();
+  }
+
   async selectConfiguredSeat(profile: ExecutionProfile) {
     await expect(this.page).toHaveURL(
       new RegExp(`/buy/${escapeRegExp(profile.eventSlug)}/tickets`),
@@ -172,6 +218,68 @@ export class TicketSelectionPage {
       if (await seat.isVisible().catch(() => false)) {
         await expect(seat).not.toHaveAttribute("aria-selected", "true");
       }
+      return {
+        httpStatus,
+        reservationId: null,
+        result: "CONFLICT",
+        visibleResult: "SEAT_CONFLICT",
+      };
+    }
+
+    return {
+      httpStatus,
+      reservationId: null,
+      result: "FAILED",
+      visibleResult: "FAILURE",
+    };
+  }
+
+  async attemptGaReservation(
+    profile: ExecutionProfile,
+    resultTimeoutMs = profile.navigationTimeoutMs,
+  ): Promise<ReservationAttemptResult> {
+    const responsePromise = this.page.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" &&
+        new URL(response.url()).pathname.endsWith("/reservations/ga"),
+      { timeout: resultTimeoutMs },
+    );
+    await this.triggerReservationAttempt();
+    const response = await responsePromise;
+    const httpStatus = response.status();
+
+    if (httpStatus >= 200 && httpStatus < 300) {
+      const payload = (await response.json().catch(() => null)) as Record<
+        string,
+        unknown
+      > | null;
+      const rawId = payload?.reservationId;
+      const reservationId =
+        typeof rawId === "string" || typeof rawId === "number"
+          ? String(rawId)
+          : null;
+      await this.page.waitForURL(
+        new RegExp(`/buy/${escapeRegExp(profile.eventSlug)}/info`),
+        { timeout: profile.navigationTimeoutMs },
+      );
+      return {
+        httpStatus,
+        reservationId,
+        result: "CREATED",
+        visibleResult: "NAVIGATED_TO_INFO",
+      };
+    }
+
+    if (httpStatus === 409) {
+      const conflict = this.page.getByText(
+        "Ticket availability changed. We updated your selection. Please continue again.",
+        { exact: true },
+      );
+      await expect(conflict).toBeVisible({ timeout: resultTimeoutMs });
+      await conflict.hover().catch(() => undefined);
+      await expect(this.page).toHaveURL(
+        new RegExp(`/buy/${escapeRegExp(profile.eventSlug)}/tickets`),
+      );
       return {
         httpStatus,
         reservationId: null,

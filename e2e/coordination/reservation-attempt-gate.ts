@@ -48,6 +48,7 @@ export class ReservationAttemptGate {
     private readonly target: {
       apiUrl: string;
       eventSlug: string;
+      reservationKind?: "seated" | "ga";
       timeoutMs: number;
       maxReleaseSkewMs: number;
     },
@@ -74,9 +75,10 @@ export class ReservationAttemptGate {
     this.armed = true;
     this.snapshotValue.state = "ARMED";
     this.snapshotValue.armedAt = new Date().toISOString();
+    const pattern = `**/reservations/${this.target.reservationKind ?? "seated"}`;
     await Promise.all(
       (["A", "B"] as const).map((id) =>
-        pages[id].route("**/reservations/seated", async (route, request) => {
+        pages[id].route(pattern, async (route, request) => {
           await this.intercept(id, route, request);
         }),
       ),
@@ -188,9 +190,10 @@ export class ReservationAttemptGate {
   }
 
   async detach(pages: Readonly<Record<ParticipantId, Page>>) {
+    const pattern = `**/reservations/${this.target.reservationKind ?? "seated"}`;
     await Promise.all(
       (["A", "B"] as const).map((id) =>
-        pages[id].unroute("**/reservations/seated").catch(() => undefined),
+        pages[id].unroute(pattern).catch(() => undefined),
       ),
     );
   }
@@ -216,6 +219,7 @@ export class ReservationAttemptGate {
         body: request.postDataJSON(),
         expectedApiUrl: this.target.apiUrl,
         expectedEventSlug: this.target.eventSlug,
+        reservationKind: this.target.reservationKind ?? "seated",
       });
     } catch (error) {
       await route.abort("blockedbyclient");
@@ -294,17 +298,20 @@ export function validateReservationRequestMetadata(input: {
   body: unknown;
   expectedApiUrl: string;
   expectedEventSlug: string;
+  reservationKind?: "seated" | "ga";
 }) {
   const requestUrl = new URL(input.requestUrl);
   const apiUrl = new URL(input.expectedApiUrl);
   if (
     input.method !== "POST" ||
     requestUrl.origin !== apiUrl.origin ||
-    !requestUrl.pathname.endsWith("/reservations/seated")
+    !requestUrl.pathname.endsWith(
+      `/reservations/${input.reservationKind ?? "seated"}`,
+    )
   ) {
     throw new ReservationAttemptGateError(
       "REQUEST_MISMATCH",
-      "The intercepted request did not match the configured seated-reservation target.",
+      "The intercepted request did not match the configured reservation target.",
     );
   }
   if (!input.body || typeof input.body !== "object") {
@@ -320,15 +327,16 @@ export function validateReservationRequestMetadata(input: {
       "Reservation event slug did not match.",
     );
   }
-  if (
-    !Array.isArray(body.seatIndices) ||
-    body.seatIndices.length !== 1 ||
-    !Number.isInteger(body.seatIndices[0]) ||
-    Number(body.seatIndices[0]) < 0
-  ) {
+  const target =
+    (input.reservationKind ?? "seated") === "ga"
+      ? normalizeGaItems(body.items)
+      : normalizeSeatIndices(body.seatIndices);
+  if (target.length !== 1) {
     throw new ReservationAttemptGateError(
       "REQUEST_MISMATCH",
-      "Contention requires exactly one valid seat index.",
+      (input.reservationKind ?? "seated") === "ga"
+        ? "GA contention requires exactly one valid ticket-type quantity."
+        : "Contention requires exactly one valid seat index.",
     );
   }
   const idempotencyKey = input.headers["idempotency-key"];
@@ -341,11 +349,34 @@ export function validateReservationRequestMetadata(input: {
   return {
     eventSlug: String(body.eventSlug),
     seatIndexFingerprint: createHash("sha256")
-      .update(String(body.seatIndices[0]))
+      .update(JSON.stringify(target[0]))
       .digest("hex")
       .slice(0, 16),
     idempotencyKey,
   };
+}
+
+function normalizeSeatIndices(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map(Number)
+    .filter((item) => Number.isInteger(item) && item >= 0)
+    .sort((a, b) => a - b);
+}
+
+function normalizeGaItems(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .flatMap((item) => {
+      if (!item || typeof item !== "object") return [];
+      const record = item as Record<string, unknown>;
+      const ticketTypeId = String(record.ticketTypeId ?? "");
+      const quantity = Number(record.quantity);
+      return ticketTypeId && Number.isInteger(quantity) && quantity > 0
+        ? [{ ticketTypeId, quantity }]
+        : [];
+    })
+    .sort((a, b) => a.ticketTypeId.localeCompare(b.ticketTypeId));
 }
 
 function deferred<T = void>(): Deferred<T> {

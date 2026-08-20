@@ -13,6 +13,9 @@
     "e2e:contention": "tsx e2e/scripts/run-seat-contention.ts",
     "e2e:contention:check": "tsx e2e/scripts/run-seat-contention.ts --check",
     "e2e:contention:test": "tsx e2e/scripts/run-seat-contention.ts --test",
+    "e2e:ga-contention": "tsx e2e/scripts/run-ga-contention.ts",
+    "e2e:ga-contention:check": "tsx e2e/scripts/run-ga-contention.ts --check",
+    "e2e:ga-contention:test": "tsx e2e/scripts/run-ga-contention.ts --test",
     "lint": "eslint",
     "prepare": "husky",
     "commitlint": "commitlint"

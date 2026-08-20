@@ -212,4 +212,55 @@ describe("TicketSelectionPage", () => {
       exact: true,
     });
   });
+
+  it("selects the configured GA quantity through the existing ticket panel", async () => {
+    const increase = { click: vi.fn().mockResolvedValue(undefined) };
+    const group = { getByRole: vi.fn().mockReturnValue(increase) };
+    const summary = {};
+    const page = {
+      getByRole: vi.fn((role: string, options?: { name?: string }) =>
+        role === "group" && options?.name === "Quantity for Final GA Batch"
+          ? group
+          : summary,
+      ),
+      getByText: vi.fn().mockReturnValue({}),
+    };
+    await new TicketSelectionPage(
+      page as unknown as Page,
+    ).selectConfiguredGaQuantity({
+      eventSlug: "ga-contention-demo",
+      ticketTypeName: "Final GA Batch",
+      ticketQuantity: 2,
+      navigationTimeoutMs: 30_000,
+    });
+    expect(increase.click).toHaveBeenCalledTimes(2);
+    expect(group.getByRole).toHaveBeenCalledWith("button", {
+      name: "Increase quantity",
+      exact: true,
+    });
+  });
+
+  it("classifies a GA 409 without retrying alternate inventory", async () => {
+    const button = {
+      first: vi.fn(),
+      click: vi.fn().mockResolvedValue(undefined),
+    };
+    button.first.mockReturnValue(button);
+    const conflict = { hover: vi.fn().mockResolvedValue(undefined) };
+    const page = {
+      getByRole: vi.fn().mockReturnValue(button),
+      getByText: vi.fn().mockReturnValue(conflict),
+      waitForResponse: vi.fn().mockResolvedValue({ status: () => 409 }),
+    };
+    const result = await new TicketSelectionPage(
+      page as unknown as Page,
+    ).attemptGaReservation(profile);
+    expect(result).toMatchObject({
+      httpStatus: 409,
+      reservationId: null,
+      result: "CONFLICT",
+    });
+    expect(conflict.hover).toHaveBeenCalledOnce();
+    expect(button.click).toHaveBeenCalledOnce();
+  });
 });

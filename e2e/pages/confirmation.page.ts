@@ -13,6 +13,28 @@ export class ConfirmationPage {
     seatLabel: string,
     observer: BookingResponseObserver,
   ) {
+    await this.approveMock(profile);
+    await this.verifyPaidAndTicket(profile, reservationId, seatLabel, observer);
+  }
+
+  async approveMockAndVerifyGa(
+    profile: ExecutionProfile,
+    reservationId: string,
+    ticketTypeName: string,
+    quantity: number,
+    observer: BookingResponseObserver,
+  ) {
+    await this.approveMock(profile);
+    await this.verifyPaidAndGaTickets(
+      profile,
+      reservationId,
+      ticketTypeName,
+      quantity,
+      observer,
+    );
+  }
+
+  private async approveMock(profile: ExecutionProfile) {
     await expect(
       this.page.getByRole("button", { name: "Approve Payment" }),
     ).toBeVisible();
@@ -21,14 +43,35 @@ export class ConfirmationPage {
       new RegExp(`/buy/${escapeRegExp(profile.eventSlug)}/confirmation`),
       { timeout: profile.paymentTimeoutMs },
     );
-
-    await this.verifyPaidAndTicket(profile, reservationId, seatLabel, observer);
   }
 
   async verifyPaidAndTicket(
     profile: ExecutionProfile,
     reservationId: string,
     seatLabel: string,
+    observer: BookingResponseObserver,
+  ) {
+    await this.verifyPaidReservation(profile, reservationId, observer);
+    await this.verifyPurchasedTicket(profile, reservationId, { seatLabel });
+  }
+
+  async verifyPaidAndGaTickets(
+    profile: ExecutionProfile,
+    reservationId: string,
+    ticketTypeName: string,
+    quantity: number,
+    observer: BookingResponseObserver,
+  ) {
+    await this.verifyPaidReservation(profile, reservationId, observer);
+    await this.verifyPurchasedTicket(profile, reservationId, {
+      ticketTypeName,
+      quantity,
+    });
+  }
+
+  private async verifyPaidReservation(
+    profile: ExecutionProfile,
+    reservationId: string,
     observer: BookingResponseObserver,
   ) {
     await expect(
@@ -51,14 +94,14 @@ export class ConfirmationPage {
         "The paid confirmation did not match the created reservation.",
       );
     }
-
-    await this.verifyPurchasedTicket(profile, reservationId, seatLabel);
   }
 
   private async verifyPurchasedTicket(
     profile: ExecutionProfile,
     reservationId: string,
-    seatLabel: string,
+    target:
+      | { seatLabel: string; ticketTypeName?: never; quantity?: never }
+      | { seatLabel?: never; ticketTypeName: string; quantity: number },
   ) {
     await this.page
       .getByRole("button", { name: "View tickets & vouchers" })
@@ -74,7 +117,7 @@ export class ConfirmationPage {
     await expect(
       this.page.getByRole("dialog").getByText("Paid", { exact: true }),
     ).toBeVisible();
-    const [row, column] = seatLabel.split("-", 2);
+    const [row, column] = target.seatLabel?.split("-", 2) ?? [];
     if (row && column) {
       await expect(
         this.page
@@ -84,6 +127,15 @@ export class ConfirmationPage {
               `(?:Row\\s+)?${escapeRegExp(row)}(?:,?\\s+Seat\\s+|-)${escapeRegExp(column)}`,
             ),
           ),
+      ).toBeVisible();
+    }
+    if (target.ticketTypeName) {
+      const dialog = this.page.getByRole("dialog");
+      await expect(
+        dialog.getByText(target.ticketTypeName, { exact: true }),
+      ).toBeVisible();
+      await expect(
+        dialog.getByText(`Quantity ${target.quantity}`, { exact: true }),
       ).toBeVisible();
     }
 
@@ -126,6 +178,36 @@ export class ConfirmationPage {
         }),
       ).toBeVisible();
       await expect(purchasedTicket.getByText(/\d+ Valid/)).toBeVisible();
+    }
+    if (target.ticketTypeName) {
+      const eventTicketGroups = this.page.getByRole("button", {
+        name: `View ticket details for ${profile.eventTitle}`,
+      });
+      await expect(eventTicketGroups.first()).toBeVisible({
+        timeout: profile.navigationTimeoutMs,
+      });
+      const group = eventTicketGroups
+        .first()
+        .locator("xpath=ancestor::article");
+      await expect(
+        group.getByText(
+          new RegExp(
+            `^${target.quantity}x ${escapeRegExp(target.ticketTypeName)}(?: - |$)`,
+          ),
+        ),
+      ).toBeVisible();
+      await group
+        .getByRole("button", {
+          name: `${target.quantity} tickets`,
+          exact: true,
+        })
+        .click();
+      await expect(
+        group.getByText(target.ticketTypeName, { exact: true }),
+      ).toHaveCount(target.quantity);
+      await expect(
+        group.getByText(`${target.quantity} Valid`, { exact: true }),
+      ).toBeVisible();
     }
 
     if (profile.ticketReviewMs > 0) {

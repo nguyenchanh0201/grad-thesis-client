@@ -22,6 +22,9 @@ const ENVIRONMENT_KEYS = [
   "E2E_EVENT_TITLE",
   "E2E_INVENTORY_MODE",
   "E2E_SEAT_LABEL",
+  "E2E_TICKET_TYPE_NAME",
+  "E2E_TICKET_TYPE_ID",
+  "E2E_GA_QUANTITY",
   "E2E_CUSTOMER_A_LABEL",
   "E2E_CUSTOMER_A_EMAIL",
   "E2E_CUSTOMER_A_PASSWORD",
@@ -106,8 +109,11 @@ const rawSchema = z
       .default("/health/ready"),
     E2E_EVENT_SLUG: requiredText,
     E2E_EVENT_TITLE: requiredText,
-    E2E_INVENTORY_MODE: z.literal("seated"),
-    E2E_SEAT_LABEL: requiredText,
+    E2E_INVENTORY_MODE: z.enum(["seated", "ga"]),
+    E2E_SEAT_LABEL: optionalText,
+    E2E_TICKET_TYPE_NAME: optionalText,
+    E2E_TICKET_TYPE_ID: optionalText,
+    E2E_GA_QUANTITY: positiveInteger(2, 100),
     E2E_CUSTOMER_A_LABEL: z
       .string()
       .trim()
@@ -170,12 +176,21 @@ const rawSchema = z
     validateTargetUrl(value.E2E_FE_URL, "E2E_FE_URL", context);
     validateTargetUrl(value.E2E_API_URL, "E2E_API_URL", context);
 
-    if (value.E2E_SEAT_LABEL.trim().toUpperCase() === "AUTO") {
+    if (value.E2E_INVENTORY_MODE === "seated" && !value.E2E_SEAT_LABEL) {
+      issue(context, "E2E_SEAT_LABEL", "is required for seated contention");
+    }
+    if (
+      value.E2E_INVENTORY_MODE === "seated" &&
+      value.E2E_SEAT_LABEL?.trim().toUpperCase() === "AUTO"
+    ) {
       issue(
         context,
         "E2E_SEAT_LABEL",
         "must identify one exact seat and cannot be AUTO",
       );
+    }
+    if (value.E2E_INVENTORY_MODE === "ga" && !value.E2E_TICKET_TYPE_NAME) {
+      issue(context, "E2E_TICKET_TYPE_NAME", "is required for GA contention");
     }
     if (
       value.E2E_CUSTOMER_A_EMAIL.toLowerCase() ===
@@ -294,8 +309,11 @@ export type ContentionExecutionProfile = {
   apiReadyPath: string;
   eventSlug: string;
   eventTitle: string;
-  inventoryMode: "seated";
+  inventoryMode: "seated" | "ga";
   seatLabel: string;
+  ticketTypeName?: string;
+  ticketTypeId?: string;
+  ticketQuantity: number;
   participants: readonly [
     ContentionParticipantProfile,
     ContentionParticipantProfile,
@@ -391,8 +409,11 @@ export async function loadContentionProfile(
     apiReadyPath: value.E2E_API_READY_PATH,
     eventSlug: value.E2E_EVENT_SLUG,
     eventTitle: value.E2E_EVENT_TITLE,
-    inventoryMode: "seated",
-    seatLabel: value.E2E_SEAT_LABEL,
+    inventoryMode: value.E2E_INVENTORY_MODE,
+    seatLabel: value.E2E_SEAT_LABEL ?? "",
+    ticketTypeName: value.E2E_TICKET_TYPE_NAME,
+    ticketTypeId: value.E2E_TICKET_TYPE_ID,
+    ticketQuantity: value.E2E_GA_QUANTITY,
     participants: [participant("A"), participant("B")],
     completionMode: value.E2E_COMPLETION_MODE,
     paymentMethod:
@@ -444,7 +465,7 @@ export function participantExecutionProfile(
     eventSlug: profile.eventSlug,
     eventTitle: profile.eventTitle,
     inventoryMode: "seated",
-    seatLabel: profile.seatLabel,
+    seatLabel: profile.seatLabel || profile.ticketTypeName || "GA",
     seatSelectionMode: "exact",
     recipientFullName: participant.recipientFullName,
     recipientEmail: participant.recipientEmail,
@@ -490,7 +511,11 @@ export function projectSafeContentionProfile(
     apiUrl: profile.apiUrl,
     eventSlug: profile.eventSlug,
     eventTitle: profile.eventTitle,
+    inventoryMode: profile.inventoryMode,
     seatLabel: profile.seatLabel,
+    ticketTypeName: profile.ticketTypeName,
+    ticketTypeId: profile.ticketTypeId,
+    ticketQuantity: profile.ticketQuantity,
     participantLabels: profile.participants.map((item) => item.label),
     completionMode: profile.completionMode,
     gateTimeoutMs: profile.gateTimeoutMs,

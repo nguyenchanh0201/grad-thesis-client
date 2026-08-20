@@ -102,4 +102,21 @@ describe("validateReservationRequestMetadata", () => {
       validateReservationRequestMetadata({ ...base, headers: {} }),
     ).toThrow(/idempotency/i);
   });
+
+  it("validates one GA ticket type and quantity", () => {
+    const result = validateReservationRequestMetadata({
+      requestUrl: "http://localhost:5004/api/v1/reservations/ga",
+      method: "POST",
+      headers: { "idempotency-key": "ga-one" },
+      body: {
+        eventSlug: "race-event",
+        items: [{ ticketTypeId: "42", quantity: 2 }],
+      },
+      expectedApiUrl: "http://localhost:5004/api/v1",
+      expectedEventSlug: "race-event",
+      reservationKind: "ga",
+    });
+    expect(result.eventSlug).toBe("race-event");
+    expect(result.seatIndexFingerprint).toHaveLength(16);
+  });
 });

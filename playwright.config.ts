@@ -1,10 +1,11 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const runId = process.env.E2E_RUN_ID ?? "discovery";
-const suite =
-  process.env.E2E_SUITE === "seat-contention"
-    ? "seat-contention"
-    : "customer-booking";
+const suite = ["seat-contention", "ga-contention"].includes(
+  process.env.E2E_SUITE ?? "",
+)
+  ? process.env.E2E_SUITE!
+  : "customer-booking";
 const outputRoot = `test-results/${suite}/${runId}`;
 const navigationTimeout = Number(
   process.env.E2E_NAVIGATION_TIMEOUT_MS ?? 30_000,

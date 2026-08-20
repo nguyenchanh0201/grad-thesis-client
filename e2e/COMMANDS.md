@@ -103,6 +103,33 @@ pnpm run e2e:contention -- --profile local-contention --headed --keep-open
 Runs the same live race and keeps both final customer windows open until the presenter closes them. Omit `--keep-open` when no browser hold is needed.
 
 ```powershell
+Set-Location ..\grad_thesis_server
+pnpm run loadtest:prepare-ga-contention-demo
+```
+
+Creates a dedicated local non-seated event with one final GA batch, copies its payment methods, clears its catalog detail cache, and refuses to reset inventory after reservation history exists.
+
+```powershell
+Set-Location ..\grad-thesis-client
+Copy-Item e2e\profiles\ga-contention.example.env e2e\profiles\ga-contention-local.env
+pnpm run e2e:ga-contention:check -- --profile ga-contention-local
+```
+
+Creates an ignored GA profile, validates both users, and confirms the event is non-seated and the exact ticket type name/optional ID exists.
+
+```powershell
+pnpm run e2e:ga-contention:test -- --profile ga-contention-local
+```
+
+Runs deterministic GA profile, request-gate, outcome, evidence, and CLI tests without reserving inventory.
+
+```powershell
+pnpm run e2e:ga-contention -- --profile ga-contention-local --headed
+```
+
+Records two isolated customers competing for the same final GA quantity; exactly one must receive `201`, the other `409`, and only the winner continues through VNPay.
+
+```powershell
 pnpm exec vitest run e2e
 ```
 

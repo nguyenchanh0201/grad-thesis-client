@@ -14,6 +14,7 @@ const profile = {
   eventTitle: "Race Event",
   inventoryMode: "seated",
   seatLabel: "A-1",
+  ticketQuantity: 2,
   participants: [
     {
       id: "A",

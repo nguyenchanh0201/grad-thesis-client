@@ -82,7 +82,7 @@ describe("loadContentionProfile", () => {
     { E2E_CUSTOMER_B_EMAIL: "A@example.test" },
     { E2E_CUSTOMER_B_LABEL: "Customer A" },
     { E2E_SEAT_LABEL: "AUTO" },
-    { E2E_INVENTORY_MODE: "ga" },
+    { E2E_SEAT_LABEL: "" },
     { E2E_FE_URL: "http://tickets.example.test" },
   ])("rejects unsafe cross-field configuration %#", async (override) => {
     const directory = await writeProfile(validProfile(override));
@@ -92,6 +92,28 @@ describe("loadContentionProfile", () => {
         environment: {},
       }),
     ).rejects.toThrow();
+  });
+
+  it("loads a GA ticket type and quantity while reusing both participants", async () => {
+    const directory = await writeProfile(
+      validProfile({
+        E2E_INVENTORY_MODE: "ga",
+        E2E_SEAT_LABEL: "",
+        E2E_TICKET_TYPE_NAME: "GA Contention Demo",
+        E2E_TICKET_TYPE_ID: "42",
+        E2E_GA_QUANTITY: "2",
+      }),
+    );
+    const profile = await loadContentionProfile("local", {
+      profilesDirectory: directory,
+      environment: {},
+    });
+    expect(profile).toMatchObject({
+      inventoryMode: "ga",
+      ticketTypeName: "GA Contention Demo",
+      ticketTypeId: "42",
+      ticketQuantity: 2,
+    });
   });
 
   it("validates official VNPay sandbox settings", async () => {

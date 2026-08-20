@@ -10,6 +10,12 @@ their real UI-generated seated-reservation requests until both are ready, and
 then forwards both unchanged. A valid result is exactly one create response
 and one real HTTP 409 conflict; either customer may win.
 
+GA quantity contention is a separate command but reuses the same login,
+event, waitroom, recipient, payment, VNPay, confirmation, window tiling, and
+video implementations. Its only inventory-specific steps select one exact
+ticket type/quantity and verify that the winning reservation owns that full
+quantity while the loser owns no new reservation.
+
 ## What the journey proves
 
 - email/password login through the visible form;
@@ -244,6 +250,41 @@ the Playwright command. A browser pass proves the two participating accounts;
 use the separate read-only backend invariant checker when claiming a global
 durable audit.
 
+## Two-customer GA quantity contention
+
+Prepare a dedicated local GA batch from the backend repository:
+
+```powershell
+pnpm run loadtest:prepare-ga-contention-demo
+```
+
+The preparation command executes inside the configured local API container so
+it targets the same PostgreSQL/Redis state as the browser-facing API. It creates
+a non-seated demo event and a ticket type whose durable available quantity is
+the requested batch size, copies the template event's payment methods, and
+invalidates the public/buy detail caches. It refuses to reset a ticket type
+after any reservation item exists. For another rehearsal, provide a new
+`GA_CONTENTION_TICKET_TYPE_NAME` and copy the returned ID/name into a fresh
+ignored profile.
+
+```powershell
+Copy-Item e2e\profiles\ga-contention.example.env e2e\profiles\ga-contention-local.env
+pnpm run e2e:ga-contention:check -- --profile ga-contention-local
+pnpm run e2e:ga-contention:test -- --profile ga-contention-local
+pnpm run e2e:ga-contention -- --profile ga-contention-local --headed
+```
+
+`E2E_INVENTORY_MODE` must be `ga`. `E2E_TICKET_TYPE_NAME` is the exact visible
+type; optional `E2E_TICKET_TYPE_ID` makes preflight reject a name/ID mismatch;
+`E2E_GA_QUANTITY` is selected independently by both customers. For the
+deterministic final-batch demo, durable availability must equal that quantity,
+so one request receives `201` and the other receives `409`. Only the winner
+continues through the configured shared payment flow.
+
+Use `--keep-open` only for live presenting. Omit it when recording so Playwright
+closes both contexts and finalizes `customer-a.webm`, `customer-b.webm`, final
+screenshots, the HTML report, and `ga-contention-result.json` automatically.
+
 ## Evidence
 
 Every valid browser run writes:
@@ -268,6 +309,11 @@ allowlist-only `contention-result.json`. The result records release skew,
 winner/loser IDs, the winning reservation ID, continuation status, and
 `verificationScope=TWO_PARTICIPANTS`; it contains labels rather than account or
 recipient identity values.
+
+Every GA contention run writes the same two-video artifact set under
+`test-results/ga-contention/<run-id>/`. Its allowlist-only JSON records the
+ticket type ID/name, quantity per customer, release skew, winner/loser,
+reservation ID, and winner continuation without credentials or raw payloads.
 
 ## Run beside external load
 

@@ -1,28 +1,18 @@
-import type { BrowserContext, Page, Video } from "@playwright/test";
+import type { Page } from "@playwright/test";
 
 import type {
   ContentionExecutionProfile,
   ParticipantId,
 } from "../config/contention-profile";
 import { ReservationAttemptGate } from "../coordination/reservation-attempt-gate";
-import { ConfirmationPage } from "../pages/confirmation.page";
-import { EventDetailPage } from "../pages/event-detail.page";
-import { LoginPage } from "../pages/login.page";
-import { PaymentPage } from "../pages/payment.page";
-import { QueuePage } from "../pages/queue.page";
-import { RecipientInfoPage } from "../pages/recipient-info.page";
+import type { ContentionParticipantSession } from "./seat-contention.flow";
+import type { ReservationAttemptResult } from "../pages/ticket-selection.page";
+import { classifyHttpAttempt } from "../reporting/contention-types";
 import {
-  TicketSelectionPage,
-  type ReservationAttemptResult,
-} from "../pages/ticket-selection.page";
-import type { ExecutionProfile } from "../config/profile";
-import {
-  classifyHttpAttempt,
-  markVerified,
-  resolveContentionAttempts,
-  type ContentionRun,
-} from "../reporting/contention-types";
-import { BookingResponseObserver } from "./booking-responses";
+  markGaVerified,
+  resolveGaContentionAttempts,
+  type GaContentionRun,
+} from "../reporting/ga-contention-types";
 import {
   contentionFailure,
   continueContentionWinner,
@@ -33,31 +23,10 @@ import {
   runContentionStep,
 } from "./contention-shared";
 
-export type ContentionPages = {
-  login: LoginPage;
-  event: EventDetailPage;
-  queue: QueuePage;
-  tickets: TicketSelectionPage;
-  recipient: RecipientInfoPage;
-  payment: PaymentPage;
-  confirmation: ConfirmationPage;
-};
-
-export type ContentionParticipantSession = {
-  id: ParticipantId;
-  label: string;
-  context: BrowserContext;
-  page: Page;
-  video: Video | null;
-  profile: ExecutionProfile;
-  pages: ContentionPages;
-  observer: BookingResponseObserver;
-};
-
-export class SeatContentionFlow {
+export class GaContentionFlow {
   constructor(
     private readonly profile: ContentionExecutionProfile,
-    private readonly run: ContentionRun,
+    private readonly run: GaContentionRun,
     private readonly sessions: readonly [
       ContentionParticipantSession,
       ContentionParticipantSession,
@@ -70,16 +39,17 @@ export class SeatContentionFlow {
       const preparation = await Promise.allSettled(
         this.sessions.map((session) => this.prepare(session)),
       );
-      const preparationFailure = preparation.find(
+      const failed = preparation.find(
         (result): result is PromiseRejectedResult =>
           result.status === "rejected",
       );
-      if (preparationFailure) throw preparationFailure.reason;
+      if (failed) throw failed.reason;
       this.run.state = "BOTH_READY";
 
       const gate = new ReservationAttemptGate({
         apiUrl: this.profile.apiUrl,
         eventSlug: this.profile.eventSlug,
+        reservationKind: "ga",
         timeoutMs: this.profile.gateTimeoutMs,
         maxReleaseSkewMs: this.profile.maxReleaseSkewMs,
       });
@@ -88,7 +58,7 @@ export class SeatContentionFlow {
       this.run.gate = gate.snapshot();
 
       const attemptPromises = this.sessions.map((session) =>
-        session.pages.tickets.attemptReservation(
+        session.pages.tickets.attemptGaReservation(
           session.profile,
           this.profile.resultTimeoutMs,
         ),
@@ -115,10 +85,9 @@ export class SeatContentionFlow {
       }
 
       const attempts = await Promise.all(attemptPromises);
-      for (let index = 0; index < attempts.length; index += 1) {
+      attempts.forEach((attempt, index) => {
         const session = this.sessions[index];
         const participant = this.participant(session.id);
-        const attempt = attempts[index];
         const classified = classifyHttpAttempt(
           session.id,
           attempt.httpStatus,
@@ -139,19 +108,20 @@ export class SeatContentionFlow {
             : classified.result === "CONFLICT"
               ? "LOST"
               : "FAILED";
-      }
+      });
       this.run.gate = gate.snapshot();
-
-      const classified = attempts.map((attempt, index) =>
+      this.run.outcome = resolveGaContentionAttempts(
         classifyHttpAttempt(
-          this.sessions[index].id,
-          attempt.httpStatus,
-          attempt.reservationId,
+          this.sessions[0].id,
+          attempts[0].httpStatus,
+          attempts[0].reservationId,
         ),
-      );
-      this.run.outcome = resolveContentionAttempts(
-        classified[0],
-        classified[1],
+        classifyHttpAttempt(
+          this.sessions[1].id,
+          attempts[1].httpStatus,
+          attempts[1].reservationId,
+        ),
+        this.profile,
       );
 
       if (this.run.outcome.classification !== "ONE_WINNER_ONE_LOSER") {
@@ -187,7 +157,7 @@ export class SeatContentionFlow {
   }
 
   async holdFinalViewsOpen() {
-    await holdContentionFinalViewsOpen(this.sessions, "contention");
+    await holdContentionFinalViewsOpen(this.sessions, "GA contention");
   }
 
   private async prepare(session: ContentionParticipantSession) {
@@ -197,16 +167,8 @@ export class SeatContentionFlow {
       participant,
       readBaselineReservationIds: () => this.myReservationIds(session),
     });
-    await runContentionStep(participant, "seat", async () => {
-      const selected = await session.pages.tickets.selectConfiguredSeat(
-        session.profile,
-      );
-      if (selected !== this.profile.seatLabel) {
-        throw new Error(
-          "The participant selected a different seat than the contention target.",
-        );
-      }
-      participant.actualOutcome = "SEAT_SELECTED";
+    await runContentionStep(participant, "ga-quantity", async () => {
+      await session.pages.tickets.selectConfiguredGaQuantity(this.profile);
       participant.readyAt = new Date().toISOString();
       participant.actualOutcome = "READY";
     });
@@ -217,63 +179,54 @@ export class SeatContentionFlow {
     const winner = this.session(outcome.winnerParticipantId!);
     const loser = this.session(outcome.loserParticipantId!);
     const reservationId = outcome.winningReservationId!;
-    const detail = await readCustomerJson(
-      winner,
-      `${this.profile.apiUrl}/reservations/${encodeURIComponent(reservationId)}`,
-      this.profile.resultTimeoutMs,
+    const detail = unwrapData(
+      await readCustomerJson(
+        winner,
+        `${this.profile.apiUrl}/reservations/${encodeURIComponent(reservationId)}`,
+        this.profile.resultTimeoutMs,
+      ),
     );
-    const reservation = unwrapData(detail);
-    if (String(reservation.id ?? "") !== reservationId) {
+    if (String(detail.id ?? "") !== reservationId) {
       throw new Error(
         "Winner reservation detail did not match the create response.",
       );
     }
     if (
-      reservation.eventSlug &&
-      String(reservation.eventSlug) !== this.profile.eventSlug
+      detail.eventSlug &&
+      String(detail.eventSlug) !== this.profile.eventSlug
     ) {
       throw new Error("Winner reservation belongs to a different event.");
     }
-    const items = Array.isArray(reservation.items) ? reservation.items : [];
-    if (
-      !items.some(
-        (item) =>
-          item &&
-          typeof item === "object" &&
-          String((item as Record<string, unknown>).seatLabel ?? "") ===
-            this.profile.seatLabel,
-      )
-    ) {
+    const items = Array.isArray(detail.items) ? detail.items : [];
+    const target = items.find((item) => {
+      if (!item || typeof item !== "object") return false;
+      const value = item as Record<string, unknown>;
+      const matchesName =
+        String(value.ticketTypeName ?? "") === this.profile.ticketTypeName;
+      const matchesId =
+        !this.profile.ticketTypeId ||
+        String(value.ticketTypeId ?? "") === this.profile.ticketTypeId;
+      return matchesName && matchesId;
+    }) as Record<string, unknown> | undefined;
+    if (!target || Number(target.quantity) !== this.profile.ticketQuantity) {
       throw new Error(
-        "Winner reservation does not contain the contested seat.",
+        "Winner reservation does not contain the configured GA quantity.",
       );
     }
 
     const loserReservations = await this.myReservations(loser);
-    const loserBaseline = new Set(
-      this.participant(loser.id).baselineReservationIds,
-    );
-    const newLoserReservation = loserReservations.some((item) => {
-      const id = String(item.id ?? "");
-      return Boolean(id) && !loserBaseline.has(id);
-    });
-    if (newLoserReservation) {
+    const baseline = new Set(this.participant(loser.id).baselineReservationIds);
+    if (
+      loserReservations.some((item) => {
+        const id = String(item.id ?? "");
+        return Boolean(id) && !baseline.has(id);
+      })
+    ) {
       throw new Error(
-        "The losing participant owns a new reservation created during contention.",
+        "The losing participant owns a new reservation created during GA contention.",
       );
     }
-
-    const eventCode =
-      typeof reservation.eventCode === "string" ? reservation.eventCode : null;
-    const targetSeatStatus = eventCode
-      ? await this.readSeatStatus(winner, eventCode)
-      : "unknown";
-    if (targetSeatStatus !== "locked" && targetSeatStatus !== "sold") {
-      throw new Error(
-        "The final public seat snapshot did not corroborate a lock or sale.",
-      );
-    }
-    this.run.outcome = markVerified(outcome, targetSeatStatus);
+    this.run.outcome = markGaVerified(outcome, String(target.ticketTypeId));
   }
 
   private async continueWinner() {
@@ -296,17 +249,19 @@ export class SeatContentionFlow {
         continuation: this.run.continuation,
         verifyPaid: async (gateway) => {
           if (gateway === "mock") {
-            await winner.pages.confirmation.approveMockAndVerify(
+            await winner.pages.confirmation.approveMockAndVerifyGa(
               winner.profile,
               reservationId,
-              this.profile.seatLabel,
+              this.profile.ticketTypeName!,
+              this.profile.ticketQuantity,
               winner.observer,
             );
           } else {
-            await winner.pages.confirmation.verifyPaidAndTicket(
+            await winner.pages.confirmation.verifyPaidAndGaTickets(
               winner.profile,
               reservationId,
-              this.profile.seatLabel,
+              this.profile.ticketTypeName!,
+              this.profile.ticketQuantity,
               winner.observer,
             );
           }
@@ -327,25 +282,19 @@ export class SeatContentionFlow {
 
   private failNonPassingOutcome(): never {
     const classification = this.run.outcome!.classification;
-    if (classification === "BOTH_CREATED") {
-      this.run.state = "INVARIANT_VIOLATION";
-      this.run.failure = contentionFailure(
-        "INVARIANT_VIOLATION",
-        "contention",
-        new Error(
-          "Both customers received a reservation for the contested seat.",
-        ),
-      );
-    } else {
-      this.run.state = "INCONCLUSIVE";
-      this.run.failure = contentionFailure(
-        "BOTH_ATTEMPTS_FAILED",
-        "contention",
-        new Error(
-          `Contention did not produce one winner and one loser: ${classification}.`,
-        ),
-      );
-    }
+    const invariantViolation = classification === "BOTH_CREATED";
+    this.run.state = invariantViolation
+      ? "INVARIANT_VIOLATION"
+      : "INCONCLUSIVE";
+    this.run.failure = contentionFailure(
+      invariantViolation ? "INVARIANT_VIOLATION" : "BOTH_ATTEMPTS_FAILED",
+      "contention",
+      new Error(
+        invariantViolation
+          ? "Both customers received the contested GA quantity."
+          : `GA contention did not produce one winner and one loser: ${classification}.`,
+      ),
+    );
     throw new Error(this.run.failure.message);
   }
 
@@ -363,35 +312,6 @@ export class SeatContentionFlow {
     );
   }
 
-  private async readSeatStatus(
-    session: ContentionParticipantSession,
-    eventCode: string,
-  ): Promise<"available" | "locked" | "sold" | "unknown"> {
-    const payload = await readCustomerJson(
-      session,
-      `${this.profile.apiUrl}/events/code/${encodeURIComponent(eventCode)}/seats`,
-      this.profile.resultTimeoutMs,
-    );
-    const sections = (payload as Record<string, unknown>).data;
-    if (!Array.isArray(sections)) return "unknown";
-    for (const section of sections) {
-      if (!section || typeof section !== "object") continue;
-      const seats = (section as Record<string, unknown>).seats;
-      if (!Array.isArray(seats)) continue;
-      for (const seat of seats) {
-        if (!seat || typeof seat !== "object") continue;
-        const value = seat as Record<string, unknown>;
-        if (String(value.seatLabel ?? "") !== this.profile.seatLabel) continue;
-        const rawStatus = value.status;
-        if (rawStatus === 0 || rawStatus === "available") return "available";
-        if (rawStatus === 1 || rawStatus === "locked") return "locked";
-        if (rawStatus === 2 || rawStatus === "sold") return "sold";
-        return "unknown";
-      }
-    }
-    return "unknown";
-  }
-
   private participant(id: ParticipantId) {
     return this.run.participants[id === "A" ? 0 : 1];
   }
@@ -403,18 +323,6 @@ export class SeatContentionFlow {
   private pageRecord(): Record<ParticipantId, Page> {
     return { A: this.sessions[0].page, B: this.sessions[1].page };
   }
-}
-
-export function createContentionPages(page: Page): ContentionPages {
-  return {
-    login: new LoginPage(page),
-    event: new EventDetailPage(page),
-    queue: new QueuePage(page),
-    tickets: new TicketSelectionPage(page),
-    recipient: new RecipientInfoPage(page),
-    payment: new PaymentPage(page),
-    confirmation: new ConfirmationPage(page),
-  };
 }
 
 function unwrapData(payload: Record<string, unknown>) {
