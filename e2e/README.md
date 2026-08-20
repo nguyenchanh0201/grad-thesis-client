@@ -4,6 +4,12 @@ This Playwright suite drives one clean Chromium customer through the public
 booking UI. It is an observer for a defense/demo run; k6 or another external
 tool remains responsible for concurrent load.
 
+The same harness also has an opt-in two-customer contention command. It opens
+two isolated sessions, lets both customers select one exact seat, holds only
+their real UI-generated seated-reservation requests until both are ready, and
+then forwards both unchanged. A valid result is exactly one create response
+and one real HTTP 409 conflict; either customer may win.
+
 ## What the journey proves
 
 - email/password login through the visible form;
@@ -17,8 +23,10 @@ tool remains responsible for concurrent load.
 - paid confirmation for the same reservation ID;
 - video plus an allowlist-only JSON result.
 
-The runner never creates sessions or reservations through setup APIs, never
-calls the mock payment callback directly, and never cancels an active checkout.
+The runner never creates sessions or reservations through setup APIs and never
+calls the mock payment callback directly. If an unfinished checkout blocks the
+journey, recovery uses the application's visible `Cancel checkout` action and
+normal cancellation endpoint before continuing.
 
 ## Install
 
@@ -186,6 +194,56 @@ one of:
 Profile/CLI validation, readiness, redaction, evidence schema, and failure-code
 mapping are covered by the fast Vitest files under `e2e/**/*.test.ts`.
 
+## Two-customer exact-seat contention
+
+Create a separate ignored profile and configure two distinct customer accounts:
+
+```powershell
+Copy-Item e2e\profiles\contention.example.env e2e\profiles\local-contention.env
+pnpm run e2e:contention:check -- --profile local-contention
+```
+
+Both customers must target the same seated event and one literal available
+seat. `AUTO` and fallback selection are rejected because they would hide the
+race. Either account may win, so both recipient blocks and the VNPay sandbox
+settings must be valid.
+
+Run the visible contention demo:
+
+```powershell
+pnpm run e2e:contention -- --profile local-contention --headed --keep-open
+```
+
+Both contexts authenticate and obtain their own waitroom admission. The ready
+gate does not reserve or lock inventory. Once both frontend requests reach the
+gate, they are released together with their original cookies, waitroom token,
+body, and idempotency key. The loser stays on the exact-seat page and is never
+retried or moved to replacement inventory.
+
+The committed contention example defaults to `vnpay-sandbox-success`: only the
+resolved winner enters the official VNPay sandbox and the same reservation ID
+must become the displayed paid ticket. Set `reservation-only` with an empty
+`E2E_PAYMENT_METHOD` for a reservation/409 rehearsal without payment. The
+`mock-payment-success` and VNPay modes are for non-production environments only.
+
+Profile properties are grouped in the example file: target URLs and readiness
+path; event and exact-seat identity; both customer credentials; both recipient
+blocks; completion/payment and VNPay sandbox fields; millisecond timeouts;
+browser/presentation controls; and diagnostic tracing. Process-level `E2E_*`
+values override file values, and real profiles remain ignored.
+
+Run the deterministic contention contract tests without opening browsers:
+
+```powershell
+pnpm run e2e:contention:test -- --profile local-contention
+```
+
+The live command does not create, start, throttle, or stop k6 traffic. Start
+external load separately, wait for it to reach the desired level, and then run
+the Playwright command. A browser pass proves the two participating accounts;
+use the separate read-only backend invariant checker when claiming a global
+durable audit.
+
 ## Evidence
 
 Every valid browser run writes:
@@ -203,6 +261,13 @@ test-results/customer-booking/<run-id>/
 results, reservation ID, expected/actual outcome, and failure classification.
 It never serializes the password, recipient details, cookies, authorization
 headers, waitroom/payment tokens, or raw request/response bodies.
+
+Every contention run writes `test-results/seat-contention/<run-id>/` with
+`customer-a.webm`, `customer-b.webm`, optional final screenshots, and one
+allowlist-only `contention-result.json`. The result records release skew,
+winner/loser IDs, the winning reservation ID, continuation status, and
+`verificationScope=TWO_PARTICIPANTS`; it contains labels rather than account or
+recipient identity values.
 
 ## Run beside external load
 

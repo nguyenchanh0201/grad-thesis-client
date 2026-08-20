@@ -1,12 +1,23 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const runId = process.env.E2E_RUN_ID ?? "discovery";
-const outputRoot = `test-results/customer-booking/${runId}`;
+const suite =
+  process.env.E2E_SUITE === "seat-contention"
+    ? "seat-contention"
+    : "customer-booking";
+const outputRoot = `test-results/${suite}/${runId}`;
 const navigationTimeout = Number(
   process.env.E2E_NAVIGATION_TIMEOUT_MS ?? 30_000,
 );
 const waitroomTimeout = Number(process.env.E2E_WAITROOM_TIMEOUT_MS ?? 120_000);
 const paymentTimeout = Number(process.env.E2E_PAYMENT_TIMEOUT_MS ?? 60_000);
+const contentionGateTimeout = Number(
+  process.env.E2E_CONTENTION_GATE_TIMEOUT_MS ?? 30_000,
+);
+const contentionResultTimeout = Number(
+  process.env.E2E_CONTENTION_RESULT_TIMEOUT_MS ?? 30_000,
+);
+const contentionReviewMs = Number(process.env.E2E_CONTENTION_REVIEW_MS ?? 0);
 const headless = process.env.E2E_HEADLESS !== "false";
 const diagnosticTrace = process.env.E2E_DIAGNOSTIC_TRACE === "true";
 
@@ -16,7 +27,12 @@ export default defineConfig({
   workers: 1,
   retries: 0,
   timeout: Math.max(
-    navigationTimeout * 6 + waitroomTimeout + paymentTimeout,
+    navigationTimeout * 8 +
+      waitroomTimeout +
+      paymentTimeout +
+      contentionGateTimeout +
+      contentionResultTimeout +
+      contentionReviewMs,
     120_000,
   ),
   expect: { timeout: navigationTimeout },

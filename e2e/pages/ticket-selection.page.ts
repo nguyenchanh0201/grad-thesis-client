@@ -4,6 +4,13 @@ import type { ExecutionProfile } from "../config/profile";
 import { JourneyFailure } from "../reporting/failure-classifier";
 import type { BookingResponseObserver } from "../flows/booking-responses";
 
+export type ReservationAttemptResult = {
+  httpStatus: number;
+  reservationId: string | null;
+  result: "CREATED" | "CONFLICT" | "FAILED";
+  visibleResult: "NAVIGATED_TO_INFO" | "SEAT_CONFLICT" | "FAILURE";
+};
+
 export class TicketSelectionPage {
   constructor(private readonly page: Page) {}
 
@@ -85,27 +92,100 @@ export class TicketSelectionPage {
     profile: ExecutionProfile,
     observer: BookingResponseObserver,
   ) {
+    const attempt = await this.attemptReservation(profile);
+    const reservationId =
+      attempt.reservationId ??
+      (attempt.result === "CREATED"
+        ? await observer.waitForReservationId(profile.navigationTimeoutMs)
+        : null);
+    if (!reservationId) {
+      throw new JourneyFailure(
+        "RESERVATION_FAILED",
+        "reservation",
+        attempt.result === "CONFLICT"
+          ? "The configured seat became unavailable during reservation."
+          : `The reservation attempt returned HTTP ${attempt.httpStatus} without an identifier.`,
+        attempt.httpStatus,
+      );
+    }
+    return reservationId;
+  }
+
+  async triggerReservationAttempt() {
     const continueButton = this.page
       .getByRole("button", { name: /VND - Continue$/i })
       .first();
     await expect(continueButton).toBeEnabled();
     await continueButton.click();
+  }
 
-    const [reservationId] = await Promise.all([
-      observer.waitForReservationId(profile.navigationTimeoutMs),
-      this.page.waitForURL(
+  async attemptReservation(
+    profile: ExecutionProfile,
+    resultTimeoutMs = profile.navigationTimeoutMs,
+  ): Promise<ReservationAttemptResult> {
+    const responsePromise = this.page.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" &&
+        new URL(response.url()).pathname.endsWith("/reservations/seated"),
+      { timeout: resultTimeoutMs },
+    );
+    await this.triggerReservationAttempt();
+    const response = await responsePromise;
+    const httpStatus = response.status();
+
+    if (httpStatus >= 200 && httpStatus < 300) {
+      const payload = (await response.json().catch(() => null)) as Record<
+        string,
+        unknown
+      > | null;
+      const rawId = payload?.reservationId;
+      const reservationId =
+        typeof rawId === "string" || typeof rawId === "number"
+          ? String(rawId)
+          : null;
+      await this.page.waitForURL(
         new RegExp(`/buy/${escapeRegExp(profile.eventSlug)}/info`),
         { timeout: profile.navigationTimeoutMs },
-      ),
-    ]);
-    if (!reservationId) {
-      throw new JourneyFailure(
-        "RESERVATION_FAILED",
-        "reservation",
-        "The reservation response did not contain an identifier.",
       );
+      return {
+        httpStatus,
+        reservationId,
+        result: "CREATED",
+        visibleResult: "NAVIGATED_TO_INFO",
+      };
     }
-    return reservationId;
+
+    if (httpStatus === 409) {
+      const conflict = this.page.getByText(
+        "Some selected seats were just taken. We updated your selection. Please continue again.",
+        { exact: true },
+      );
+      await expect(conflict).toBeVisible({ timeout: resultTimeoutMs });
+      await conflict.hover().catch(() => undefined);
+      await expect(this.page).toHaveURL(
+        new RegExp(`/buy/${escapeRegExp(profile.eventSlug)}/tickets`),
+      );
+      const seat = this.page.getByRole("gridcell", {
+        name: `Seat ${profile.seatLabel}`,
+        exact: true,
+      });
+      if (await seat.isVisible().catch(() => false)) {
+        await expect(seat).not.toHaveAttribute("aria-selected", "true");
+      }
+      return {
+        httpStatus,
+        reservationId: null,
+        result: "CONFLICT",
+        visibleResult: "SEAT_CONFLICT",
+      };
+    }
+
+    return {
+      httpStatus,
+      reservationId: null,
+      result: "FAILED",
+      visibleResult: "FAILURE",
+    };
   }
 
   private async openSectionContaining(

@@ -9,6 +9,10 @@ vi.mock("@playwright/test", () => ({
     toHaveURL: vi.fn().mockResolvedValue(undefined),
     toHaveAttribute: vi.fn().mockResolvedValue(undefined),
     toBeVisible: vi.fn().mockResolvedValue(undefined),
+    toBeEnabled: vi.fn().mockResolvedValue(undefined),
+    not: {
+      toHaveAttribute: vi.fn().mockResolvedValue(undefined),
+    },
   })),
 }));
 
@@ -148,5 +152,64 @@ describe("TicketSelectionPage", () => {
       "gridcell",
       expect.anything(),
     );
+  });
+
+  it("captures the successful create response before winner navigation", async () => {
+    const button = {
+      first: vi.fn(),
+      click: vi.fn().mockResolvedValue(undefined),
+    };
+    button.first.mockReturnValue(button);
+    const page = {
+      getByRole: vi.fn().mockReturnValue(button),
+      waitForResponse: vi.fn().mockResolvedValue({
+        status: () => 201,
+        json: vi.fn().mockResolvedValue({ status: true, reservationId: "44" }),
+      }),
+      waitForURL: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const result = await new TicketSelectionPage(
+      page as unknown as Page,
+    ).attemptReservation(profile);
+
+    expect(result).toEqual({
+      httpStatus: 201,
+      reservationId: "44",
+      result: "CREATED",
+      visibleResult: "NAVIGATED_TO_INFO",
+    });
+    expect(button.click).toHaveBeenCalledOnce();
+  });
+
+  it("classifies a 409 as the expected loser without selecting a fallback", async () => {
+    const button = {
+      first: vi.fn(),
+      click: vi.fn().mockResolvedValue(undefined),
+    };
+    button.first.mockReturnValue(button);
+    const conflict = { hover: vi.fn().mockResolvedValue(undefined) };
+    const seat = { isVisible: vi.fn().mockResolvedValue(true) };
+    const page = {
+      getByRole: vi.fn((role: string) => (role === "gridcell" ? seat : button)),
+      getByText: vi.fn().mockReturnValue(conflict),
+      waitForResponse: vi.fn().mockResolvedValue({ status: () => 409 }),
+    };
+
+    const result = await new TicketSelectionPage(
+      page as unknown as Page,
+    ).attemptReservation(profile);
+
+    expect(result).toMatchObject({
+      httpStatus: 409,
+      reservationId: null,
+      result: "CONFLICT",
+      visibleResult: "SEAT_CONFLICT",
+    });
+    expect(conflict.hover).toHaveBeenCalledOnce();
+    expect(page.getByRole).toHaveBeenCalledWith("gridcell", {
+      name: "Seat A-3",
+      exact: true,
+    });
   });
 });

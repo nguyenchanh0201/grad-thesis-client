@@ -10,6 +10,9 @@
     "e2e:booking": "tsx e2e/scripts/run-customer-booking.ts",
     "e2e:booking:check": "tsx e2e/scripts/run-customer-booking.ts --check",
     "e2e:booking:test": "tsx e2e/scripts/run-customer-booking.ts --test",
+    "e2e:contention": "tsx e2e/scripts/run-seat-contention.ts",
+    "e2e:contention:check": "tsx e2e/scripts/run-seat-contention.ts --check",
+    "e2e:contention:test": "tsx e2e/scripts/run-seat-contention.ts --test",
     "lint": "eslint",
     "prepare": "husky",
     "commitlint": "commitlint"

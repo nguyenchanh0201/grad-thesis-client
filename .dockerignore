@@ -2,4 +2,8 @@ node_modules
 .next
 out
 .git
-.env.local
+.env*
+*.log*
+coverage
+test-results
+playwright-report

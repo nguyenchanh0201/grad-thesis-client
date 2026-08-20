@@ -71,6 +71,38 @@ pnpm run e2e:booking:test -- --profile local
 Runs the Playwright scenario selected by the profile for controlled regression verification.
 
 ```powershell
+Copy-Item e2e\profiles\contention.example.env e2e\profiles\local-contention.env
+```
+
+Creates an ignored two-customer contention profile with placeholder-only values.
+
+```powershell
+pnpm run e2e:contention:check -- --profile local-contention
+```
+
+Validates both accounts, the exact shared seat, safe payment mode, and frontend/API readiness without opening browsers.
+
+```powershell
+pnpm run e2e:contention:test -- --profile local-contention
+```
+
+Runs deterministic profile, gate, outcome, evidence, presentation, and CLI contention tests without mutating inventory.
+
+```powershell
+pnpm run e2e:contention -- --profile local-contention --headed
+```
+
+Runs two isolated visible customers against one exact seat. The default
+contention example continues the winner through the VNPay sandbox; the loser
+stops on the real HTTP 409 conflict.
+
+```powershell
+pnpm run e2e:contention -- --profile local-contention --headed --keep-open
+```
+
+Runs the same live race and keeps both final customer windows open until the presenter closes them. Omit `--keep-open` when no browser hold is needed.
+
+```powershell
 pnpm exec vitest run e2e
 ```
 

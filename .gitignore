@@ -9,6 +9,7 @@
 /playwright-report/
 /e2e/profiles/*.env
 !/e2e/profiles/*.example.env
+/e2e/profiles/contention-*.env
 **/local-diagnostic-trace.zip
 **/*.trace.zip
 
@@ -28,6 +29,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 /.e2e-frontend.*.log
+/.e2e-contention.*.log
 
 # local env files
 .env*.local
