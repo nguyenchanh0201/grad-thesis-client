@@ -1,5 +1,8 @@
 # Customer Booking E2E Commands
 
+Complete environment-variable reference for all three runners:
+[`profiles/README.md`](profiles/README.md).
+
 ```powershell
 pnpm install
 ```

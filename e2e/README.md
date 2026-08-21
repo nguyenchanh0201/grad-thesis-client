@@ -43,6 +43,10 @@ pnpm exec playwright install chromium
 
 ## Create a profile
 
+See [`profiles/README.md`](profiles/README.md) for the complete reference of
+all user-configurable and runner-internal environment variables used by the
+booking, exact-seat contention, and GA quantity contention scripts.
+
 ```powershell
 Copy-Item e2e\profiles\local.example.env e2e\profiles\local.env
 ```
